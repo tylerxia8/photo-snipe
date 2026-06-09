@@ -10,7 +10,7 @@ func _ready() -> void:
 		camera = player.get_node_or_null("Camera3D") as Camera3D
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not event.is_action_pressed("capture"):
+	if not event.is_action("capture") or not event.is_pressed() or event.is_echo():
 		return
 	if camera == null or player == null:
 		return

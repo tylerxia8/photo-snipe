@@ -42,7 +42,7 @@ func _handle_round_started(payload: Dictionary) -> void:
 			Vector3(float(rot_arr[0]), float(rot_arr[1]), float(rot_arr[2]))
 		)
 	if hud_label:
-		hud_label.text = "Left-click to snap a photo"
+		hud_label.text = "Left Shift to snap a photo"
 	if round_name_label:
 		round_name_label.text = str(round_data.get("name", "Round"))
 

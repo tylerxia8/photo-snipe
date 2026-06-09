@@ -47,7 +47,13 @@ export function serveWebClient(req: IncomingMessage, res: ServerResponse): boole
   }
 
   const ext = extname(filePath);
-  res.writeHead(200, { "Content-Type": MIME[ext] ?? "application/octet-stream" });
+  const headers: Record<string, string> = {
+    "Content-Type": MIME[ext] ?? "application/octet-stream",
+  };
+  if (ext === ".html") {
+    headers["Cache-Control"] = "no-cache";
+  }
+  res.writeHead(200, headers);
   createReadStream(filePath).pipe(res);
   return true;
 }

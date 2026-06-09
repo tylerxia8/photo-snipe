@@ -16,27 +16,42 @@ function addBox(
 ): THREE.Mesh {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), material);
   mesh.position.copy(pos);
+  mesh.castShadow = false;
+  mesh.receiveShadow = true;
   parent.add(mesh);
 
-  const half = size.clone().multiplyScalar(0.5);
-  const box = new THREE.Box3().setFromCenterAndSize(pos, size);
-  colliders.push(box);
-  void half;
+  colliders.push(new THREE.Box3().setFromCenterAndSize(pos, size));
   return mesh;
+}
+
+function addMarker(
+  parent: THREE.Object3D,
+  pos: THREE.Vector3,
+  color: number,
+): void {
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.6, 0.6, 0.08, 24),
+    mat(color, 0.5),
+  );
+  mesh.position.set(pos.x, 0.04, pos.z);
+  parent.add(mesh);
 }
 
 export function buildWarehouse(scene: THREE.Scene): THREE.Box3[] {
   const group = new THREE.Group();
+  group.name = "warehouse";
   scene.add(group);
 
   const colliders: THREE.Box3[] = [];
   const floorMat = mat(0x525456);
   const wallMat = mat(0x737882);
+  const ceilingMat = mat(0x3a3d42);
   const crateMat = mat(0x856137);
   const shelfMat = mat(0x474d56);
   const metalMat = mat(0x8c9094, 0.4);
 
   addBox(group, new THREE.Vector3(0, -0.1, 0), new THREE.Vector3(48, 0.2, 48), floorMat, colliders);
+  addBox(group, new THREE.Vector3(0, WALL_HEIGHT + 0.05, 0), new THREE.Vector3(48, 0.1, 48), ceilingMat, colliders);
 
   addBox(group, new THREE.Vector3(0, WALL_HEIGHT * 0.5, -24), new THREE.Vector3(48, WALL_HEIGHT, WALL_THICKNESS), wallMat, colliders);
   addBox(group, new THREE.Vector3(0, WALL_HEIGHT * 0.5, 24), new THREE.Vector3(48, WALL_HEIGHT, WALL_THICKNESS), wallMat, colliders);
@@ -71,6 +86,9 @@ export function buildWarehouse(scene: THREE.Scene): THREE.Box3[] {
   for (const [x, y, z, sx, sy, sz] of crates) {
     addBox(group, new THREE.Vector3(x, y, z), new THREE.Vector3(sx, sy, sz), crateMat, colliders);
   }
+
+  addMarker(group, new THREE.Vector3(2, 0, -24), 0x3399ee);
+  addMarker(group, new THREE.Vector3(2, 0, 24), 0xe85c3c);
 
   return colliders;
 }

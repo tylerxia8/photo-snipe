@@ -39,18 +39,21 @@ export class Game {
     },
     mount: HTMLElement,
   ) {
-    this.scene.background = new THREE.Color(0x0a0a0c);
-    this.scene.fog = new THREE.Fog(0x0a0a0c, 20, 90);
+    this.scene.background = new THREE.Color(0x1a1c22);
+    this.scene.fog = new THREE.Fog(0x1a1c22, 35, 75);
 
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     mount.appendChild(this.renderer.domElement);
 
-    const hemi = new THREE.HemisphereLight(0x8899aa, 0x222222, 0.6);
+    const hemi = new THREE.HemisphereLight(0xb8c4d4, 0x3a3a40, 0.85);
     this.scene.add(hemi);
-    const sun = new THREE.DirectionalLight(0xfff5e6, 1.1);
+    const sun = new THREE.DirectionalLight(0xfff5e6, 1.35);
     sun.position.set(10, 20, 8);
     this.scene.add(sun);
+    const fill = new THREE.DirectionalLight(0x8899bb, 0.35);
+    fill.position.set(-8, 12, -10);
+    this.scene.add(fill);
 
     const body = new THREE.Mesh(
       new THREE.CapsuleGeometry(0.4, 1.0, 4, 8),
@@ -62,6 +65,8 @@ export class Game {
 
     this.controls = new PointerLockControls(this.camera, this.renderer.domElement);
     this.scene.add(this.controls.getObject());
+
+    this.colliders = buildWarehouse(this.scene);
 
     window.addEventListener("resize", () => this.onResize());
     window.addEventListener("keydown", (e) => this.onKeyDown(e));
@@ -75,7 +80,6 @@ export class Game {
       if (!locked) this.clearInputState();
       this.onLockChange?.(locked);
     });
-    this.renderer.domElement.addEventListener("mousedown", (e) => this.onMouseDown(e));
     window.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
@@ -84,10 +88,9 @@ export class Game {
   }
 
   startRound(spawn: { position: number[]; rotation: number[] }, roundName: string): void {
-    this.colliders = buildWarehouse(this.scene);
     this.active = true;
     this.hud.setRoundName(roundName);
-    this.hud.setMessage("Click to play · WASD move · Space jump · Left-click to snap a photo");
+    this.hud.setMessage("Click to play · WASD move · Space jump · Left Shift to snap a photo");
 
     const [x, y, z] = spawn.position;
     const [, rotY] = spawn.rotation;
@@ -233,16 +236,16 @@ export class Game {
       e.preventDefault();
       return;
     }
+    if (e.code === "ShiftLeft") {
+      if (!e.repeat) this.snapPhoto();
+      e.preventDefault();
+      return;
+    }
     this.keys.add(e.code);
   }
 
   private onKeyUp(e: KeyboardEvent): void {
     this.keys.delete(e.code);
-  }
-
-  private onMouseDown(e: MouseEvent): void {
-    if (!this.controls?.isLocked) return;
-    if (e.button === 0) this.snapPhoto();
   }
 
   private onResize(): void {
