@@ -80,6 +80,7 @@ export class MatchSession {
 
     for (const slot of ["A", "B"] as const) {
       const spawn = round.spawns[slot === "A" ? "playerA" : "playerB"];
+      const opponentSpawn = round.spawns[slot === "A" ? "playerB" : "playerA"];
       this.liveState[slot] = {
         position: [...spawn.position],
         rotation: [...spawn.rotation],
@@ -91,6 +92,17 @@ export class MatchSession {
         roundIndex: this.state.roundIndex,
         round,
         yourSpawn: spawn,
+        opponentSpawn,
+      });
+
+      const opponent = opponentSlot(slot);
+      const opp = this.liveState[opponent];
+      send(this.players[slot].socket, {
+        type: "opponent_state",
+        position: opp.position,
+        rotation: opp.rotation,
+        aiming: opp.aiming,
+        serverTimeMs: Date.now(),
       });
     }
 
@@ -174,7 +186,7 @@ export class MatchSession {
 
     const opponentPose: PlayerPose = {
       position: fromArray(oppState.position),
-      rotation: eulerFromArray(oppState.rotation),
+      rotation: { x: 0, y: oppState.rotation[1], z: 0 },
       aiming: oppState.aiming,
       bodyOffset: DEFAULT_BODY_OFFSET,
       bodyRadius: DEFAULT_BODY_RADIUS,

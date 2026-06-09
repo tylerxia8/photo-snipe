@@ -113,8 +113,8 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
     addBox(group, new THREE.Vector3(x, y, z), new THREE.Vector3(sx, sy, sz), crateMat, allBoxes);
   }
 
-  addMarker(group, new THREE.Vector3(0, 0, -22), 0x3399ee);
-  addMarker(group, new THREE.Vector3(0, 0, 22), 0xe85c3c);
+  addMarker(group, new THREE.Vector3(0, 0, -18), 0x3399ee);
+  addMarker(group, new THREE.Vector3(0, 0, 18), 0xe85c3c);
 
   const standSurfaces = allBoxes
     .filter((box) => box !== floorBox && box !== ceilingBox && box.max.y > 0.2)

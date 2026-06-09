@@ -6,7 +6,6 @@ const lobby = document.getElementById("lobby")!;
 const hud = document.getElementById("hud")!;
 const crosshair = document.getElementById("crosshair")!;
 const flash = document.getElementById("flash")!;
-const clickToPlay = document.getElementById("click-to-play")!;
 const statusEl = document.getElementById("status")!;
 const nameInput = document.getElementById("name-input") as HTMLInputElement;
 const roomInput = document.getElementById("room-input") as HTMLInputElement;
@@ -55,24 +54,18 @@ net.onMessage = (msg: ServerMessage) => {
     case "match_started":
       lobby.classList.add("hidden");
       hud.classList.remove("hidden");
-      clickToPlay.classList.remove("hidden");
       if (!game) {
         game = new Game(net, hudApi(), mount);
-        game.setLockChangeHandler((locked) => {
-          clickToPlay.classList.toggle("hidden", locked);
-        });
       }
       setStatus(`Match vs ${String(msg.opponentName)}`);
       break;
     case "round_started": {
       const round = msg.round as { name?: string };
       const spawn = msg.yourSpawn as { position: number[]; rotation: number[] };
-      game?.startRound(spawn, String(round?.name ?? "Round"));
+      const opponentSpawn = msg.opponentSpawn as { position: number[]; rotation: number[] };
+      game?.startRound(spawn, opponentSpawn, String(round?.name ?? "Round"));
       lobby.classList.add("hidden");
       hud.classList.remove("hidden");
-      if (game && !game.isLocked()) {
-        clickToPlay.classList.remove("hidden");
-      }
       break;
     }
     case "opponent_state":
@@ -94,7 +87,6 @@ net.onMessage = (msg: ServerMessage) => {
       break;
     case "match_ended":
       game?.endMatch();
-      clickToPlay.classList.remove("hidden");
       hudApi().setMessage(`Match over! Winner: ${String(msg.winnerSlot)}`);
       break;
     case "error":
@@ -114,12 +106,6 @@ document.getElementById("join-btn")!.addEventListener("click", () => {
     return;
   }
   net.joinRoom(code, displayName());
-});
-
-mount.addEventListener("click", () => {
-  if (game?.isActive() && !game.isLocked()) {
-    game.requestLock();
-  }
 });
 
 let last = performance.now();

@@ -9,9 +9,10 @@ import {
 } from "./warehouse.js";
 
 const WALK_SPEED = 3;
-const JUMP_VELOCITY = 4.5;
-const GRAVITY = 16;
+const JUMP_VELOCITY = 8;
+const GRAVITY = 18;
 const EYE_OFFSET = 0.6;
+const BODY_VISUAL_OFFSET = 0.9;
 
 export class Game {
   readonly scene = new THREE.Scene();
@@ -33,7 +34,6 @@ export class Game {
   private onFloor = true;
   private jumpQueued = false;
   private groundEyeY = 1.6;
-  private onLockChange: ((locked: boolean) => void) | null = null;
 
   constructor(
     private net: NetClient,
@@ -66,7 +66,7 @@ export class Game {
       new THREE.CapsuleGeometry(0.4, 1.0, 4, 8),
       new THREE.MeshStandardMaterial({ color: 0xe74c3c }),
     );
-    body.position.y = 0.9;
+    body.position.y = BODY_VISUAL_OFFSET;
     this.opponent.add(body);
     this.scene.add(this.opponent);
 
@@ -78,12 +78,6 @@ export class Game {
     this.standSurfaces = warehouse.standSurfaces;
     this.defaultFeetY = warehouse.defaultFeetY;
 
-    this.renderer.domElement.addEventListener("click", () => {
-      if (this.active && !this.controls?.isLocked) {
-        this.requestLock();
-      }
-    });
-
     window.addEventListener("resize", () => this.onResize());
     window.addEventListener("keydown", (e) => this.onKeyDown(e));
     window.addEventListener("keyup", (e) => this.onKeyUp(e));
@@ -92,25 +86,30 @@ export class Game {
       if (document.hidden) this.clearInputState();
     });
     document.addEventListener("pointerlockchange", () => {
-      const locked = document.pointerLockElement === this.renderer.domElement;
-      if (!locked) this.clearInputState();
-      this.onLockChange?.(locked);
+      if (document.pointerLockElement !== this.renderer.domElement) {
+        this.clearInputState();
+      }
+    });
+    document.addEventListener("click", () => {
+      if (this.active && !this.controls?.isLocked) {
+        this.requestLock();
+      }
     });
     window.addEventListener("contextmenu", (e) => e.preventDefault());
-  }
-
-  setLockChangeHandler(handler: (locked: boolean) => void): void {
-    this.onLockChange = handler;
   }
 
   isActive(): boolean {
     return this.active;
   }
 
-  startRound(spawn: { position: number[]; rotation: number[] }, roundName: string): void {
+  startRound(
+    spawn: { position: number[]; rotation: number[] },
+    opponentSpawn: { position: number[]; rotation: number[] },
+    roundName: string,
+  ): void {
     this.active = true;
     this.hud.setRoundName(roundName);
-    this.hud.setMessage("Click anywhere to play · WASD move · Space jump · Left Shift to snap a photo");
+    this.hud.setMessage("WASD move · Space jump · Left Shift to snap a photo");
 
     const [x, y, z] = spawn.position;
     const [, rotY] = spawn.rotation;
@@ -128,6 +127,8 @@ export class Game {
     obj.rotation.y = this.yaw;
     this.camera.position.copy(obj.position);
     this.camera.rotation.x = this.pitch;
+
+    this.updateOpponent(opponentSpawn.position, opponentSpawn.rotation);
   }
 
   endMatch(): void {
@@ -139,11 +140,7 @@ export class Game {
 
   updateOpponent(position: number[], rotation: number[]): void {
     this.opponent.position.set(position[0], position[1], position[2]);
-    this.opponent.rotation.set(
-      THREE.MathUtils.degToRad(rotation[0]),
-      THREE.MathUtils.degToRad(rotation[1]),
-      THREE.MathUtils.degToRad(rotation[2]),
-    );
+    this.opponent.rotation.set(0, THREE.MathUtils.degToRad(rotation[1]), 0);
   }
 
   tick(delta: number): void {
@@ -155,7 +152,7 @@ export class Game {
     }
 
     this.stateTimer += delta;
-    if (this.stateTimer >= 0.05 && this.controls?.isLocked) {
+    if (this.stateTimer >= 0.05 && this.active) {
       this.stateTimer = 0;
       this.sequence += 1;
       const obj = this.controls!.getObject();
