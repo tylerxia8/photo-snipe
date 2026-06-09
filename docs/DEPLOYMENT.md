@@ -12,25 +12,30 @@ Deploy the authoritative WebSocket game server for online 1v1 matches.
 
 [Railway](https://railway.app) supports WebSockets and Docker out of the box.
 
-### 1. Login and create project
+### Option A — Deploy from GitHub (no CLI login)
+
+Best if `railway login` fails in automated shells.
+
+1. Open **[railway.com/new](https://railway.com/new)** → **Deploy from GitHub repo**
+2. Install the [Railway GitHub App](https://github.com/apps/railway-app/installations/new) if prompted
+3. Select **`tylerxia8/photo-snipe`**
+4. Click **Deploy Now** — Railway reads `railway.toml` + root `Dockerfile`
+5. In the service → **Settings** → **Networking** → **Generate Domain**
+6. Copy the public URL (e.g. `photo-snipe-production.up.railway.app`)
+
+### Option B — CLI deploy (run in your own terminal)
+
+```powershell
+cd photo-snipe
+.\scripts\deploy-railway.ps1
+```
+
+Or manually:
 
 ```bash
 railway login
-cd photo-snipe
-railway init          # create new project
-```
-
-### 2. Deploy
-
-```bash
-railway up
-```
-
-Railway builds the root `Dockerfile` and exposes a public URL.
-
-### 3. Generate a public domain
-
-```bash
+railway init
+railway up --detach
 railway domain
 ```
 

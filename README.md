@@ -35,6 +35,8 @@ npm run dev:server    # WebSocket server on :8787
 
 **Deploy online:** see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) (Railway / Render / Docker).
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/tylerxia8/photo-snipe)
+
 Open `client/godot/` in Godot 4 and run the project. See [client/godot/README.md](client/godot/README.md).
 
 1. Player A: **Create Room** → share the 4-letter code
