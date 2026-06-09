@@ -9,6 +9,7 @@
     "build": "npm run build -w core && npm run build -w server",
     "test": "npm run test -w core",
     "dev:server": "npm run dev -w server",
+    "start": "node server/dist/index.js",
     "start:server": "npm run start -w server"
   }
 }

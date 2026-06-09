@@ -1,0 +1,12 @@
+# Fallback if Railway does not use Dockerfile
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build", "npm prune --omit=dev"]
+
+[start]
+cmd = "node server/dist/index.js"
