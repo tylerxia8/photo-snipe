@@ -1,6 +1,6 @@
 # Copy to network.cfg after deploying the server.
-# Railway example:
-server_url=wss://your-app.up.railway.app
+# Railway production:
+server_url=wss://photo-snipe-server-production-2274.up.railway.app
 
 # Render example:
 # server_url=wss://photo-snipe-server.onrender.com
