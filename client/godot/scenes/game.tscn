@@ -1,0 +1,74 @@
+[gd_scene load_steps=6 format=3 uid="uid://photosnipe_game"]
+
+[ext_resource type="Script" path="res://scripts/game_manager.gd" id="1_game"]
+[ext_resource type="Script" path="res://scripts/fps_controller.gd" id="2_fps"]
+[ext_resource type="Script" path="res://scripts/camera_controller.gd" id="3_cam"]
+[ext_resource type="Script" path="res://scripts/exposure_fx.gd" id="4_fx"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_opponent"]
+radius = 0.4
+height = 1.8
+
+[node name="Game" type="Node3D"]
+script = ExtResource("1_game")
+
+[node name="BuildingRoot" type="Node3D" parent="."]
+
+[node name="Player" type="CharacterBody3D" parent="." groups=["player"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1, -24)
+script = ExtResource("2_fps")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
+shape = SubResource("CapsuleShape3D_player")
+
+[node name="Camera3D" type="Camera3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+current = true
+fov = 75.0
+
+[node name="CameraController" type="Node" parent="Player"]
+script = ExtResource("3_cam")
+
+[node name="Opponent" type="Node3D" parent="."]
+
+[node name="Body" type="MeshInstance3D" parent="Opponent"]
+mesh = SubResource("CapsuleMesh_opponent")
+
+[node name="FaceHitVolume" type="Node3D" parent="Opponent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="HUD" type="Label" parent="UI"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 400.0
+offset_bottom = 48.0
+theme_override_font_sizes/font_size = 18
+text = "Waiting for round..."
+
+[node name="RoundName" type="Label" parent="UI"]
+offset_left = 16.0
+offset_top = 44.0
+offset_right = 400.0
+offset_bottom = 72.0
+theme_override_font_sizes/font_size = 14
+text = ""
+
+[node name="FlashOverlay" type="ColorRect" parent="UI"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.8)
+
+[node name="ExposureFX" type="Node" parent="."]
+script = ExtResource("4_fx")
+flash_overlay = NodePath("../UI/FlashOverlay")

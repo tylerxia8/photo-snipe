@@ -1,0 +1,14 @@
+{
+  "name": "photo-snipe",
+  "private": true,
+  "workspaces": [
+    "core",
+    "server"
+  ],
+  "scripts": {
+    "build": "npm run build -w core && npm run build -w server",
+    "test": "npm run test -w core",
+    "dev:server": "npm run dev -w server",
+    "start:server": "npm run start -w server"
+  }
+}

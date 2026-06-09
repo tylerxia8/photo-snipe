@@ -1,0 +1,9 @@
+{
+  "id": "duel-standard",
+  "name": "Standard Duel",
+  "roundPool": [
+    "warehouse-interior-01"
+  ],
+  "roundsToWin": 2,
+  "overtimeEnabled": false
+}

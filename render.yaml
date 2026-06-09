@@ -1,0 +1,14 @@
+# Render Blueprint — alternative to Railway
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: photo-snipe-server
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0

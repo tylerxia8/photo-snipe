@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+.git
+.gitignore
+client
+docs
+*.md
+.env
+.env.*
+core/src/**/*.test.ts
+core/node_modules
+server/node_modules
+client/godot/.godot

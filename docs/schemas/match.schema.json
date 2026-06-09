@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tylerxia8/photo-snipe/schemas/match.schema.json",
+  "title": "PhotoSnipe Match Config",
+  "type": "object",
+  "required": ["id", "roundPool", "roundsToWin"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "name": {
+      "type": "string"
+    },
+    "roundPool": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "description": "Round ID referencing a file in data/rounds/"
+      }
+    },
+    "roundsToWin": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "First player to win this many rounds wins the match"
+    },
+    "overtimeEnabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, tied rounds (timer expiry) trigger overtime"
+    }
+  }
+}

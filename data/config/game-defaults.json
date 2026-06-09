@@ -1,0 +1,7 @@
+{
+  "movement": {
+    "walkSpeedMps": 3.0,
+    "aimModeSpeedMultiplier": 0.6,
+    "sprintEnabled": false
+  }
+}
