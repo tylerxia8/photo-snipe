@@ -4,10 +4,9 @@ import type { NetClient } from "../net/client.js";
 import { buildWarehouse, resolveCollision } from "./warehouse.js";
 
 const WALK_SPEED = 3;
-const JUMP_VELOCITY = 5;
-const GRAVITY = 9.8;
+const JUMP_VELOCITY = 2.2;
+const GRAVITY = 16;
 const EYE_OFFSET = 0.6;
-const GROUND_FEET_Y = 1;
 
 export class Game {
   readonly scene = new THREE.Scene();
@@ -26,6 +25,7 @@ export class Game {
   private verticalVelocity = 0;
   private onFloor = true;
   private jumpQueued = false;
+  private groundEyeY = 1.6;
   private onLockChange: ((locked: boolean) => void) | null = null;
 
   constructor(
@@ -96,13 +96,16 @@ export class Game {
     const [, rotY] = spawn.rotation;
     this.yaw = THREE.MathUtils.degToRad(rotY);
     this.pitch = 0;
+    this.groundEyeY = y + EYE_OFFSET;
     this.verticalVelocity = 0;
     this.onFloor = true;
     this.jumpQueued = false;
     this.clearInputState();
 
-    this.setEyePosition(x, y + EYE_OFFSET, z);
-    this.controls!.getObject().rotation.y = this.yaw;
+    const obj = this.controls!.getObject();
+    obj.position.set(x, this.groundEyeY, z);
+    obj.rotation.y = this.yaw;
+    this.camera.position.copy(obj.position);
     this.camera.rotation.x = this.pitch;
 
     this.requestLock();
@@ -136,9 +139,9 @@ export class Game {
     if (this.stateTimer >= 0.05 && this.controls?.isLocked) {
       this.stateTimer = 0;
       this.sequence += 1;
-      const feet = this.getFeetPosition();
+      const obj = this.controls!.getObject();
       this.net.sendPlayerState(
-        [feet.x, feet.y, feet.z],
+        [obj.position.x, obj.position.y - EYE_OFFSET, obj.position.z],
         [
           THREE.MathUtils.radToDeg(this.pitch),
           THREE.MathUtils.radToDeg(this.yaw),
@@ -152,30 +155,16 @@ export class Game {
     this.renderer.render(this.scene, this.camera);
   }
 
-  private setEyePosition(x: number, y: number, z: number): void {
-    this.camera.position.set(x, y, z);
-    this.controls!.getObject().position.copy(this.camera.position);
-  }
-
-  private getFeetPosition(): THREE.Vector3 {
-    return new THREE.Vector3(
-      this.camera.position.x,
-      this.camera.position.y - EYE_OFFSET,
-      this.camera.position.z,
-    );
-  }
-
   private updateMovement(delta: number): void {
     if (!this.controls?.isLocked) return;
 
     const speed = WALK_SPEED * delta;
+    const obj = this.controls.getObject();
     const forward = new THREE.Vector3();
     this.controls.getDirection(forward);
     forward.y = 0;
     forward.normalize();
     const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
-
-    const feet = this.getFeetPosition();
 
     const move = new THREE.Vector3();
     if (this.keys.has("KeyW")) move.add(forward);
@@ -184,7 +173,8 @@ export class Game {
     if (this.keys.has("KeyD")) move.add(right);
     if (move.lengthSq() > 0) {
       move.normalize().multiplyScalar(speed);
-      feet.add(move);
+      obj.position.add(move);
+      obj.position.copy(resolveCollision(obj.position, this.colliders));
     }
 
     if (this.jumpQueued && this.onFloor) {
@@ -193,21 +183,19 @@ export class Game {
       this.jumpQueued = false;
     }
 
-    this.verticalVelocity -= GRAVITY * delta;
-    feet.y += this.verticalVelocity * delta;
-
-    if (feet.y <= GROUND_FEET_Y) {
-      feet.y = GROUND_FEET_Y;
-      this.verticalVelocity = 0;
-      this.onFloor = true;
+    if (!this.onFloor) {
+      this.verticalVelocity -= GRAVITY * delta;
+      obj.position.y += this.verticalVelocity * delta;
+      if (obj.position.y <= this.groundEyeY) {
+        obj.position.y = this.groundEyeY;
+        this.verticalVelocity = 0;
+        this.onFloor = true;
+      }
     }
 
-    const resolved = resolveCollision(feet, this.colliders);
-    feet.copy(resolved);
-
-    this.setEyePosition(feet.x, feet.y + EYE_OFFSET, feet.z);
-    this.controls.getObject().rotation.y = this.yaw;
+    this.yaw = obj.rotation.y;
     this.pitch = this.camera.rotation.x;
+    this.camera.position.copy(obj.position);
   }
 
   private snapPhoto(): void {
