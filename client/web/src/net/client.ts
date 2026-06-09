@@ -77,6 +77,7 @@ export class NetClient {
     cameraRotation: [number, number, number],
     fovDeg: number,
     aiming: boolean,
+    aspectRatio: number,
   ): void {
     this.send({
       type: "photo_attempt",
@@ -84,6 +85,7 @@ export class NetClient {
       cameraRotation,
       fovDeg,
       aiming,
+      aspectRatio,
     });
   }
 }

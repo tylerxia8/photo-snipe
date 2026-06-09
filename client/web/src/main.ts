@@ -116,7 +116,11 @@ document.getElementById("join-btn")!.addEventListener("click", () => {
   net.joinRoom(code, displayName());
 });
 
-clickToPlay.addEventListener("click", () => game?.requestLock());
+mount.addEventListener("click", () => {
+  if (game?.isActive() && !game.isLocked()) {
+    game.requestLock();
+  }
+});
 
 let last = performance.now();
 function frame(now: number): void {

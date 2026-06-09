@@ -233,6 +233,10 @@ async function handleMessage(
       const cameraPosition = message.cameraPosition;
       const cameraRotation = message.cameraRotation;
       const fovDeg = typeof message.fovDeg === "number" ? message.fovDeg : 60;
+      const aspectRatio =
+        typeof message.aspectRatio === "number" && message.aspectRatio > 0
+          ? message.aspectRatio
+          : 16 / 9;
 
       if (
         !Array.isArray(cameraPosition) ||
@@ -249,6 +253,7 @@ async function handleMessage(
         cameraRotation as [number, number, number],
         fovDeg,
         Boolean(message.aiming),
+        aspectRatio,
       );
       break;
     }

@@ -140,6 +140,7 @@ export class MatchSession {
     cameraRotation: [number, number, number],
     fovDeg: number,
     aiming: boolean,
+    aspectRatio = 16 / 9,
   ): void {
     if (this.state.phase !== "round_active" || !this.state.currentRound) {
       return;
@@ -184,7 +185,7 @@ export class MatchSession {
       attempt,
       opponentPose,
       rules,
-      { lastAttemptMs: this.liveState[slot].lastPhotoAttemptMs, skipOcclusion: true },
+      { lastAttemptMs: this.liveState[slot].lastPhotoAttemptMs, skipOcclusion: true, aspectRatio },
     );
 
     this.liveState[slot].lastPhotoAttemptMs = timestampMs;

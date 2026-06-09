@@ -37,8 +37,8 @@ function isPointInCameraFrustum(
     return false;
   }
 
-  const halfVFov = ((fovDeg / aspectRatio) * Math.PI) / 180 / 2;
-  const halfHFov = (fovDeg * Math.PI) / 180 / 2;
+  const halfVFov = (fovDeg * Math.PI) / 180 / 2;
+  const halfHFov = Math.atan(Math.tan(halfVFov) * aspectRatio);
 
   const localX = dot(dir, right);
   const localY = dot(dir, up);
@@ -76,6 +76,7 @@ function bodySamplePoints(pose: PlayerPose): Vector3[] {
 function isBodyInFrame(
   attempt: PhotoAttempt,
   opponent: PlayerPose,
+  aspectRatio: number,
 ): boolean {
   const samples = bodySamplePoints(opponent);
   return samples.some((point) =>
@@ -84,6 +85,7 @@ function isBodyInFrame(
       attempt.cameraRotation,
       attempt.fovDeg,
       point,
+      aspectRatio,
     ),
   );
 }
@@ -91,6 +93,7 @@ function isBodyInFrame(
 export interface ValidatePhotoOptions {
   lastAttemptMs?: number;
   skipOcclusion?: boolean;
+  aspectRatio?: number;
 }
 
 export function validatePhoto(
@@ -99,6 +102,7 @@ export function validatePhoto(
   rules: RoundRules,
   options: ValidatePhotoOptions = { skipOcclusion: true },
 ): PhotoValidationResult {
+  const aspectRatio = options.aspectRatio ?? 16 / 9;
   if (rules.requireAimMode && !attempt.aiming) {
     return { valid: false, reason: "not_aiming" };
   }
@@ -124,7 +128,7 @@ export function validatePhoto(
   const requireBody =
     rules.requireBodyInFrame ?? rules.requireFaceInFrame ?? true;
 
-  if (requireBody && !isBodyInFrame(attempt, opponent)) {
+  if (requireBody && !isBodyInFrame(attempt, opponent, aspectRatio)) {
     return { valid: false, reason: "body_out_of_frame" };
   }
 

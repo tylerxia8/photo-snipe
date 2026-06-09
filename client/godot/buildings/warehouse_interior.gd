@@ -141,8 +141,8 @@ func _build_spawn_markers() -> void:
 	markers.name = "SpawnMarkers"
 	add_child(markers)
 
-	_add_marker(markers, Vector3(2, 0.05, -24), Color(0.2, 0.5, 0.9), "SpawnA")
-	_add_marker(markers, Vector3(2, 0.05, 24), Color(0.9, 0.35, 0.2), "SpawnB")
+	_add_marker(markers, Vector3(0, 0.05, -22), Color(0.2, 0.5, 0.9), "SpawnA")
+	_add_marker(markers, Vector3(0, 0.05, 22), Color(0.9, 0.35, 0.2), "SpawnB")
 
 func _add_marker(parent: Node3D, pos: Vector3, color: Color, marker_name: String) -> void:
 	var mesh_inst := MeshInstance3D.new()

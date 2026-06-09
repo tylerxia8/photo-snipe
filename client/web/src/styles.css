@@ -144,4 +144,5 @@ button:hover {
   z-index: 6;
   font-size: 0.85rem;
   color: #e5e7eb;
+  pointer-events: none;
 }

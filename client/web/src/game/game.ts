@@ -1,10 +1,15 @@
 import * as THREE from "three";
 import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js";
 import type { NetClient } from "../net/client.js";
-import { buildWarehouse, resolveCollision } from "./warehouse.js";
+import {
+  buildWarehouse,
+  getSupportedFeetY,
+  resolveCollision,
+  type StandSurface,
+} from "./warehouse.js";
 
 const WALK_SPEED = 3;
-const JUMP_VELOCITY = 2.2;
+const JUMP_VELOCITY = 4.5;
 const GRAVITY = 16;
 const EYE_OFFSET = 0.6;
 
@@ -16,6 +21,8 @@ export class Game {
 
   private controls: PointerLockControls | null = null;
   private colliders: THREE.Box3[] = [];
+  private standSurfaces: StandSurface[] = [];
+  private defaultFeetY = 1;
   private keys = new Set<string>();
   private sequence = 0;
   private stateTimer = 0;
@@ -66,7 +73,16 @@ export class Game {
     this.controls = new PointerLockControls(this.camera, this.renderer.domElement);
     this.scene.add(this.controls.getObject());
 
-    this.colliders = buildWarehouse(this.scene);
+    const warehouse = buildWarehouse(this.scene);
+    this.colliders = warehouse.colliders;
+    this.standSurfaces = warehouse.standSurfaces;
+    this.defaultFeetY = warehouse.defaultFeetY;
+
+    this.renderer.domElement.addEventListener("click", () => {
+      if (this.active && !this.controls?.isLocked) {
+        this.requestLock();
+      }
+    });
 
     window.addEventListener("resize", () => this.onResize());
     window.addEventListener("keydown", (e) => this.onKeyDown(e));
@@ -87,15 +103,20 @@ export class Game {
     this.onLockChange = handler;
   }
 
+  isActive(): boolean {
+    return this.active;
+  }
+
   startRound(spawn: { position: number[]; rotation: number[] }, roundName: string): void {
     this.active = true;
     this.hud.setRoundName(roundName);
-    this.hud.setMessage("Click to play · WASD move · Space jump · Left Shift to snap a photo");
+    this.hud.setMessage("Click anywhere to play · WASD move · Space jump · Left Shift to snap a photo");
 
     const [x, y, z] = spawn.position;
     const [, rotY] = spawn.rotation;
     this.yaw = THREE.MathUtils.degToRad(rotY);
     this.pitch = 0;
+    this.defaultFeetY = y;
     this.groundEyeY = y + EYE_OFFSET;
     this.verticalVelocity = 0;
     this.onFloor = true;
@@ -107,8 +128,6 @@ export class Game {
     obj.rotation.y = this.yaw;
     this.camera.position.copy(obj.position);
     this.camera.rotation.x = this.pitch;
-
-    this.requestLock();
   }
 
   endMatch(): void {
@@ -142,17 +161,28 @@ export class Game {
       const obj = this.controls!.getObject();
       this.net.sendPlayerState(
         [obj.position.x, obj.position.y - EYE_OFFSET, obj.position.z],
-        [
-          THREE.MathUtils.radToDeg(this.pitch),
-          THREE.MathUtils.radToDeg(this.yaw),
-          0,
-        ],
+        this.getCameraRotationDeg(),
         false,
         this.sequence,
       );
     }
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  private getCameraRotationDeg(): [number, number, number] {
+    const forward = new THREE.Vector3();
+    this.controls!.getDirection(forward);
+    const pitch = THREE.MathUtils.radToDeg(
+      -Math.asin(Math.max(-1, Math.min(1, forward.y))),
+    );
+    const yaw = THREE.MathUtils.radToDeg(Math.atan2(forward.x, forward.z));
+    return [pitch, yaw, 0];
+  }
+
+  private getSupportedEyeY(x: number, z: number): number {
+    const feetY = getSupportedFeetY(x, z, this.standSurfaces, this.defaultFeetY);
+    return feetY + EYE_OFFSET;
   }
 
   private updateMovement(delta: number): void {
@@ -186,10 +216,21 @@ export class Game {
     if (!this.onFloor) {
       this.verticalVelocity -= GRAVITY * delta;
       obj.position.y += this.verticalVelocity * delta;
-      if (obj.position.y <= this.groundEyeY) {
-        obj.position.y = this.groundEyeY;
+
+      const supportedEyeY = this.getSupportedEyeY(obj.position.x, obj.position.z);
+      if (obj.position.y <= supportedEyeY && this.verticalVelocity <= 0) {
+        obj.position.y = supportedEyeY;
+        this.groundEyeY = supportedEyeY;
         this.verticalVelocity = 0;
         this.onFloor = true;
+      }
+    } else {
+      const supportedEyeY = this.getSupportedEyeY(obj.position.x, obj.position.z);
+      if (obj.position.y > supportedEyeY + 0.05) {
+        this.onFloor = false;
+      } else {
+        obj.position.y = supportedEyeY;
+        this.groundEyeY = supportedEyeY;
       }
     }
 
@@ -202,13 +243,10 @@ export class Game {
     if (!this.active || !this.controls?.isLocked) return;
     this.net.sendPhotoAttempt(
       [this.camera.position.x, this.camera.position.y, this.camera.position.z],
-      [
-        THREE.MathUtils.radToDeg(this.pitch),
-        THREE.MathUtils.radToDeg(this.yaw),
-        0,
-      ],
+      this.getCameraRotationDeg(),
       this.camera.fov,
       false,
+      this.camera.aspect,
     );
     this.hud.flash();
   }

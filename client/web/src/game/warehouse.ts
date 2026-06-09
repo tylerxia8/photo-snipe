@@ -2,6 +2,21 @@ import * as THREE from "three";
 
 const WALL_HEIGHT = 5;
 const WALL_THICKNESS = 0.4;
+const DEFAULT_FEET_Y = 1;
+
+export interface StandSurface {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+  feetY: number;
+}
+
+export interface WarehouseBuild {
+  colliders: THREE.Box3[];
+  standSurfaces: StandSurface[];
+  defaultFeetY: number;
+}
 
 function mat(color: number, roughness = 0.85): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ color, roughness });
@@ -13,15 +28,16 @@ function addBox(
   size: THREE.Vector3,
   material: THREE.Material,
   colliders: THREE.Box3[],
-): THREE.Mesh {
+): THREE.Box3 {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), material);
   mesh.position.copy(pos);
   mesh.castShadow = false;
   mesh.receiveShadow = true;
   parent.add(mesh);
 
-  colliders.push(new THREE.Box3().setFromCenterAndSize(pos, size));
-  return mesh;
+  const box = new THREE.Box3().setFromCenterAndSize(pos, size);
+  colliders.push(box);
+  return box;
 }
 
 function addMarker(
@@ -37,12 +53,22 @@ function addMarker(
   parent.add(mesh);
 }
 
-export function buildWarehouse(scene: THREE.Scene): THREE.Box3[] {
+function boxToSurface(box: THREE.Box3): StandSurface {
+  return {
+    minX: box.min.x,
+    maxX: box.max.x,
+    minZ: box.min.z,
+    maxZ: box.max.z,
+    feetY: box.max.y,
+  };
+}
+
+export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
   const group = new THREE.Group();
   group.name = "warehouse";
   scene.add(group);
 
-  const colliders: THREE.Box3[] = [];
+  const allBoxes: THREE.Box3[] = [];
   const floorMat = mat(0x525456);
   const wallMat = mat(0x737882);
   const ceilingMat = mat(0x3a3d42);
@@ -50,31 +76,31 @@ export function buildWarehouse(scene: THREE.Scene): THREE.Box3[] {
   const shelfMat = mat(0x474d56);
   const metalMat = mat(0x8c9094, 0.4);
 
-  addBox(group, new THREE.Vector3(0, -0.1, 0), new THREE.Vector3(48, 0.2, 48), floorMat, colliders);
-  addBox(group, new THREE.Vector3(0, WALL_HEIGHT + 0.05, 0), new THREE.Vector3(48, 0.1, 48), ceilingMat, colliders);
+  const floorBox = addBox(group, new THREE.Vector3(0, -0.1, 0), new THREE.Vector3(48, 0.2, 48), floorMat, allBoxes);
+  const ceilingBox = addBox(group, new THREE.Vector3(0, WALL_HEIGHT + 0.05, 0), new THREE.Vector3(48, 0.1, 48), ceilingMat, allBoxes);
 
-  addBox(group, new THREE.Vector3(0, WALL_HEIGHT * 0.5, -24), new THREE.Vector3(48, WALL_HEIGHT, WALL_THICKNESS), wallMat, colliders);
-  addBox(group, new THREE.Vector3(0, WALL_HEIGHT * 0.5, 24), new THREE.Vector3(48, WALL_HEIGHT, WALL_THICKNESS), wallMat, colliders);
-  addBox(group, new THREE.Vector3(24, WALL_HEIGHT * 0.5, 0), new THREE.Vector3(WALL_THICKNESS, WALL_HEIGHT, 48), wallMat, colliders);
-  addBox(group, new THREE.Vector3(-24, WALL_HEIGHT * 0.5, 0), new THREE.Vector3(WALL_THICKNESS, WALL_HEIGHT, 48), wallMat, colliders);
+  addBox(group, new THREE.Vector3(0, WALL_HEIGHT * 0.5, -24), new THREE.Vector3(48, WALL_HEIGHT, WALL_THICKNESS), wallMat, allBoxes);
+  addBox(group, new THREE.Vector3(0, WALL_HEIGHT * 0.5, 24), new THREE.Vector3(48, WALL_HEIGHT, WALL_THICKNESS), wallMat, allBoxes);
+  addBox(group, new THREE.Vector3(24, WALL_HEIGHT * 0.5, 0), new THREE.Vector3(WALL_THICKNESS, WALL_HEIGHT, 48), wallMat, allBoxes);
+  addBox(group, new THREE.Vector3(-24, WALL_HEIGHT * 0.5, 0), new THREE.Vector3(WALL_THICKNESS, WALL_HEIGHT, 48), wallMat, allBoxes);
 
   for (const [x, z] of [
     [-12, -14], [12, -14], [-12, 0], [12, 0], [-12, 14], [12, 14],
   ] as const) {
-    addBox(group, new THREE.Vector3(x, 2.5, z), new THREE.Vector3(16, 5, WALL_THICKNESS), wallMat, colliders);
+    addBox(group, new THREE.Vector3(x, 2.5, z), new THREE.Vector3(16, 5, WALL_THICKNESS), wallMat, allBoxes);
   }
 
   for (const z of [-18, -8, 8, 18]) {
-    addBox(group, new THREE.Vector3(16, 1.25, z), new THREE.Vector3(4, 2.5, 6), shelfMat, colliders);
-    addBox(group, new THREE.Vector3(-16, 1.25, z), new THREE.Vector3(4, 2.5, 6), shelfMat, colliders);
+    addBox(group, new THREE.Vector3(16, 1.25, z), new THREE.Vector3(4, 2.5, 6), shelfMat, allBoxes);
+    addBox(group, new THREE.Vector3(-16, 1.25, z), new THREE.Vector3(4, 2.5, 6), shelfMat, allBoxes);
   }
 
   for (const [x, z] of [[8, -6], [-8, 6], [8, 6], [-8, -6]] as const) {
-    addBox(group, new THREE.Vector3(x, 3, z), new THREE.Vector3(0.8, 6, 0.8), metalMat, colliders);
+    addBox(group, new THREE.Vector3(x, 3, z), new THREE.Vector3(0.8, 6, 0.8), metalMat, allBoxes);
   }
 
-  addBox(group, new THREE.Vector3(0, 1, 0), new THREE.Vector3(7, 2, 5), crateMat, colliders);
-  addBox(group, new THREE.Vector3(0, 2.6, 0), new THREE.Vector3(5, 2, 3.5), crateMat, colliders);
+  addBox(group, new THREE.Vector3(0, 1, 0), new THREE.Vector3(7, 2, 5), crateMat, allBoxes);
+  addBox(group, new THREE.Vector3(0, 2.6, 0), new THREE.Vector3(5, 2, 3.5), crateMat, allBoxes);
 
   const crates: Array<[number, number, number, number, number, number]> = [
     [6, 0.75, -20, 2, 1.5, 2], [-5, 0.75, -18, 1.5, 1.2, 1.5],
@@ -84,13 +110,40 @@ export function buildWarehouse(scene: THREE.Scene): THREE.Box3[] {
     [3, 0.75, -2, 2, 1.5, 2], [-4, 0.75, 3, 1.5, 1.2, 1.5],
   ];
   for (const [x, y, z, sx, sy, sz] of crates) {
-    addBox(group, new THREE.Vector3(x, y, z), new THREE.Vector3(sx, sy, sz), crateMat, colliders);
+    addBox(group, new THREE.Vector3(x, y, z), new THREE.Vector3(sx, sy, sz), crateMat, allBoxes);
   }
 
-  addMarker(group, new THREE.Vector3(2, 0, -24), 0x3399ee);
-  addMarker(group, new THREE.Vector3(2, 0, 24), 0xe85c3c);
+  addMarker(group, new THREE.Vector3(0, 0, -22), 0x3399ee);
+  addMarker(group, new THREE.Vector3(0, 0, 22), 0xe85c3c);
 
-  return colliders;
+  const standSurfaces = allBoxes
+    .filter((box) => box !== floorBox && box !== ceilingBox && box.max.y > 0.2)
+    .map(boxToSurface);
+
+  const colliders = allBoxes.filter((box) => box !== floorBox && box !== ceilingBox);
+
+  return { colliders, standSurfaces, defaultFeetY: DEFAULT_FEET_Y };
+}
+
+export function getSupportedFeetY(
+  x: number,
+  z: number,
+  surfaces: StandSurface[],
+  defaultFeetY: number,
+): number {
+  let best = defaultFeetY;
+  for (const surface of surfaces) {
+    if (
+      x >= surface.minX &&
+      x <= surface.maxX &&
+      z >= surface.minZ &&
+      z <= surface.maxZ &&
+      surface.feetY > best
+    ) {
+      best = surface.feetY;
+    }
+  }
+  return best;
 }
 
 export function resolveCollision(
