@@ -82,7 +82,7 @@ net.onMessage = (msg: ServerMessage) => {
       if (msg.valid) {
         hudApi().setMessage("Valid capture!");
       } else {
-        hudApi().setMessage(`Miss: ${String(msg.reason ?? "unknown")}`);
+        hudApi().setMessage("Miss");
       }
       break;
     case "match_ended":

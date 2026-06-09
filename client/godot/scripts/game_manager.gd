@@ -85,7 +85,7 @@ func _handle_photo_result(payload: Dictionary) -> void:
 		if payload.get("valid", false):
 			hud_label.text = "Valid capture!"
 		else:
-			hud_label.text = "Miss: %s" % str(payload.get("reason", "unknown"))
+			hud_label.text = "Miss"
 
 func _handle_match_end(payload: Dictionary) -> void:
 	if hud_label:
