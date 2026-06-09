@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getWarehouseInteriorOccluders } from "../arena/warehouse-interior.js";
 import {
   DEFAULT_BODY_HALF_HEIGHT,
   DEFAULT_BODY_OFFSET,
@@ -23,9 +24,9 @@ const baseRules: RoundRules = {
   },
 };
 
-function opponentAt(z: number, yaw = 180): PlayerPose {
+function opponentAt(z: number, yaw = 180, x = 0, y = 0): PlayerPose {
   return {
-    position: { x: 0, y: 0, z },
+    position: { x, y, z },
     rotation: { x: 0, y: yaw, z: 0 },
     aiming: false,
     bodyOffset: DEFAULT_BODY_OFFSET,
@@ -119,5 +120,33 @@ describe("validatePhoto", () => {
       { skipOcclusion: true },
     );
     expect(result).toEqual({ valid: false, reason: "body_out_of_frame" });
+  });
+
+  it("rejects when a wall blocks line of sight", () => {
+    const occluders = getWarehouseInteriorOccluders();
+    const result = validatePhoto(
+      attemptFacingOpponent({
+        cameraPosition: { x: -10, y: 1.6, z: -5 },
+        cameraRotation: { x: 0, y: 0, z: 0 },
+      }),
+      opponentAt(5, 180, -10),
+      baseRules,
+      { skipOcclusion: false, occluders },
+    );
+    expect(result).toEqual({ valid: false, reason: "body_occluded" });
+  });
+
+  it("accepts when opponent is in frame and unobstructed", () => {
+    const occluders = getWarehouseInteriorOccluders();
+    const result = validatePhoto(
+      attemptFacingOpponent({
+        cameraPosition: { x: 0, y: 1.6, z: 5 },
+        cameraRotation: { x: 0, y: 0, z: 0 },
+      }),
+      opponentAt(12, 180, 0),
+      baseRules,
+      { skipOcclusion: false, occluders },
+    );
+    expect(result.valid).toBe(true);
   });
 });

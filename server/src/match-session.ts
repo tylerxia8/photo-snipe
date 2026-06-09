@@ -7,6 +7,7 @@ import {
   DEFAULT_BODY_RADIUS,
   endRound,
   fromArray,
+  getOccludersForBuilding,
   nextRoundId,
   startRound,
   validatePhoto,
@@ -197,7 +198,12 @@ export class MatchSession {
       attempt,
       opponentPose,
       rules,
-      { lastAttemptMs: this.liveState[slot].lastPhotoAttemptMs, skipOcclusion: true, aspectRatio },
+      {
+        lastAttemptMs: this.liveState[slot].lastPhotoAttemptMs,
+        skipOcclusion: false,
+        aspectRatio,
+        occluders: getOccludersForBuilding(this.state.currentRound.building.id),
+      },
     );
 
     this.liveState[slot].lastPhotoAttemptMs = timestampMs;

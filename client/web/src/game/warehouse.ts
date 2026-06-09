@@ -3,6 +3,7 @@ import * as THREE from "three";
 const WALL_HEIGHT = 5;
 const WALL_THICKNESS = 0.4;
 const DEFAULT_FEET_Y = 1;
+const PLAYER_RADIUS = 0.35;
 
 export interface StandSurface {
   minX: number;
@@ -13,7 +14,7 @@ export interface StandSurface {
 }
 
 export interface WarehouseBuild {
-  colliders: THREE.Box3[];
+  wallColliders: THREE.Box3[];
   standSurfaces: StandSurface[];
   defaultFeetY: number;
 }
@@ -69,6 +70,7 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
   scene.add(group);
 
   const allBoxes: THREE.Box3[] = [];
+  const wallBoxes: THREE.Box3[] = [];
   const floorMat = mat(0x525456);
   const wallMat = mat(0x737882);
   const ceilingMat = mat(0x3a3d42);
@@ -79,15 +81,20 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
   const floorBox = addBox(group, new THREE.Vector3(0, -0.1, 0), new THREE.Vector3(48, 0.2, 48), floorMat, allBoxes);
   const ceilingBox = addBox(group, new THREE.Vector3(0, WALL_HEIGHT + 0.05, 0), new THREE.Vector3(48, 0.1, 48), ceilingMat, allBoxes);
 
-  addBox(group, new THREE.Vector3(0, WALL_HEIGHT * 0.5, -24), new THREE.Vector3(48, WALL_HEIGHT, WALL_THICKNESS), wallMat, allBoxes);
-  addBox(group, new THREE.Vector3(0, WALL_HEIGHT * 0.5, 24), new THREE.Vector3(48, WALL_HEIGHT, WALL_THICKNESS), wallMat, allBoxes);
-  addBox(group, new THREE.Vector3(24, WALL_HEIGHT * 0.5, 0), new THREE.Vector3(WALL_THICKNESS, WALL_HEIGHT, 48), wallMat, allBoxes);
-  addBox(group, new THREE.Vector3(-24, WALL_HEIGHT * 0.5, 0), new THREE.Vector3(WALL_THICKNESS, WALL_HEIGHT, 48), wallMat, allBoxes);
+  const addWall = (pos: THREE.Vector3, size: THREE.Vector3) => {
+    const box = addBox(group, pos, size, wallMat, allBoxes);
+    wallBoxes.push(box);
+  };
+
+  addWall(new THREE.Vector3(0, WALL_HEIGHT * 0.5, -24), new THREE.Vector3(48, WALL_HEIGHT, WALL_THICKNESS));
+  addWall(new THREE.Vector3(0, WALL_HEIGHT * 0.5, 24), new THREE.Vector3(48, WALL_HEIGHT, WALL_THICKNESS));
+  addWall(new THREE.Vector3(24, WALL_HEIGHT * 0.5, 0), new THREE.Vector3(WALL_THICKNESS, WALL_HEIGHT, 48));
+  addWall(new THREE.Vector3(-24, WALL_HEIGHT * 0.5, 0), new THREE.Vector3(WALL_THICKNESS, WALL_HEIGHT, 48));
 
   for (const [x, z] of [
     [-12, -14], [12, -14], [-12, 0], [12, 0], [-12, 14], [12, 14],
   ] as const) {
-    addBox(group, new THREE.Vector3(x, 2.5, z), new THREE.Vector3(16, 5, WALL_THICKNESS), wallMat, allBoxes);
+    addWall(new THREE.Vector3(x, 2.5, z), new THREE.Vector3(16, 5, WALL_THICKNESS));
   }
 
   for (const z of [-18, -8, 8, 18]) {
@@ -120,9 +127,7 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
     .filter((box) => box !== floorBox && box !== ceilingBox && box.max.y > 0.2)
     .map(boxToSurface);
 
-  const colliders = allBoxes.filter((box) => box !== floorBox && box !== ceilingBox);
-
-  return { colliders, standSurfaces, defaultFeetY: DEFAULT_FEET_Y };
+  return { wallColliders: wallBoxes, standSurfaces, defaultFeetY: DEFAULT_FEET_Y };
 }
 
 export function getSupportedFeetY(
@@ -130,14 +135,15 @@ export function getSupportedFeetY(
   z: number,
   surfaces: StandSurface[],
   defaultFeetY: number,
+  radius = PLAYER_RADIUS,
 ): number {
   let best = defaultFeetY;
   for (const surface of surfaces) {
     if (
-      x >= surface.minX &&
-      x <= surface.maxX &&
-      z >= surface.minZ &&
-      z <= surface.maxZ &&
+      x >= surface.minX + radius &&
+      x <= surface.maxX - radius &&
+      z >= surface.minZ + radius &&
+      z <= surface.maxZ - radius &&
       surface.feetY > best
     ) {
       best = surface.feetY;
@@ -148,8 +154,8 @@ export function getSupportedFeetY(
 
 export function resolveCollision(
   pos: THREE.Vector3,
-  colliders: THREE.Box3[],
-  radius = 0.35,
+  wallColliders: THREE.Box3[],
+  radius = PLAYER_RADIUS,
   height = 1.8,
 ): THREE.Vector3 {
   const next = pos.clone();
@@ -158,7 +164,7 @@ export function resolveCollision(
     new THREE.Vector3(next.x + radius, next.y + height * 0.5, next.z + radius),
   );
 
-  for (const wall of colliders) {
+  for (const wall of wallColliders) {
     if (playerBox.intersectsBox(wall)) {
       const dx = Math.min(wall.max.x - playerBox.min.x, playerBox.max.x - wall.min.x);
       const dz = Math.min(wall.max.z - playerBox.min.z, playerBox.max.z - wall.min.z);

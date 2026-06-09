@@ -9,6 +9,8 @@ import {
   sub,
   vec3,
 } from "../math/vector.js";
+import type { AxisAlignedBox } from "../arena/warehouse-interior.js";
+import { hasLineOfSight } from "./occlusion.js";
 import type {
   PhotoAttempt,
   PhotoValidationResult,
@@ -72,28 +74,47 @@ function bodySamplePoints(pose: PlayerPose): Vector3[] {
   return points;
 }
 
-/** True when any part of the opponent body volume is inside the camera frustum. */
+/** True when any unobstructed body part is inside the camera frustum. */
+function isBodyVisible(
+  attempt: PhotoAttempt,
+  opponent: PlayerPose,
+  aspectRatio: number,
+  occluders?: AxisAlignedBox[],
+): boolean {
+  const samples = bodySamplePoints(opponent);
+  for (const point of samples) {
+    if (
+      !isPointInCameraFrustum(
+        attempt.cameraPosition,
+        attempt.cameraRotation,
+        attempt.fovDeg,
+        point,
+        aspectRatio,
+      )
+    ) {
+      continue;
+    }
+    if (occluders && !hasLineOfSight(attempt.cameraPosition, point, occluders)) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
 function isBodyInFrame(
   attempt: PhotoAttempt,
   opponent: PlayerPose,
   aspectRatio: number,
 ): boolean {
-  const samples = bodySamplePoints(opponent);
-  return samples.some((point) =>
-    isPointInCameraFrustum(
-      attempt.cameraPosition,
-      attempt.cameraRotation,
-      attempt.fovDeg,
-      point,
-      aspectRatio,
-    ),
-  );
+  return isBodyVisible(attempt, opponent, aspectRatio);
 }
 
 export interface ValidatePhotoOptions {
   lastAttemptMs?: number;
   skipOcclusion?: boolean;
   aspectRatio?: number;
+  occluders?: AxisAlignedBox[];
 }
 
 export function validatePhoto(
@@ -132,8 +153,10 @@ export function validatePhoto(
     return { valid: false, reason: "body_out_of_frame" };
   }
 
-  if (!options.skipOcclusion) {
-    return { valid: false, reason: "body_occluded" };
+  if (!options.skipOcclusion && options.occluders && options.occluders.length > 0) {
+    if (!isBodyVisible(attempt, opponent, aspectRatio, options.occluders)) {
+      return { valid: false, reason: "body_occluded" };
+    }
   }
 
   return { valid: true };

@@ -74,7 +74,7 @@ export class Game {
     this.scene.add(this.controls.getObject());
 
     const warehouse = buildWarehouse(this.scene);
-    this.colliders = warehouse.colliders;
+    this.colliders = warehouse.wallColliders;
     this.standSurfaces = warehouse.standSurfaces;
     this.defaultFeetY = warehouse.defaultFeetY;
 
