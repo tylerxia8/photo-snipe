@@ -212,7 +212,7 @@ Sent to the **shooter** after validation.
 }
 ```
 
-Reasons: `face_out_of_frame`, `too_far`, `too_close`, `cooldown`, `not_aiming`
+Reasons: `body_out_of_frame`, `too_far`, `too_close`, `cooldown`, `not_aiming`
 
 ### `round_ended`
 

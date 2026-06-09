@@ -10,7 +10,7 @@ Scaffold phase — core rules, server, and Godot client are in place. See [docs/
 
 - **Perspective:** First-person
 - **Players:** 2 per match, same building, opposite-end spawns
-- **Goal:** Take a valid photo with the opponent's **face in frame** before they photograph you
+- **Goal:** Take a valid photo with **any part of the opponent's body in frame** before they photograph you
 - **Risk:** Every shot triggers a **flash and shutter sound**, revealing your position
 - **Rounds:** **5 minutes** each; different building per round
 - **Movement:** Slow tactical walk (tunable after first playtest)

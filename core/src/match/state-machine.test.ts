@@ -29,7 +29,7 @@ const round: RoundDefinition = {
     maxPhotoDistance: 60,
     minPhotoDistance: 3,
     requireAimMode: true,
-    requireFaceInFrame: true,
+    requireBodyInFrame: true,
     exposure: {
       flash: true,
       sound: true,

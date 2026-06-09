@@ -5,6 +5,7 @@ const WALK_SPEED := 3.0
 const AIM_SPEED_MULTIPLIER := 0.6
 const MOUSE_SENSITIVITY := 0.002
 const STATE_SEND_INTERVAL := 0.05
+const JUMP_VELOCITY := 4.5
 
 @export var camera: Camera3D
 var aiming: bool = false
@@ -53,6 +54,9 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, speed)
 		velocity.z = move_toward(velocity.z, 0.0, speed)
+
+	if is_on_floor() and Input.is_action_just_pressed("jump"):
+		velocity.y = JUMP_VELOCITY
 
 	velocity.y -= 9.8 * delta
 	move_and_slide()

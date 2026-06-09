@@ -1,10 +1,11 @@
 import {
   add,
+  bodyWorldCenter,
   cameraBasis,
   distance,
   dot,
-  faceWorldCenter,
   normalize,
+  rotateY,
   sub,
   vec3,
 } from "../math/vector.js";
@@ -16,13 +17,11 @@ import type {
   Vector3,
 } from "../types.js";
 
-const FACE_SAMPLE_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315];
-
 function isPointInCameraFrustum(
   cameraPosition: PhotoAttempt["cameraPosition"],
   cameraRotation: PhotoAttempt["cameraRotation"],
   fovDeg: number,
-  point: { x: number; y: number; z: number },
+  point: Vector3,
   aspectRatio = 16 / 9,
 ): boolean {
   const { forward, right, up } = cameraBasis(cameraRotation);
@@ -50,35 +49,36 @@ function isPointInCameraFrustum(
   return Math.abs(yaw) <= halfHFov && Math.abs(pitch) <= halfVFov;
 }
 
-function faceSamplePoints(pose: PlayerPose): Vector3[] {
-  const center = faceWorldCenter(pose);
+function bodySamplePoints(pose: PlayerPose): Vector3[] {
+  const center = bodyWorldCenter(pose);
   const points: Vector3[] = [center];
 
-  for (const angleDeg of FACE_SAMPLE_ANGLES) {
-    const rad = (angleDeg * Math.PI) / 180;
-    points.push(
-      add(
-        center,
-        vec3(
-          Math.cos(rad) * pose.faceRadius,
-          0,
-          Math.sin(rad) * pose.faceRadius,
-        ),
-      ),
-    );
+  const localSamples = [
+    vec3(0, pose.bodyHalfHeight, 0),
+    vec3(0, -pose.bodyHalfHeight, 0),
+    vec3(pose.bodyRadius, 0, 0),
+    vec3(-pose.bodyRadius, 0, 0),
+    vec3(0, 0, pose.bodyRadius),
+    vec3(0, 0, -pose.bodyRadius),
+    vec3(0, pose.bodyHalfHeight * 0.5, 0),
+    vec3(0, -pose.bodyHalfHeight * 0.5, 0),
+  ];
+
+  for (const local of localSamples) {
+    const rotated = rotateY(local, pose.rotation.y);
+    points.push(add(center, rotated));
   }
 
-  points.push(add(center, vec3(0, pose.faceRadius, 0)));
-  points.push(add(center, vec3(0, -pose.faceRadius * 0.5, 0)));
   return points;
 }
 
-function isFaceInFrame(
+/** True when any part of the opponent body volume is inside the camera frustum. */
+function isBodyInFrame(
   attempt: PhotoAttempt,
   opponent: PlayerPose,
 ): boolean {
-  const samples = faceSamplePoints(opponent);
-  return samples.every((point) =>
+  const samples = bodySamplePoints(opponent);
+  return samples.some((point) =>
     isPointInCameraFrustum(
       attempt.cameraPosition,
       attempt.cameraRotation,
@@ -110,8 +110,8 @@ export function validatePhoto(
     return { valid: false, reason: "cooldown" };
   }
 
-  const faceCenter = faceWorldCenter(opponent);
-  const dist = distance(attempt.cameraPosition, faceCenter);
+  const bodyCenter = bodyWorldCenter(opponent);
+  const dist = distance(attempt.cameraPosition, bodyCenter);
 
   if (dist < rules.minPhotoDistance) {
     return { valid: false, reason: "too_close" };
@@ -121,17 +121,25 @@ export function validatePhoto(
     return { valid: false, reason: "too_far" };
   }
 
-  if (rules.requireFaceInFrame && !isFaceInFrame(attempt, opponent)) {
-    return { valid: false, reason: "face_out_of_frame" };
+  const requireBody =
+    rules.requireBodyInFrame ?? rules.requireFaceInFrame ?? true;
+
+  if (requireBody && !isBodyInFrame(attempt, opponent)) {
+    return { valid: false, reason: "body_out_of_frame" };
   }
 
-  // Occlusion requires building geometry on the server (post-MVP).
   if (!options.skipOcclusion) {
-    return { valid: false, reason: "face_occluded" };
+    return { valid: false, reason: "body_occluded" };
   }
 
   return { valid: true };
 }
 
-export const DEFAULT_FACE_OFFSET = vec3(0, 1.6, 0);
-export const DEFAULT_FACE_RADIUS = 0.15;
+export const DEFAULT_BODY_OFFSET = vec3(0, 0.9, 0);
+export const DEFAULT_BODY_RADIUS = 0.4;
+export const DEFAULT_BODY_HALF_HEIGHT = 0.5;
+
+/** @deprecated Use DEFAULT_BODY_OFFSET */
+export const DEFAULT_FACE_OFFSET = DEFAULT_BODY_OFFSET;
+/** @deprecated Use DEFAULT_BODY_RADIUS */
+export const DEFAULT_FACE_RADIUS = DEFAULT_BODY_RADIUS;

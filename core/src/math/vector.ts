@@ -52,13 +52,26 @@ export function rotateY(v: Vector3, degreesY: number): Vector3 {
   };
 }
 
+export function bodyWorldCenter(pose: {
+  position: Vector3;
+  rotation: EulerDegrees;
+  bodyOffset: Vector3;
+}): Vector3 {
+  const offset = rotateY(pose.bodyOffset, pose.rotation.y);
+  return add(pose.position, offset);
+}
+
+/** @deprecated Use bodyWorldCenter */
 export function faceWorldCenter(pose: {
   position: Vector3;
   rotation: EulerDegrees;
   faceOffset: Vector3;
 }): Vector3 {
-  const offset = rotateY(pose.faceOffset, pose.rotation.y);
-  return add(pose.position, offset);
+  return bodyWorldCenter({
+    position: pose.position,
+    rotation: pose.rotation,
+    bodyOffset: pose.faceOffset,
+  });
 }
 
 export function cameraBasis(rotation: EulerDegrees): {

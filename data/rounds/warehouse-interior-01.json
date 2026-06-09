@@ -21,7 +21,7 @@
     "maxPhotoDistance": 60.0,
     "minPhotoDistance": 3.0,
     "requireAimMode": true,
-    "requireFaceInFrame": true,
+    "requireBodyInFrame": true,
     "exposure": {
       "flash": true,
       "sound": true,

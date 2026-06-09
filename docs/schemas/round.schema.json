@@ -72,10 +72,15 @@
           "type": "boolean",
           "default": true
         },
-        "requireFaceInFrame": {
+        "requireBodyInFrame": {
           "type": "boolean",
           "default": true,
-          "description": "Opponent face hit volume must be inside camera frustum"
+          "description": "Any part of opponent body hit volume must be inside camera frustum"
+        },
+        "requireFaceInFrame": {
+          "type": "boolean",
+          "deprecated": true,
+          "description": "Deprecated alias for requireBodyInFrame"
         },
         "exposure": {
           "type": "object",

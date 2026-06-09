@@ -100,6 +100,6 @@ export function resolveCollision(
     }
   }
 
-  next.y = 1;
+  next.y = pos.y;
   return next;
 }

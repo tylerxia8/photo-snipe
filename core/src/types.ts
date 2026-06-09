@@ -13,9 +13,11 @@ export interface EulerDegrees {
 export type PlayerSlot = "A" | "B";
 
 export type PhotoInvalidReason =
+  | "body_out_of_frame"
   | "face_out_of_frame"
   | "too_far"
   | "too_close"
+  | "body_occluded"
   | "face_occluded"
   | "cooldown"
   | "not_aiming";
@@ -38,8 +40,13 @@ export interface PlayerPose {
   position: Vector3;
   rotation: EulerDegrees;
   aiming: boolean;
-  faceOffset: Vector3;
-  faceRadius: number;
+  bodyOffset: Vector3;
+  bodyRadius: number;
+  bodyHalfHeight: number;
+  /** @deprecated Use bodyOffset */
+  faceOffset?: Vector3;
+  /** @deprecated Use bodyRadius */
+  faceRadius?: number;
 }
 
 export interface RoundExposureRules {
@@ -56,7 +63,9 @@ export interface RoundRules {
   maxPhotoDistance: number;
   minPhotoDistance: number;
   requireAimMode: boolean;
-  requireFaceInFrame: boolean;
+  requireBodyInFrame?: boolean;
+  /** @deprecated Use requireBodyInFrame */
+  requireFaceInFrame?: boolean;
   exposure: RoundExposureRules;
 }
 

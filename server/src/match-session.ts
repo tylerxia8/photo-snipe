@@ -2,8 +2,9 @@ import { randomUUID } from "node:crypto";
 import type { WebSocket } from "ws";
 import {
   createMatchState,
-  DEFAULT_FACE_OFFSET,
-  DEFAULT_FACE_RADIUS,
+  DEFAULT_BODY_HALF_HEIGHT,
+  DEFAULT_BODY_OFFSET,
+  DEFAULT_BODY_RADIUS,
   endRound,
   fromArray,
   nextRoundId,
@@ -183,8 +184,9 @@ export class MatchSession {
       position: fromArray(oppState.position),
       rotation: eulerFromArray(oppState.rotation),
       aiming: oppState.aiming,
-      faceOffset: DEFAULT_FACE_OFFSET,
-      faceRadius: DEFAULT_FACE_RADIUS,
+      bodyOffset: DEFAULT_BODY_OFFSET,
+      bodyRadius: DEFAULT_BODY_RADIUS,
+      bodyHalfHeight: DEFAULT_BODY_HALF_HEIGHT,
     };
 
     const result = validatePhoto(

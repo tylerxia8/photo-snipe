@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_FACE_OFFSET,
-  DEFAULT_FACE_RADIUS,
+  DEFAULT_BODY_HALF_HEIGHT,
+  DEFAULT_BODY_OFFSET,
+  DEFAULT_BODY_RADIUS,
   validatePhoto,
 } from "./validate.js";
 import type { PhotoAttempt, PlayerPose, RoundRules } from "../types.js";
@@ -12,7 +13,7 @@ const baseRules: RoundRules = {
   maxPhotoDistance: 60,
   minPhotoDistance: 3,
   requireAimMode: true,
-  requireFaceInFrame: true,
+  requireBodyInFrame: true,
   exposure: {
     flash: true,
     sound: true,
@@ -27,8 +28,9 @@ function opponentAt(z: number, yaw = 180): PlayerPose {
     position: { x: 0, y: 0, z },
     rotation: { x: 0, y: yaw, z: 0 },
     aiming: false,
-    faceOffset: DEFAULT_FACE_OFFSET,
-    faceRadius: DEFAULT_FACE_RADIUS,
+    bodyOffset: DEFAULT_BODY_OFFSET,
+    bodyRadius: DEFAULT_BODY_RADIUS,
+    bodyHalfHeight: DEFAULT_BODY_HALF_HEIGHT,
   };
 }
 
@@ -47,9 +49,19 @@ function attemptFacingOpponent(
 }
 
 describe("validatePhoto", () => {
-  it("accepts a valid face capture", () => {
+  it("accepts when any body part is in frame", () => {
     const result = validatePhoto(
       attemptFacingOpponent(),
+      opponentAt(10),
+      baseRules,
+      { skipOcclusion: true },
+    );
+    expect(result.valid).toBe(true);
+  });
+
+  it("accepts partial body visibility", () => {
+    const result = validatePhoto(
+      attemptFacingOpponent({ cameraRotation: { x: 0, y: 8, z: 0 } }),
       opponentAt(10),
       baseRules,
       { skipOcclusion: true },
@@ -97,7 +109,7 @@ describe("validatePhoto", () => {
     expect(result).toEqual({ valid: false, reason: "too_close" });
   });
 
-  it("rejects when face is out of frame", () => {
+  it("rejects when no body part is in frame", () => {
     const result = validatePhoto(
       attemptFacingOpponent({
         cameraRotation: { x: 0, y: 90, z: 0 },
@@ -106,6 +118,6 @@ describe("validatePhoto", () => {
       baseRules,
       { skipOcclusion: true },
     );
-    expect(result).toEqual({ valid: false, reason: "face_out_of_frame" });
+    expect(result).toEqual({ valid: false, reason: "body_out_of_frame" });
   });
 });

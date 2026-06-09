@@ -7,6 +7,9 @@ const WALK_SPEED = 3;
 const AIM_MULT = 0.6;
 const NORMAL_FOV = 75;
 const AIM_FOV = 40;
+const JUMP_VELOCITY = 5;
+const GRAVITY = 9.8;
+const GROUND_Y = 1;
 
 export class Game {
   readonly scene = new THREE.Scene();
@@ -24,6 +27,8 @@ export class Game {
   private active = false;
   private yaw = 0;
   private pitch = 0;
+  private verticalVelocity = 0;
+  private onFloor = true;
 
   constructor(
     private net: NetClient,
@@ -62,13 +67,9 @@ export class Game {
 
     window.addEventListener("resize", () => this.onResize());
     window.addEventListener("keydown", (e) => this.onKeyDown(e));
-    window.addEventListener("keyup", (e) => this.keys.delete(e.code));
-    this.renderer.domElement.addEventListener("mousedown", (e) => {
-      if (e.button === 2) this.aiming = true;
-    });
-    window.addEventListener("mouseup", (e) => {
-      if (e.button === 2) this.aiming = false;
-    });
+    window.addEventListener("keyup", (e) => this.onKeyUp(e));
+    this.renderer.domElement.addEventListener("mousedown", (e) => this.onMouseDown(e));
+    window.addEventListener("mouseup", (e) => this.onMouseUp(e));
     window.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
@@ -77,12 +78,14 @@ export class Game {
     this.active = true;
     this.roundEndsAtMs = roundEndsAtMs;
     this.hud.setRoundName(roundName);
-    this.hud.setMessage("Find your opponent — right-click aim, space shoot");
+    this.hud.setMessage("Find your opponent — right-click aim, left-click shoot, space jump");
 
     const [x, y, z] = spawn.position;
     const [, rotY] = spawn.rotation;
     this.yaw = THREE.MathUtils.degToRad(rotY);
     this.pitch = 0;
+    this.verticalVelocity = 0;
+    this.onFloor = true;
     this.camera.position.set(x, y + 0.6, z);
     this.controls!.getObject().position.copy(this.camera.position);
     this.controls!.getObject().rotation.y = this.yaw;
@@ -153,12 +156,29 @@ export class Game {
     if (move.lengthSq() > 0) {
       move.normalize().multiplyScalar(speed);
       obj.position.add(move);
-      obj.position.copy(resolveCollision(obj.position, this.colliders));
     }
+
+    if (this.onFloor && this.keys.has("Space")) {
+      this.verticalVelocity = JUMP_VELOCITY;
+      this.onFloor = false;
+    }
+
+    this.verticalVelocity -= GRAVITY * delta;
+    obj.position.y += this.verticalVelocity * delta;
+
+    if (obj.position.y <= GROUND_Y) {
+      obj.position.y = GROUND_Y;
+      this.verticalVelocity = 0;
+      this.onFloor = true;
+    }
+
+    obj.position.copy(resolveCollision(obj.position, this.colliders));
+    obj.position.y = Math.max(obj.position.y, GROUND_Y);
 
     this.yaw = obj.rotation.y;
     this.pitch = this.camera.rotation.x;
     this.camera.position.copy(obj.position);
+    this.camera.position.y += 0.6;
   }
 
   private updateCameraFov(): void {
@@ -167,23 +187,39 @@ export class Game {
     this.camera.updateProjectionMatrix();
   }
 
+  private shootPhoto(): void {
+    if (!this.aiming || !this.active) return;
+    this.net.sendPhotoAttempt(
+      [this.camera.position.x, this.camera.position.y, this.camera.position.z],
+      [
+        THREE.MathUtils.radToDeg(this.pitch),
+        THREE.MathUtils.radToDeg(this.yaw),
+        0,
+      ],
+      this.camera.fov,
+      this.aiming,
+    );
+    this.hud.flash();
+  }
+
   private onKeyDown(e: KeyboardEvent): void {
     this.keys.add(e.code);
-    if (e.code === "Space" && this.aiming && this.active) {
+    if (e.code === "Space" && this.onFloor) {
       e.preventDefault();
-      const obj = this.controls!.getObject();
-      this.net.sendPhotoAttempt(
-        [this.camera.position.x, this.camera.position.y, this.camera.position.z],
-        [
-          THREE.MathUtils.radToDeg(this.pitch),
-          THREE.MathUtils.radToDeg(this.yaw),
-          0,
-        ],
-        this.camera.fov,
-        this.aiming,
-      );
-      this.hud.flash();
     }
+  }
+
+  private onKeyUp(e: KeyboardEvent): void {
+    this.keys.delete(e.code);
+  }
+
+  private onMouseDown(e: MouseEvent): void {
+    if (e.button === 2) this.aiming = true;
+    if (e.button === 0) this.shootPhoto();
+  }
+
+  private onMouseUp(e: MouseEvent): void {
+    if (e.button === 2) this.aiming = false;
   }
 
   private onResize(): void {
