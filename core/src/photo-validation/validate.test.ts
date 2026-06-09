@@ -12,7 +12,7 @@ const baseRules: RoundRules = {
   photoCooldownSec: 2,
   maxPhotoDistance: 60,
   minPhotoDistance: 3,
-  requireAimMode: true,
+  requireAimMode: false,
   requireBodyInFrame: true,
   exposure: {
     flash: true,
@@ -69,11 +69,11 @@ describe("validatePhoto", () => {
     expect(result.valid).toBe(true);
   });
 
-  it("rejects when not aiming", () => {
+  it("rejects when aim mode is required but not active", () => {
     const result = validatePhoto(
       attemptFacingOpponent({ aiming: false }),
       opponentAt(10),
-      baseRules,
+      { ...baseRules, requireAimMode: true },
       { skipOcclusion: true },
     );
     expect(result).toEqual({ valid: false, reason: "not_aiming" });

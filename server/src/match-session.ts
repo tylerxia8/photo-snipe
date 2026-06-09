@@ -53,7 +53,6 @@ export class MatchSession {
   private state: MatchState;
   private players: Record<PlayerSlot, LobbyPlayer>;
   private liveState: Record<PlayerSlot, LivePlayerState>;
-  private roundTimer: NodeJS.Timeout | null = null;
   private syncTimer: NodeJS.Timeout | null = null;
 
   constructor(matchConfig: MatchConfig, playerA: LobbyPlayer, playerB: LobbyPlayer) {
@@ -79,8 +78,6 @@ export class MatchSession {
     const round = await loadRound(roundId);
     this.state = startRound(this.state, round);
 
-    const roundEndsAtMs = Date.now() + round.rules.roundTimeLimitSec * 1000;
-
     for (const slot of ["A", "B"] as const) {
       const spawn = round.spawns[slot === "A" ? "playerA" : "playerB"];
       this.liveState[slot] = {
@@ -94,14 +91,8 @@ export class MatchSession {
         roundIndex: this.state.roundIndex,
         round,
         yourSpawn: spawn,
-        roundEndsAtMs,
       });
     }
-
-    this.clearRoundTimer();
-    this.roundTimer = setTimeout(() => {
-      this.finishRound("timeout_draw", null);
-    }, round.rules.roundTimeLimitSec * 1000);
 
     this.startSync();
   }
@@ -217,10 +208,19 @@ export class MatchSession {
       return;
     }
 
-    this.clearRoundTimer();
     this.clearSyncTimer();
 
     this.state = endRound(this.state, reason, winner);
+
+    if (this.state.phase === "match_end" && this.state.winner) {
+      broadcast([this.players.A, this.players.B], {
+        type: "match_ended",
+        winnerSlot: this.state.winner,
+        scores: this.state.scores,
+        reason,
+      });
+      return;
+    }
 
     broadcast([this.players.A, this.players.B], {
       type: "round_ended",
@@ -228,15 +228,6 @@ export class MatchSession {
       winnerSlot: winner,
       scores: this.state.scores,
     });
-
-    if (this.state.phase === "match_end" && this.state.winner) {
-      broadcast([this.players.A, this.players.B], {
-        type: "match_ended",
-        winnerSlot: this.state.winner,
-        scores: this.state.scores,
-      });
-      return;
-    }
 
     setTimeout(() => {
       void this.beginNextRound();
@@ -246,13 +237,6 @@ export class MatchSession {
   handleDisconnect(slot: PlayerSlot): void {
     if (this.state.phase === "round_active") {
       this.finishRound("forfeit", opponentSlot(slot));
-    }
-  }
-
-  private clearRoundTimer(): void {
-    if (this.roundTimer) {
-      clearTimeout(this.roundTimer);
-      this.roundTimer = null;
     }
   }
 

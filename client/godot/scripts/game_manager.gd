@@ -1,7 +1,6 @@
 extends Node3D
 
 var player_slot: String = ""
-var round_ends_at_ms: int = 0
 
 var _building_loader := BuildingLoader.new()
 var _active_building: Node3D = null
@@ -17,14 +16,6 @@ func _ready() -> void:
 	NetClient.message_received.connect(_on_message)
 	_load_default_building()
 
-func _process(_delta: float) -> void:
-	if round_ends_at_ms > 0 and hud_label:
-		var remaining := maxi(0, round_ends_at_ms - Time.get_unix_time_from_system() * 1000)
-		var seconds := int(remaining / 1000)
-		var minutes := seconds / 60
-		seconds %= 60
-		hud_label.text = "Time: %02d:%02d" % [minutes, seconds]
-
 func _on_message(payload: Dictionary) -> void:
 	match str(payload.get("type")):
 		"round_started":
@@ -35,11 +26,10 @@ func _on_message(payload: Dictionary) -> void:
 			_handle_photo_exposure(payload)
 		"photo_result":
 			_handle_photo_result(payload)
-		"round_ended", "match_ended":
-			_handle_round_or_match_end(payload)
+		"match_ended":
+			_handle_match_end(payload)
 
 func _handle_round_started(payload: Dictionary) -> void:
-	round_ends_at_ms = int(payload.get("roundEndsAtMs", 0))
 	var round_data: Dictionary = payload.get("round", {})
 	_load_building(round_data)
 
@@ -52,7 +42,7 @@ func _handle_round_started(payload: Dictionary) -> void:
 			Vector3(float(rot_arr[0]), float(rot_arr[1]), float(rot_arr[2]))
 		)
 	if hud_label:
-		hud_label.text = "Hunt your opponent"
+		hud_label.text = "Left-click to snap a photo"
 	if round_name_label:
 		round_name_label.text = str(round_data.get("name", "Round"))
 
@@ -97,10 +87,7 @@ func _handle_photo_result(payload: Dictionary) -> void:
 		else:
 			hud_label.text = "Miss: %s" % str(payload.get("reason", "unknown"))
 
-func _handle_round_or_match_end(payload: Dictionary) -> void:
+func _handle_match_end(payload: Dictionary) -> void:
 	if hud_label:
-		var msg_type := str(payload.get("type"))
-		if msg_type == "match_ended":
-			hud_label.text = "Match over! Winner: %s" % str(payload.get("winnerSlot"))
-		else:
-			hud_label.text = "Round ended: %s" % str(payload.get("reason"))
+		hud_label.text = "Match over! Winner: %s" % str(payload.get("winnerSlot"))
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

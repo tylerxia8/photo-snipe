@@ -4,9 +4,6 @@ import type { NetClient } from "../net/client.js";
 import { buildWarehouse, resolveCollision } from "./warehouse.js";
 
 const WALK_SPEED = 3;
-const AIM_MULT = 0.6;
-const NORMAL_FOV = 75;
-const AIM_FOV = 40;
 const JUMP_VELOCITY = 5;
 const GRAVITY = 9.8;
 const EYE_OFFSET = 0.6;
@@ -14,17 +11,15 @@ const GROUND_FEET_Y = 1;
 
 export class Game {
   readonly scene = new THREE.Scene();
-  readonly camera = new THREE.PerspectiveCamera(NORMAL_FOV, 1, 0.1, 200);
+  readonly camera = new THREE.PerspectiveCamera(75, 1, 0.1, 200);
   readonly renderer = new THREE.WebGLRenderer({ antialias: true });
   readonly opponent = new THREE.Group();
 
   private controls: PointerLockControls | null = null;
   private colliders: THREE.Box3[] = [];
   private keys = new Set<string>();
-  private aiming = false;
   private sequence = 0;
   private stateTimer = 0;
-  private roundEndsAtMs = 0;
   private active = false;
   private yaw = 0;
   private pitch = 0;
@@ -36,11 +31,11 @@ export class Game {
   constructor(
     private net: NetClient,
     private hud: {
-      setTimer: (text: string) => void;
       setMessage: (text: string) => void;
       setRoundName: (text: string) => void;
       flash: () => void;
-      showCrosshair: (aiming: boolean) => void;
+      showCrosshair: () => void;
+      hideCrosshair: () => void;
     },
     mount: HTMLElement,
   ) {
@@ -81,7 +76,6 @@ export class Game {
       this.onLockChange?.(locked);
     });
     this.renderer.domElement.addEventListener("mousedown", (e) => this.onMouseDown(e));
-    window.addEventListener("mouseup", (e) => this.onMouseUp(e));
     window.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
@@ -89,12 +83,11 @@ export class Game {
     this.onLockChange = handler;
   }
 
-  startRound(spawn: { position: number[]; rotation: number[] }, roundName: string, roundEndsAtMs: number): void {
+  startRound(spawn: { position: number[]; rotation: number[] }, roundName: string): void {
     this.colliders = buildWarehouse(this.scene);
     this.active = true;
-    this.roundEndsAtMs = roundEndsAtMs;
     this.hud.setRoundName(roundName);
-    this.hud.setMessage("Click to play · WASD move · Space jump · Right-click aim · Left-click shoot");
+    this.hud.setMessage("Click to play · WASD move · Space jump · Left-click to snap a photo");
 
     const [x, y, z] = spawn.position;
     const [, rotY] = spawn.rotation;
@@ -112,6 +105,13 @@ export class Game {
     this.requestLock();
   }
 
+  endMatch(): void {
+    this.active = false;
+    this.clearInputState();
+    this.hud.hideCrosshair();
+    document.exitPointerLock();
+  }
+
   updateOpponent(position: number[], rotation: number[]): void {
     this.opponent.position.set(position[0], position[1], position[2]);
     this.opponent.rotation.set(
@@ -125,16 +125,8 @@ export class Game {
     if (!this.active) return;
 
     this.updateMovement(delta);
-    this.updateCameraFov();
     if (this.controls?.isLocked) {
-      this.hud.showCrosshair(this.aiming);
-    }
-
-    if (this.roundEndsAtMs > 0) {
-      const remaining = Math.max(0, this.roundEndsAtMs - Date.now());
-      const sec = Math.floor(remaining / 1000);
-      const min = Math.floor(sec / 60);
-      this.hud.setTimer(`${String(min).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`);
+      this.hud.showCrosshair();
     }
 
     this.stateTimer += delta;
@@ -149,7 +141,7 @@ export class Game {
           THREE.MathUtils.radToDeg(this.yaw),
           0,
         ],
-        this.aiming,
+        false,
         this.sequence,
       );
     }
@@ -173,7 +165,7 @@ export class Game {
   private updateMovement(delta: number): void {
     if (!this.controls?.isLocked) return;
 
-    const speed = (this.aiming ? WALK_SPEED * AIM_MULT : WALK_SPEED) * delta;
+    const speed = WALK_SPEED * delta;
     const forward = new THREE.Vector3();
     this.controls.getDirection(forward);
     forward.y = 0;
@@ -215,14 +207,8 @@ export class Game {
     this.pitch = this.camera.rotation.x;
   }
 
-  private updateCameraFov(): void {
-    const target = this.aiming ? AIM_FOV : NORMAL_FOV;
-    this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, target, 0.15);
-    this.camera.updateProjectionMatrix();
-  }
-
-  private shootPhoto(): void {
-    if (!this.aiming || !this.active || !this.controls?.isLocked) return;
+  private snapPhoto(): void {
+    if (!this.active || !this.controls?.isLocked) return;
     this.net.sendPhotoAttempt(
       [this.camera.position.x, this.camera.position.y, this.camera.position.z],
       [
@@ -231,14 +217,13 @@ export class Game {
         0,
       ],
       this.camera.fov,
-      this.aiming,
+      false,
     );
     this.hud.flash();
   }
 
   private clearInputState(): void {
     this.keys.clear();
-    this.aiming = false;
     this.jumpQueued = false;
   }
 
@@ -257,12 +242,7 @@ export class Game {
 
   private onMouseDown(e: MouseEvent): void {
     if (!this.controls?.isLocked) return;
-    if (e.button === 2) this.aiming = true;
-    if (e.button === 0) this.shootPhoto();
-  }
-
-  private onMouseUp(e: MouseEvent): void {
-    if (e.button === 2) this.aiming = false;
+    if (e.button === 0) this.snapPhoto();
   }
 
   private onResize(): void {

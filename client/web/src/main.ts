@@ -10,7 +10,6 @@ const clickToPlay = document.getElementById("click-to-play")!;
 const statusEl = document.getElementById("status")!;
 const nameInput = document.getElementById("name-input") as HTMLInputElement;
 const roomInput = document.getElementById("room-input") as HTMLInputElement;
-const timerEl = document.getElementById("timer")!;
 const messageEl = document.getElementById("message")!;
 const roundNameEl = document.getElementById("round-name")!;
 
@@ -28,7 +27,6 @@ function displayName(): string {
 
 function hudApi() {
   return {
-    setTimer: (text: string) => { timerEl.textContent = text; },
     setMessage: (text: string) => { messageEl.textContent = text; },
     setRoundName: (text: string) => { roundNameEl.textContent = text; },
     flash: () => {
@@ -36,9 +34,11 @@ function hudApi() {
       flash.classList.add("active");
       setTimeout(() => flash.classList.remove("active"), 150);
     },
-    showCrosshair: (aiming: boolean) => {
+    showCrosshair: () => {
       crosshair.classList.remove("hidden");
-      crosshair.classList.toggle("aiming", aiming);
+    },
+    hideCrosshair: () => {
+      crosshair.classList.add("hidden");
     },
   };
 }
@@ -67,7 +67,7 @@ net.onMessage = (msg: ServerMessage) => {
     case "round_started": {
       const round = msg.round as { name?: string };
       const spawn = msg.yourSpawn as { position: number[]; rotation: number[] };
-      game?.startRound(spawn, String(round?.name ?? "Round"), Number(msg.roundEndsAtMs));
+      game?.startRound(spawn, String(round?.name ?? "Round"));
       lobby.classList.add("hidden");
       hud.classList.remove("hidden");
       if (game && !game.isLocked()) {
@@ -92,10 +92,9 @@ net.onMessage = (msg: ServerMessage) => {
         hudApi().setMessage(`Miss: ${String(msg.reason ?? "unknown")}`);
       }
       break;
-    case "round_ended":
-      hudApi().setMessage(`Round ended: ${String(msg.reason)}`);
-      break;
     case "match_ended":
+      game?.endMatch();
+      clickToPlay.classList.remove("hidden");
       hudApi().setMessage(`Match over! Winner: ${String(msg.winnerSlot)}`);
       break;
     case "error":

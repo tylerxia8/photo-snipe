@@ -20,7 +20,7 @@
     "photoCooldownSec": 2.0,
     "maxPhotoDistance": 60.0,
     "minPhotoDistance": 3.0,
-    "requireAimMode": true,
+    "requireAimMode": false,
     "requireBodyInFrame": true,
     "exposure": {
       "flash": true,

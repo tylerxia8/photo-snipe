@@ -101,11 +101,6 @@ button:hover {
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
 
-#timer {
-  font-size: 1.75rem;
-  font-weight: 700;
-}
-
 #message {
   margin-top: 0.35rem;
   color: #dbeafe;
@@ -122,13 +117,6 @@ button:hover {
   border-radius: 50%;
   z-index: 4;
   pointer-events: none;
-}
-
-.crosshair.aiming {
-  width: 28px;
-  height: 28px;
-  margin: -14px 0 0 -14px;
-  border-color: #fbbf24;
 }
 
 .flash {

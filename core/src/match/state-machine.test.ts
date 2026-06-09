@@ -12,7 +12,7 @@ const matchConfig: MatchConfig = {
   id: "duel-standard",
   name: "Standard Duel",
   roundPool: ["warehouse-interior-01", "office-01"],
-  roundsToWin: 2,
+  roundsToWin: 1,
 };
 
 const round: RoundDefinition = {
@@ -28,7 +28,7 @@ const round: RoundDefinition = {
     photoCooldownSec: 2,
     maxPhotoDistance: 60,
     minPhotoDistance: 3,
-    requireAimMode: true,
+    requireAimMode: false,
     requireBodyInFrame: true,
     exposure: {
       flash: true,
@@ -41,19 +41,13 @@ const round: RoundDefinition = {
 };
 
 describe("match state machine", () => {
-  it("tracks round wins until match is over", () => {
+  it("ends the match on the first valid capture", () => {
     let state = createMatchState(matchConfig);
     state = startRound(state, round);
     expect(state.phase).toBe("round_active");
 
     state = endRound(state, "valid_capture", "A");
     expect(state.scores.A).toBe(1);
-    expect(state.phase).toBe("round_end");
-    expect(isMatchOver(state)).toBe(false);
-
-    state = startRound(state, round);
-    state = endRound(state, "valid_capture", "A");
-    expect(state.scores.A).toBe(2);
     expect(state.phase).toBe("match_end");
     expect(state.winner).toBe("A");
     expect(isMatchOver(state)).toBe(true);
