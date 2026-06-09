@@ -58,6 +58,9 @@ net.onMessage = (msg: ServerMessage) => {
       clickToPlay.classList.remove("hidden");
       if (!game) {
         game = new Game(net, hudApi(), mount);
+        game.setLockChangeHandler((locked) => {
+          clickToPlay.classList.toggle("hidden", locked);
+        });
       }
       setStatus(`Match vs ${String(msg.opponentName)}`);
       break;
@@ -67,7 +70,9 @@ net.onMessage = (msg: ServerMessage) => {
       game?.startRound(spawn, String(round?.name ?? "Round"), Number(msg.roundEndsAtMs));
       lobby.classList.add("hidden");
       hud.classList.remove("hidden");
-      clickToPlay.classList.remove("hidden");
+      if (game && !game.isLocked()) {
+        clickToPlay.classList.remove("hidden");
+      }
       break;
     }
     case "opponent_state":
