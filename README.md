@@ -35,9 +35,11 @@ npm run dev:server    # WebSocket server on :8787
 
 **Deploy online:** see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) (Railway / Render / Docker).
 
+**Play in browser:** visit your deployed server URL (e.g. `https://photo-snipe-server-production-2274.up.railway.app`).
+
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/tylerxia8/photo-snipe)
 
-Open `client/godot/` in Godot 4 and run the project. See [client/godot/README.md](client/godot/README.md).
+Open `client/godot/` in Godot 4 for the desktop client, **or play in your browser** at the deployed server URL.
 
 1. Player A: **Create Room** → share the 4-letter code
 2. Player B: **Join Room** with that code

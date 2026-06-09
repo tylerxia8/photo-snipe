@@ -3,12 +3,14 @@
   "private": true,
   "workspaces": [
     "core",
-    "server"
+    "server",
+    "client/web"
   ],
   "scripts": {
-    "build": "npm run build -w core && npm run build -w server",
+    "build": "npm run build -w core && npm run build -w server && npm run build -w @photo-snipe/web",
     "test": "npm run test -w core",
     "dev:server": "npm run dev -w server",
+    "dev:web": "npm run dev -w @photo-snipe/web",
     "start": "node server/dist/index.js",
     "start:server": "npm run start -w server"
   }

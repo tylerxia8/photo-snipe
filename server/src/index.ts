@@ -4,6 +4,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { loadMatchConfig } from "./data-loader.js";
 import { LobbyManager } from "./lobby.js";
 import { MatchSession } from "./match-session.js";
+import { serveWebClient, webClientAvailable } from "./static.js";
 import type { PlayerSlot } from "@photo-snipe/core";
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -45,38 +46,13 @@ const httpServer = createServer((req, res) => {
     return;
   }
 
-  if (req.url === "/" || req.url === "/index.html") {
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    res.end(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PhotoSnipe Server</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 3rem auto; padding: 0 1.5rem; line-height: 1.5; color: #1a1a1a; }
-    h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
-    .status { color: #0a7a2f; font-weight: 600; }
-    code { background: #f4f4f4; padding: 0.15rem 0.4rem; border-radius: 4px; }
-    ol { padding-left: 1.25rem; }
-  </style>
-</head>
-<body>
-  <h1>PhotoSnipe Server</h1>
-  <p class="status">Online — WebSocket backend for 1v1 matches</p>
-  <p>This URL is <strong>not</strong> the game itself. PhotoSnipe runs in the
-     <strong>Godot 4 desktop client</strong>, which connects here over WebSocket.</p>
-  <h2>How to play</h2>
-  <ol>
-    <li>Open <code>client/godot/</code> in Godot 4</li>
-    <li>Press <strong>F5</strong> to run the project</li>
-    <li>Player A: <strong>Create Room</strong> and share the code</li>
-    <li>Player B: <strong>Join Room</strong> with that code</li>
-  </ol>
-  <p>WebSocket endpoint: <code>wss://${req.headers.host}</code></p>
-  <p>Health check: <a href="/health">/health</a></p>
-</body>
-</html>`);
+  if (serveWebClient(req, res)) {
+    return;
+  }
+
+  if (!webClientAvailable() && (req.url === "/" || req.url === "/index.html")) {
+    res.writeHead(503, { "Content-Type": "text/plain" });
+    res.end("Web client not built. Run: npm run build -w @photo-snipe/web\n");
     return;
   }
 

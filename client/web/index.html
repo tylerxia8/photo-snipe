@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PhotoSnipe</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="lobby" class="panel">
+        <h1>PhotoSnipe</h1>
+        <p class="tagline">Photograph your opponent's face before they get yours.</p>
+        <label>
+          Display name
+          <input id="name-input" type="text" placeholder="Player" maxlength="24" />
+        </label>
+        <label>
+          Room code (to join)
+          <input id="room-input" type="text" placeholder="ABCD" maxlength="4" />
+        </label>
+        <div class="actions">
+          <button id="create-btn" type="button">Create Room</button>
+          <button id="join-btn" type="button">Join Room</button>
+        </div>
+        <p id="status" class="status">Connecting…</p>
+      </div>
+
+      <div id="hud" class="hud hidden">
+        <div id="round-name"></div>
+        <div id="timer">--:--</div>
+        <div id="message"></div>
+      </div>
+
+      <div id="crosshair" class="crosshair hidden"></div>
+      <div id="flash" class="flash hidden"></div>
+
+      <div id="click-to-play" class="click-to-play hidden">
+        <p>Click to capture mouse · WASD move · Hold right-click aim · Space shoot</p>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
