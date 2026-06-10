@@ -3,8 +3,10 @@ import { PointerLockControls } from "three/examples/jsm/controls/PointerLockCont
 import type { NetClient } from "../net/client.js";
 import {
   buildWarehouse,
-  getSupportedFeetY,
+  getHighestSurfaceBelow,
+  PLAYER_RADIUS,
   resolveCollision,
+  supportsFeetAt,
   type StandSurface,
 } from "./warehouse.js";
 import { createBlockyPlayer } from "./blocky-player.js";
@@ -13,6 +15,7 @@ const WALK_SPEED = 3;
 const JUMP_VELOCITY = 8;
 const GRAVITY = 18;
 const EYE_OFFSET = 0.6;
+const STAND_SKIN = 0.02;
 
 export class Game {
   readonly scene = new THREE.Scene();
@@ -22,8 +25,10 @@ export class Game {
 
   private controls: PointerLockControls | null = null;
   private colliders: THREE.Box3[] = [];
+  private propColliders: THREE.Box3[] = [];
   private standSurfaces: StandSurface[] = [];
   private defaultFeetY = 1;
+  private standingFeetY = 1;
   private keys = new Set<string>();
   private sequence = 0;
   private stateTimer = 0;
@@ -79,6 +84,7 @@ export class Game {
 
     const warehouse = buildWarehouse(this.scene);
     this.colliders = warehouse.wallColliders;
+    this.propColliders = warehouse.propColliders;
     this.standSurfaces = warehouse.standSurfaces;
     this.defaultFeetY = warehouse.defaultFeetY;
 
@@ -120,7 +126,8 @@ export class Game {
     this.yaw = THREE.MathUtils.degToRad(rotY);
     this.pitch = 0;
     this.defaultFeetY = y;
-    this.groundEyeY = y + EYE_OFFSET;
+    this.standingFeetY = y + STAND_SKIN;
+    this.groundEyeY = this.standingFeetY + EYE_OFFSET;
     this.verticalVelocity = 0;
     this.onFloor = true;
     this.jumpQueued = false;
@@ -128,9 +135,7 @@ export class Game {
 
     const obj = this.controls!.getObject();
     obj.position.set(x, this.groundEyeY, z);
-    obj.rotation.y = this.yaw;
-    this.camera.position.copy(obj.position);
-    this.camera.rotation.x = this.pitch;
+    obj.rotation.set(0, this.yaw, 0, "YXZ");
 
     this.updateOpponent(opponentSpawn.position, opponentSpawn.rotation);
   }
@@ -139,6 +144,12 @@ export class Game {
     this.active = false;
     this.clearInputState();
     this.hud.hideCrosshair();
+
+    const obj = this.controls?.getObject();
+    if (obj) {
+      obj.rotation.set(0, obj.rotation.y, 0, "YXZ");
+    }
+
     document.exitPointerLock();
   }
 
@@ -181,9 +192,22 @@ export class Game {
     return [pitch, yaw, 0];
   }
 
-  private getSupportedEyeY(x: number, z: number): number {
-    const feetY = getSupportedFeetY(x, z, this.standSurfaces, this.defaultFeetY);
+  private getCurrentFeetY(eyeY: number): number {
+    return eyeY - EYE_OFFSET;
+  }
+
+  private eyeYFromFeet(feetY: number): number {
     return feetY + EYE_OFFSET;
+  }
+
+  private findLandingFeetY(x: number, z: number, maxFeetY: number): number {
+    return getHighestSurfaceBelow(
+      x,
+      z,
+      this.standSurfaces,
+      this.defaultFeetY,
+      maxFeetY,
+    );
   }
 
   private updateMovement(delta: number): void {
@@ -205,7 +229,15 @@ export class Game {
     if (move.lengthSq() > 0) {
       move.normalize().multiplyScalar(speed);
       obj.position.add(move);
-      obj.position.copy(resolveCollision(obj.position, this.colliders));
+      obj.position.copy(
+        resolveCollision(
+          obj.position,
+          [...this.colliders, ...this.propColliders],
+          PLAYER_RADIUS,
+          1.8,
+          this.getCurrentFeetY(obj.position.y),
+        ),
+      );
     }
 
     if (this.jumpQueued && this.onFloor) {
@@ -218,25 +250,35 @@ export class Game {
       this.verticalVelocity -= GRAVITY * delta;
       obj.position.y += this.verticalVelocity * delta;
 
-      const supportedEyeY = this.getSupportedEyeY(obj.position.x, obj.position.z);
-      if (obj.position.y <= supportedEyeY && this.verticalVelocity <= 0) {
-        obj.position.y = supportedEyeY;
-        this.groundEyeY = supportedEyeY;
+      const currentFeetY = this.getCurrentFeetY(obj.position.y);
+      const landingFeetY = this.findLandingFeetY(obj.position.x, obj.position.z, currentFeetY);
+      const landingEyeY = this.eyeYFromFeet(landingFeetY + STAND_SKIN);
+
+      if (obj.position.y <= landingEyeY && this.verticalVelocity <= 0) {
+        this.standingFeetY = landingFeetY + STAND_SKIN;
+        obj.position.y = this.eyeYFromFeet(this.standingFeetY);
+        this.groundEyeY = obj.position.y;
         this.verticalVelocity = 0;
         this.onFloor = true;
       }
+    } else if (
+      supportsFeetAt(
+        obj.position.x,
+        obj.position.z,
+        this.standSurfaces,
+        this.defaultFeetY,
+        this.standingFeetY,
+      )
+    ) {
+      obj.position.y = this.eyeYFromFeet(this.standingFeetY);
+      this.groundEyeY = obj.position.y;
     } else {
-      const supportedEyeY = this.getSupportedEyeY(obj.position.x, obj.position.z);
-      if (obj.position.y > supportedEyeY + 0.05) {
-        this.onFloor = false;
-      } else {
-        obj.position.y = supportedEyeY;
-        this.groundEyeY = supportedEyeY;
-      }
+      this.onFloor = false;
+      this.verticalVelocity = 0;
     }
 
     this.yaw = obj.rotation.y;
-    this.pitch = this.camera.rotation.x;
+    this.pitch = obj.rotation.x;
     this.camera.position.copy(obj.position);
   }
 

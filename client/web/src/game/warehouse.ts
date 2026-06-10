@@ -5,6 +5,8 @@ const WALL_THICKNESS = 0.4;
 const DEFAULT_FEET_Y = 1;
 const PLAYER_RADIUS = 0.35;
 
+export { PLAYER_RADIUS };
+
 export interface StandSurface {
   minX: number;
   maxX: number;
@@ -15,6 +17,7 @@ export interface StandSurface {
 
 export interface WarehouseBuild {
   wallColliders: THREE.Box3[];
+  propColliders: THREE.Box3[];
   standSurfaces: StandSurface[];
   defaultFeetY: number;
 }
@@ -207,7 +210,69 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
     .filter((box) => box !== floorBox && box !== ceilingBox && box.max.y > 0.2)
     .map(boxToSurface);
 
-  return { wallColliders: wallBoxes, standSurfaces, defaultFeetY: DEFAULT_FEET_Y };
+  const propColliders = allBoxes.filter(
+    (box) => box !== floorBox && box !== ceilingBox && !wallBoxes.includes(box),
+  );
+
+  return { wallColliders: wallBoxes, propColliders, standSurfaces, defaultFeetY: DEFAULT_FEET_Y };
+}
+
+export function isPointOverSurface(
+  x: number,
+  z: number,
+  surface: StandSurface,
+  radius = PLAYER_RADIUS,
+): boolean {
+  return (
+    x >= surface.minX + radius &&
+    x <= surface.maxX - radius &&
+    z >= surface.minZ + radius &&
+    z <= surface.maxZ - radius
+  );
+}
+
+export function supportsFeetAt(
+  x: number,
+  z: number,
+  surfaces: StandSurface[],
+  defaultFeetY: number,
+  feetY: number,
+  radius = PLAYER_RADIUS,
+  epsilon = 0.05,
+): boolean {
+  if (Math.abs(feetY - defaultFeetY) <= epsilon) {
+    return true;
+  }
+
+  for (const surface of surfaces) {
+    if (Math.abs(surface.feetY - feetY) <= epsilon && isPointOverSurface(x, z, surface, radius)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function getHighestSurfaceBelow(
+  x: number,
+  z: number,
+  surfaces: StandSurface[],
+  defaultFeetY: number,
+  maxFeetY: number,
+  radius = PLAYER_RADIUS,
+  epsilon = 0.05,
+): number {
+  let best = defaultFeetY;
+  for (const surface of surfaces) {
+    if (
+      isPointOverSurface(x, z, surface, radius) &&
+      surface.feetY <= maxFeetY + epsilon &&
+      surface.feetY > best
+    ) {
+      best = surface.feetY;
+    }
+  }
+  return best;
 }
 
 export function getSupportedFeetY(
@@ -237,14 +302,20 @@ export function resolveCollision(
   wallColliders: THREE.Box3[],
   radius = PLAYER_RADIUS,
   height = 1.8,
+  feetY?: number,
 ): THREE.Vector3 {
   const next = pos.clone();
+  const feet = feetY ?? pos.y - height * 0.5;
   const playerBox = new THREE.Box3(
     new THREE.Vector3(next.x - radius, next.y - height * 0.5, next.z - radius),
     new THREE.Vector3(next.x + radius, next.y + height * 0.5, next.z + radius),
   );
 
   for (const wall of wallColliders) {
+    if (feet >= wall.max.y - 0.05) {
+      continue;
+    }
+
     if (playerBox.intersectsBox(wall)) {
       const dx = Math.min(wall.max.x - playerBox.min.x, playerBox.max.x - wall.min.x);
       const dz = Math.min(wall.max.z - playerBox.min.z, playerBox.max.z - wall.min.z);
