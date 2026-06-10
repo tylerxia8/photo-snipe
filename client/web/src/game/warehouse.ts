@@ -19,8 +19,47 @@ export interface WarehouseBuild {
   defaultFeetY: number;
 }
 
-function mat(color: number, roughness = 0.85): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({ color, roughness });
+function flatMat(color: number): THREE.MeshLambertMaterial {
+  return new THREE.MeshLambertMaterial({ color });
+}
+
+function flatTexMat(texture: THREE.Texture, color = 0xffffff): THREE.MeshLambertMaterial {
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.MeshLambertMaterial({ map: texture, color });
+}
+
+function createGridTexture(light: string, dark: string, cells = 8): THREE.CanvasTexture {
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const step = size / cells;
+  for (let y = 0; y < cells; y++) {
+    for (let x = 0; x < cells; x++) {
+      ctx.fillStyle = (x + y) % 2 === 0 ? light : dark;
+      ctx.fillRect(x * step, y * step, step, step);
+    }
+  }
+  ctx.strokeStyle = "rgba(0,0,0,0.15)";
+  ctx.lineWidth = 2;
+  for (let i = 0; i <= cells; i++) {
+    const p = i * step;
+    ctx.beginPath();
+    ctx.moveTo(p, 0);
+    ctx.lineTo(p, size);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, p);
+    ctx.lineTo(size, p);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  return tex;
 }
 
 function addBox(
@@ -32,7 +71,7 @@ function addBox(
 ): THREE.Box3 {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), material);
   mesh.position.copy(pos);
-  mesh.castShadow = false;
+  mesh.castShadow = true;
   mesh.receiveShadow = true;
   parent.add(mesh);
 
@@ -41,17 +80,20 @@ function addBox(
   return box;
 }
 
-function addMarker(
+function addLightStrip(
   parent: THREE.Object3D,
   pos: THREE.Vector3,
-  color: number,
+  size: THREE.Vector3,
 ): void {
-  const mesh = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.6, 0.6, 0.08, 24),
-    mat(color, 0.5),
+  const housing = addBox(parent, pos, size, flatMat(0x3a4048), []);
+  void housing;
+  const glow = new THREE.Mesh(
+    new THREE.BoxGeometry(size.x * 0.82, size.y * 0.35, size.z * 0.82),
+    new THREE.MeshLambertMaterial({ color: 0xdff6ff, emissive: 0x88ccff, emissiveIntensity: 0.55 }),
   );
-  mesh.position.set(pos.x, 0.04, pos.z);
-  parent.add(mesh);
+  glow.position.copy(pos);
+  glow.position.y += size.y * 0.08;
+  parent.add(glow);
 }
 
 function boxToSurface(box: THREE.Box3): StandSurface {
@@ -71,19 +113,45 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
 
   const allBoxes: THREE.Box3[] = [];
   const wallBoxes: THREE.Box3[] = [];
-  const floorMat = mat(0x525456);
-  const wallMat = mat(0x737882);
-  const ceilingMat = mat(0x3a3d42);
-  const crateMat = mat(0x856137);
-  const shelfMat = mat(0x474d56);
-  const metalMat = mat(0x8c9094, 0.4);
 
-  const floorBox = addBox(group, new THREE.Vector3(0, -0.1, 0), new THREE.Vector3(48, 0.2, 48), floorMat, allBoxes);
-  const ceilingBox = addBox(group, new THREE.Vector3(0, WALL_HEIGHT + 0.05, 0), new THREE.Vector3(48, 0.1, 48), ceilingMat, allBoxes);
+  const floorTex = createGridTexture("#6b7280", "#5b6170");
+  floorTex.repeat.set(12, 12);
+  const floorMat = flatTexMat(floorTex);
+
+  const wallMat = flatMat(0x8b95a8);
+  const wallTrim = flatMat(0x5f6775);
+  const ceilingMat = flatMat(0x454b57);
+  const crateColors = [0xe67e22, 0x3498db, 0x2ecc71, 0x9b59b6, 0xf1c40f];
+  const shelfMat = flatMat(0x546e7a);
+  const pillarMat = flatMat(0x78909c);
+  const stripeMat = flatMat(0xf39c12);
+
+  const floorBox = addBox(
+    group,
+    new THREE.Vector3(0, -0.1, 0),
+    new THREE.Vector3(48, 0.2, 48),
+    floorMat,
+    allBoxes,
+  );
+  const ceilingBox = addBox(
+    group,
+    new THREE.Vector3(0, WALL_HEIGHT + 0.05, 0),
+    new THREE.Vector3(48, 0.1, 48),
+    ceilingMat,
+    allBoxes,
+  );
 
   const addWall = (pos: THREE.Vector3, size: THREE.Vector3) => {
     const box = addBox(group, pos, size, wallMat, allBoxes);
     wallBoxes.push(box);
+    const trimH = 0.15;
+    addBox(
+      group,
+      new THREE.Vector3(pos.x, pos.y - size.y * 0.5 + trimH * 0.5, pos.z),
+      new THREE.Vector3(size.x, trimH, size.z + 0.02),
+      wallTrim,
+      [],
+    );
   };
 
   addWall(new THREE.Vector3(0, WALL_HEIGHT * 0.5, -24), new THREE.Vector3(48, WALL_HEIGHT, WALL_THICKNESS));
@@ -97,17 +165,25 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
     addWall(new THREE.Vector3(x, 2.5, z), new THREE.Vector3(16, 5, WALL_THICKNESS));
   }
 
+  for (let i = 0; i < 5; i++) {
+    const x = -18 + i * 9;
+    addLightStrip(group, new THREE.Vector3(x, WALL_HEIGHT + 0.02, 0), new THREE.Vector3(6, 0.12, 1.2));
+  }
+
   for (const z of [-18, -8, 8, 18]) {
     addBox(group, new THREE.Vector3(16, 1.25, z), new THREE.Vector3(4, 2.5, 6), shelfMat, allBoxes);
     addBox(group, new THREE.Vector3(-16, 1.25, z), new THREE.Vector3(4, 2.5, 6), shelfMat, allBoxes);
+    addBox(group, new THREE.Vector3(16, 2.55, z), new THREE.Vector3(4.1, 0.12, 6.1), stripeMat, allBoxes);
+    addBox(group, new THREE.Vector3(-16, 2.55, z), new THREE.Vector3(4.1, 0.12, 6.1), stripeMat, allBoxes);
   }
 
   for (const [x, z] of [[8, -6], [-8, 6], [8, 6], [-8, -6]] as const) {
-    addBox(group, new THREE.Vector3(x, 3, z), new THREE.Vector3(0.8, 6, 0.8), metalMat, allBoxes);
+    addBox(group, new THREE.Vector3(x, 3, z), new THREE.Vector3(0.8, 6, 0.8), pillarMat, allBoxes);
+    addBox(group, new THREE.Vector3(x, 5.8, z), new THREE.Vector3(1.2, 0.15, 1.2), stripeMat, allBoxes);
   }
 
-  addBox(group, new THREE.Vector3(0, 1, 0), new THREE.Vector3(7, 2, 5), crateMat, allBoxes);
-  addBox(group, new THREE.Vector3(0, 2.6, 0), new THREE.Vector3(5, 2, 3.5), crateMat, allBoxes);
+  addBox(group, new THREE.Vector3(0, 1, 0), new THREE.Vector3(7, 2, 5), flatMat(crateColors[0]), allBoxes);
+  addBox(group, new THREE.Vector3(0, 2.6, 0), new THREE.Vector3(5, 2, 3.5), flatMat(crateColors[1]), allBoxes);
 
   const crates: Array<[number, number, number, number, number, number]> = [
     [6, 0.75, -20, 2, 1.5, 2], [-5, 0.75, -18, 1.5, 1.2, 1.5],
@@ -116,12 +192,16 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
     [8, 0.75, 20, 2, 1.5, 2], [-7, 0.75, 18, 1.5, 1.2, 1.5],
     [3, 0.75, -2, 2, 1.5, 2], [-4, 0.75, 3, 1.5, 1.2, 1.5],
   ];
-  for (const [x, y, z, sx, sy, sz] of crates) {
-    addBox(group, new THREE.Vector3(x, y, z), new THREE.Vector3(sx, sy, sz), crateMat, allBoxes);
-  }
+  crates.forEach(([x, y, z, sx, sy, sz], i) => {
+    addBox(group, new THREE.Vector3(x, y, z), new THREE.Vector3(sx, sy, sz), flatMat(crateColors[i % crateColors.length]), allBoxes);
+  });
 
-  addMarker(group, new THREE.Vector3(0, 0, -18), 0x3399ee);
-  addMarker(group, new THREE.Vector3(0, 0, 18), 0xe85c3c);
+  const spawnPad = (x: number, z: number, color: number) => {
+    addBox(group, new THREE.Vector3(x, 0.02, z), new THREE.Vector3(3.2, 0.04, 3.2), flatMat(color), []);
+    addBox(group, new THREE.Vector3(x, 0.06, z), new THREE.Vector3(2.4, 0.02, 2.4), flatMat(0xffffff), []);
+  };
+  spawnPad(0, -18, 0x3498db);
+  spawnPad(0, 18, 0xe74c3c);
 
   const standSurfaces = allBoxes
     .filter((box) => box !== floorBox && box !== ceilingBox && box.max.y > 0.2)

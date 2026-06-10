@@ -7,12 +7,12 @@ import {
   resolveCollision,
   type StandSurface,
 } from "./warehouse.js";
+import { createBlockyPlayer } from "./blocky-player.js";
 
 const WALK_SPEED = 3;
 const JUMP_VELOCITY = 8;
 const GRAVITY = 18;
 const EYE_OFFSET = 0.6;
-const BODY_VISUAL_OFFSET = 0.9;
 
 export class Game {
   readonly scene = new THREE.Scene();
@@ -46,28 +46,32 @@ export class Game {
     },
     mount: HTMLElement,
   ) {
-    this.scene.background = new THREE.Color(0x1a1c22);
-    this.scene.fog = new THREE.Fog(0x1a1c22, 35, 75);
+    this.scene.background = new THREE.Color(0x7eb8da);
+    this.scene.fog = new THREE.Fog(0x9ec9e0, 45, 95);
 
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     mount.appendChild(this.renderer.domElement);
 
-    const hemi = new THREE.HemisphereLight(0xb8c4d4, 0x3a3a40, 0.85);
-    this.scene.add(hemi);
-    const sun = new THREE.DirectionalLight(0xfff5e6, 1.35);
-    sun.position.set(10, 20, 8);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+    this.scene.add(ambient);
+    const sun = new THREE.DirectionalLight(0xfff4e0, 1.05);
+    sun.position.set(12, 24, 10);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.left = -30;
+    sun.shadow.camera.right = 30;
+    sun.shadow.camera.top = 30;
+    sun.shadow.camera.bottom = -30;
     this.scene.add(sun);
-    const fill = new THREE.DirectionalLight(0x8899bb, 0.35);
-    fill.position.set(-8, 12, -10);
+    const fill = new THREE.DirectionalLight(0xb3d9ff, 0.35);
+    fill.position.set(-10, 14, -12);
     this.scene.add(fill);
 
-    const body = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.4, 1.0, 4, 8),
-      new THREE.MeshStandardMaterial({ color: 0xe74c3c }),
-    );
-    body.position.y = BODY_VISUAL_OFFSET;
-    this.opponent.add(body);
+    const opponentModel = createBlockyPlayer(0xe74c3c, 0xf39c12);
+    this.opponent.add(opponentModel);
     this.scene.add(this.opponent);
 
     this.controls = new PointerLockControls(this.camera, this.renderer.domElement);

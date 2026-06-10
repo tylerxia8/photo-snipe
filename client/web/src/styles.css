@@ -10,87 +10,262 @@ body,
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #0a0a0c;
-  font-family: system-ui, sans-serif;
-  color: #f5f5f5;
+  background: #0b0f14;
+  font-family: "Rajdhani", system-ui, sans-serif;
+  color: #f5f7fa;
 }
 
 canvas {
   display: block;
 }
 
-.panel {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(12, 14, 18, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 2rem;
-  width: min(420px, 92vw);
-  z-index: 10;
+.hidden {
+  display: none !important;
 }
 
-.panel h1 {
-  font-size: 2rem;
-  margin-bottom: 0.25rem;
+/* ── FPS Lobby ── */
+
+.lobby {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.lobby-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 40%, rgba(0, 230, 118, 0.12), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 85% 70%, rgba(41, 182, 246, 0.14), transparent 50%),
+    linear-gradient(145deg, #0a1018 0%, #121820 45%, #0d1218 100%);
+}
+
+.lobby-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 85%);
+  pointer-events: none;
+}
+
+.lobby-vignette {
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+}
+
+.lobby-layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 2rem;
+  align-items: center;
+  height: 100%;
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.lobby-hero {
+  padding-right: 1rem;
+}
+
+.lobby-badge {
+  display: inline-block;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  color: #00e676;
+  border: 1px solid rgba(0, 230, 118, 0.35);
+  background: rgba(0, 230, 118, 0.08);
+  padding: 0.35rem 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.lobby-title {
+  font-size: clamp(3rem, 8vw, 5.5rem);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow: 0 0 40px rgba(0, 230, 118, 0.25);
+}
+
+.lobby-title-accent {
+  color: #00e676;
 }
 
 .tagline {
-  color: #9aa3b2;
-  margin-bottom: 1.25rem;
+  margin-top: 1rem;
+  max-width: 34ch;
+  font-size: 1.15rem;
+  line-height: 1.45;
+  color: #b8c4d4;
 }
 
-.panel label {
-  display: block;
-  margin-bottom: 0.75rem;
-  font-size: 0.85rem;
-  color: #c5ccd6;
+.lobby-features {
+  list-style: none;
+  margin-top: 1.75rem;
+  display: grid;
+  gap: 0.55rem;
 }
 
-.panel input {
+.lobby-features li {
+  position: relative;
+  padding-left: 1.1rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #dce4ef;
+}
+
+.lobby-features li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.45rem;
+  height: 0.45rem;
+  background: #29b6f6;
+  box-shadow: 0 0 10px rgba(41, 182, 246, 0.8);
+  transform: rotate(45deg);
+}
+
+.lobby-controls-hint {
+  display: grid;
+  grid-template-columns: auto auto auto auto auto auto;
+  gap: 0.35rem 0.75rem;
+  margin-top: 2rem;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: #7f8fa4;
+}
+
+.lobby-controls-hint span:nth-child(odd) {
+  color: #00e676;
+  font-weight: 700;
+}
+
+.panel {
+  background: rgba(10, 14, 20, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 3px solid #00e676;
+  padding: 1.75rem;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+
+.panel-header h2 {
+  font-size: 1.5rem;
+  letter-spacing: 0.14em;
+  color: #eef3f8;
+}
+
+.panel-header p {
+  margin-top: 0.25rem;
+  color: #8fa0b3;
+  font-size: 0.95rem;
+}
+
+.field {
   display: block;
+  margin-top: 1.1rem;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  color: #7f8fa4;
+  margin-bottom: 0.4rem;
+}
+
+.field input {
   width: 100%;
-  margin-top: 0.35rem;
-  padding: 0.65rem 0.75rem;
-  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #151820;
+  background: rgba(0, 0, 0, 0.35);
   color: #fff;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.field input:focus {
+  border-color: rgba(0, 230, 118, 0.65);
+  box-shadow: 0 0 0 2px rgba(0, 230, 118, 0.15);
 }
 
 .actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
-  margin-top: 1rem;
+  margin-top: 1.35rem;
 }
 
-button {
-  flex: 1;
-  padding: 0.75rem 1rem;
+.btn {
+  padding: 0.85rem 1rem;
   border: none;
-  border-radius: 8px;
-  background: #3b82f6;
-  color: white;
-  font-weight: 600;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   cursor: pointer;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  transition: transform 0.12s, filter 0.12s;
 }
 
-button:hover {
-  background: #2563eb;
+.btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #00e676, #00c853);
+  color: #041008;
+}
+
+.btn-secondary {
+  background: linear-gradient(180deg, #29b6f6, #039be5);
+  color: #041018;
 }
 
 .status {
   margin-top: 1rem;
-  font-size: 0.9rem;
-  color: #9aa3b2;
   min-height: 1.25rem;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.82rem;
+  color: #8fa0b3;
 }
 
-.hidden {
-  display: none !important;
+@media (max-width: 860px) {
+  .lobby-layout {
+    grid-template-columns: 1fr;
+    align-content: center;
+    overflow-y: auto;
+  }
+
+  .lobby-hero {
+    padding-right: 0;
+  }
+
+  .lobby-controls-hint {
+    display: none;
+  }
 }
+
+/* ── In-game HUD ── */
 
 .hud {
   position: absolute;
@@ -98,25 +273,71 @@ button:hover {
   left: 1rem;
   z-index: 5;
   pointer-events: none;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+#round-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #00e676;
+  text-shadow: 0 0 12px rgba(0, 230, 118, 0.35);
 }
 
 #message {
   margin-top: 0.35rem;
-  color: #dbeafe;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #e8f0ff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
 }
+
+/* ── Crosshair ── */
 
 .crosshair {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 20px;
-  height: 20px;
-  margin: -10px 0 0 -10px;
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
   z-index: 4;
   pointer-events: none;
+}
+
+.crosshair-v,
+.crosshair-h {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+.crosshair-v {
+  left: 50%;
+  top: 2px;
+  width: 2px;
+  height: 20px;
+  transform: translateX(-50%);
+}
+
+.crosshair-h {
+  top: 50%;
+  left: 2px;
+  width: 20px;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.crosshair-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  background: #00e676;
+  box-shadow: 0 0 6px rgba(0, 230, 118, 0.9);
 }
 
 .flash {

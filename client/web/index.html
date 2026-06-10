@@ -4,26 +4,63 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PhotoSnipe</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
     <div id="app">
-      <div id="lobby" class="panel">
-        <h1>PhotoSnipe</h1>
-        <p class="tagline">Photograph any part of your opponent before they get you.</p>
-        <label>
-          Display name
-          <input id="name-input" type="text" placeholder="Player" maxlength="24" />
-        </label>
-        <label>
-          Room code (to join)
-          <input id="room-input" type="text" placeholder="ABCD" maxlength="4" />
-        </label>
-        <div class="actions">
-          <button id="create-btn" type="button">Create Room</button>
-          <button id="join-btn" type="button">Join Room</button>
+      <div id="lobby" class="lobby">
+        <div class="lobby-bg"></div>
+        <div class="lobby-grid"></div>
+        <div class="lobby-vignette"></div>
+
+        <div class="lobby-layout">
+          <aside class="lobby-hero">
+            <p class="lobby-badge">ONLINE · 1v1 · PHOTO COMBAT</p>
+            <h1 class="lobby-title">
+              <span class="lobby-title-accent">PHOTO</span>SNIPE
+            </h1>
+            <p class="tagline">Stalk. Snap. Win. First clear photo takes the match.</p>
+
+            <ul class="lobby-features">
+              <li>Fast arena duels</li>
+              <li>Line-of-sight captures only</li>
+              <li>Jump, climb, outplay</li>
+            </ul>
+
+            <div class="lobby-controls-hint">
+              <span>WASD</span><span>MOVE</span>
+              <span>SPACE</span><span>JUMP</span>
+              <span>SHIFT</span><span>SNAP</span>
+            </div>
+          </aside>
+
+          <section class="lobby-panel panel">
+            <div class="panel-header">
+              <h2>MULTIPLAYER</h2>
+              <p>Join a room or host your own</p>
+            </div>
+
+            <label class="field">
+              <span class="field-label">OPERATOR NAME</span>
+              <input id="name-input" type="text" placeholder="Enter callsign" maxlength="24" />
+            </label>
+
+            <label class="field">
+              <span class="field-label">ROOM CODE</span>
+              <input id="room-input" type="text" placeholder="ABCD" maxlength="4" />
+            </label>
+
+            <div class="actions">
+              <button id="create-btn" class="btn btn-primary" type="button">HOST MATCH</button>
+              <button id="join-btn" class="btn btn-secondary" type="button">JOIN MATCH</button>
+            </div>
+
+            <p id="status" class="status">Connecting…</p>
+          </section>
         </div>
-        <p id="status" class="status">Connecting…</p>
       </div>
 
       <div id="hud" class="hud hidden">
@@ -31,7 +68,11 @@
         <div id="message"></div>
       </div>
 
-      <div id="crosshair" class="crosshair hidden"></div>
+      <div id="crosshair" class="crosshair hidden">
+        <span class="crosshair-v"></span>
+        <span class="crosshair-h"></span>
+        <span class="crosshair-dot"></span>
+      </div>
       <div id="flash" class="flash hidden"></div>
     </div>
     <script type="module" src="/src/main.ts"></script>
