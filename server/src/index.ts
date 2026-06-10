@@ -2,8 +2,9 @@ import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
 import { loadMatchConfig } from "./data-loader.js";
-import { LobbyManager } from "./lobby.js";
+import { LobbyManager, type LobbyPlayer } from "./lobby.js";
 import { MatchSession } from "./match-session.js";
+import { RematchManager } from "./rematch.js";
 import { serveWebClient, webClientAvailable } from "./static.js";
 import type { PlayerSlot } from "@photo-snipe/core";
 
@@ -18,10 +19,94 @@ interface ClientContext {
 }
 
 const lobby = new LobbyManager();
+const rematch = new RematchManager();
 const clients = new WeakMap<WebSocket, ClientContext>();
 
+function opponentSlot(slot: PlayerSlot): PlayerSlot {
+  return slot === "A" ? "B" : "A";
+}
+
+function sendRematchStatus(roomCode: string): void {
+  const session = rematch.get(roomCode);
+  if (!session) {
+    return;
+  }
+  for (const playerSlot of ["A", "B"] as const) {
+    const player = session.players[playerSlot];
+    const opponent = opponentSlot(playerSlot);
+    send(player.socket, {
+      type: "rematch_status",
+      youReady: session.votes[playerSlot] === true,
+      opponentReady: session.votes[opponent] === true,
+    });
+  }
+}
+
+async function startMatch(
+  playerA: LobbyPlayer,
+  playerB: LobbyPlayer,
+  roomCode: string,
+): Promise<MatchSession> {
+  const matchConfig = await loadMatchConfig();
+  const match = new MatchSession(matchConfig, playerA, playerB, () => {
+    registerRematch(match, roomCode);
+    clearMatchContext(match);
+  });
+  const ctxA = clients.get(playerA.socket);
+  const ctxB = clients.get(playerB.socket);
+  if (ctxA) {
+    ctxA.match = match;
+    ctxA.roomCode = roomCode;
+  }
+  if (ctxB) {
+    ctxB.match = match;
+    ctxB.roomCode = roomCode;
+  }
+
+  send(playerA.socket, {
+    type: "match_started",
+    matchId: match.matchId,
+    playerSlot: "A",
+    opponentName: playerB.displayName,
+    matchConfig: {
+      roundsToWin: matchConfig.roundsToWin,
+      roundPool: matchConfig.roundPool,
+    },
+  });
+
+  send(playerB.socket, {
+    type: "match_started",
+    matchId: match.matchId,
+    playerSlot: "B",
+    opponentName: playerA.displayName,
+    matchConfig: {
+      roundsToWin: matchConfig.roundsToWin,
+      roundPool: matchConfig.roundPool,
+    },
+  });
+
+  match.start();
+  return match;
+}
+
+function registerRematch(match: MatchSession, roomCode: string): void {
+  rematch.register(roomCode, match.getPlayers());
+}
+
+function clearMatchContext(match: MatchSession): void {
+  const players = match.getPlayers();
+  for (const player of [players.A, players.B]) {
+    const ctx = clients.get(player.socket);
+    if (ctx) {
+      ctx.match = undefined;
+    }
+  }
+}
+
 function send(socket: WebSocket, payload: Record<string, unknown>): void {
-  socket.send(JSON.stringify(payload));
+  if (socket.readyState === socket.OPEN) {
+    socket.send(JSON.stringify(payload));
+  }
 }
 
 function parseMessage(raw: Buffer | ArrayBuffer | Buffer[]): Record<string, unknown> | null {
@@ -84,6 +169,11 @@ wss.on("connection", (socket) => {
 
     if (ctx.match && ctx.slot) {
       ctx.match.handleDisconnect(ctx.slot);
+    }
+
+    if (ctx.roomCode && ctx.slot) {
+      rematch.setVote(ctx.roomCode, ctx.slot, false);
+      sendRematchStatus(ctx.roomCode);
     }
 
     lobby.removePlayer(ctx.clientId);
@@ -153,40 +243,46 @@ async function handleMessage(
         return;
       }
 
-      const matchConfig = await loadMatchConfig();
-      const match = new MatchSession(matchConfig, playerA, playerB);
-      const ctxA = clients.get(playerA.socket);
-      const ctxB = clients.get(playerB.socket);
-      if (ctxA) {
-        ctxA.match = match;
+      await startMatch(playerA, playerB, joined.room.code);
+      break;
+    }
+
+    case "rematch_request": {
+      if (!ctx.roomCode || !ctx.slot) {
+        send(socket, {
+          type: "error",
+          code: "not_in_room",
+          message: "Finish a match before requesting a rematch",
+        });
+        return;
       }
-      if (ctxB) {
-        ctxB.match = match;
+
+      const session = rematch.setVote(ctx.roomCode, ctx.slot, true);
+      if (!session) {
+        send(socket, {
+          type: "error",
+          code: "rematch_unavailable",
+          message: "Rematch is not available for this room",
+        });
+        return;
       }
 
-      send(playerA.socket, {
-        type: "match_started",
-        matchId: match.matchId,
-        playerSlot: "A",
-        opponentName: playerB.displayName,
-        matchConfig: {
-          roundsToWin: matchConfig.roundsToWin,
-          roundPool: matchConfig.roundPool,
-        },
-      });
+      sendRematchStatus(ctx.roomCode);
 
-      send(playerB.socket, {
-        type: "match_started",
-        matchId: match.matchId,
-        playerSlot: "B",
-        opponentName: playerA.displayName,
-        matchConfig: {
-          roundsToWin: matchConfig.roundsToWin,
-          roundPool: matchConfig.roundPool,
-        },
-      });
+      if (rematch.bothReady(session)) {
+        rematch.clear(ctx.roomCode);
+        await startMatch(session.players.A, session.players.B, ctx.roomCode);
+      }
+      break;
+    }
 
-      match.start();
+    case "return_to_menu": {
+      if (ctx.roomCode && ctx.slot) {
+        rematch.setVote(ctx.roomCode, ctx.slot, false);
+        sendRematchStatus(ctx.roomCode);
+      }
+      ctx.match = undefined;
+      send(socket, { type: "returned_to_menu" });
       break;
     }
 

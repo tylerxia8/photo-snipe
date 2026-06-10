@@ -16,56 +16,95 @@
         <div class="lobby-grid"></div>
         <div class="lobby-vignette"></div>
 
-        <div class="lobby-layout">
-          <aside class="lobby-hero">
-            <p class="lobby-badge">ONLINE · 1v1 · PHOTO COMBAT</p>
-            <h1 class="lobby-title">
-              <span class="lobby-title-accent">PHOTO</span>SNIPE
-            </h1>
-            <p class="tagline">Stalk. Snap. Win. First clear photo takes the match.</p>
+        <header class="kr-header">
+          <div class="kr-logo">
+            <span class="kr-logo-mark">PS</span>
+            <span class="kr-logo-text">PHOTOSNIPE</span>
+          </div>
+          <div class="kr-header-meta">
+            <span class="kr-pill">1v1 · PHOTO COMBAT</span>
+            <span id="header-status" class="kr-status">Connecting…</span>
+          </div>
+        </header>
 
-            <ul class="lobby-features">
-              <li>Fast arena duels</li>
-              <li>Line-of-sight captures only</li>
-              <li>Jump, climb, outplay</li>
-            </ul>
+        <div class="kr-shell">
+          <nav class="kr-sidebar" aria-label="Main navigation">
+            <button class="kr-nav-item active" type="button" data-nav="play">PLAY</button>
+            <button class="kr-nav-item disabled" type="button" disabled>CLASSES</button>
+            <button class="kr-nav-item disabled" type="button" disabled>SOCIAL</button>
+            <button class="kr-nav-item disabled" type="button" disabled>SHOP</button>
+          </nav>
 
-            <div class="lobby-controls-hint">
-              <span>WASD</span><span>MOVE</span>
-              <span>SPACE</span><span>JUMP</span>
-              <span>SHIFT</span><span>SNAP</span>
-            </div>
-          </aside>
+          <main class="kr-main">
+            <section class="kr-preview">
+              <div class="kr-preview-card">
+                <div class="kr-preview-figure"></div>
+                <p class="kr-preview-label">OPERATOR</p>
+                <p class="kr-preview-mode">Warehouse Interior</p>
+              </div>
 
-          <section class="lobby-panel panel">
-            <div class="panel-header">
-              <h2>MULTIPLAYER</h2>
-              <p>Join a room or host your own</p>
-            </div>
+              <ul class="kr-tips">
+                <li>First clear photo wins</li>
+                <li>Line-of-sight only</li>
+                <li>Jump to reach high ground</li>
+              </ul>
+            </section>
 
-            <label class="field">
-              <span class="field-label">OPERATOR NAME</span>
-              <input id="name-input" type="text" placeholder="Enter callsign" maxlength="24" />
-            </label>
+            <section class="kr-menu-window panel">
+              <div class="kr-menu-header">
+                <h2>QUICK MATCH</h2>
+                <p>Host a room or join with a code</p>
+              </div>
 
-            <label class="field">
-              <span class="field-label">ROOM CODE</span>
-              <input id="room-input" type="text" placeholder="ABCD" maxlength="4" />
-            </label>
+              <label class="field">
+                <span class="field-label">USERNAME</span>
+                <input id="name-input" type="text" placeholder="Enter username" maxlength="24" />
+              </label>
 
-            <div class="actions">
-              <button id="create-btn" class="btn btn-primary" type="button">HOST MATCH</button>
-              <button id="join-btn" class="btn btn-secondary" type="button">JOIN MATCH</button>
-            </div>
+              <label class="field">
+                <span class="field-label">ROOM CODE</span>
+                <input id="room-input" type="text" placeholder="ABCD" maxlength="4" />
+              </label>
 
-            <p id="status" class="status">Connecting…</p>
-          </section>
+              <div class="actions">
+                <button id="create-btn" class="btn btn-primary" type="button">HOST MATCH</button>
+                <button id="join-btn" class="btn btn-secondary" type="button">JOIN MATCH</button>
+              </div>
+
+              <p id="status" class="status">Connecting…</p>
+
+              <div class="kr-controls">
+                <span><kbd>WASD</kbd> Move</span>
+                <span><kbd>SPACE</kbd> Jump</span>
+                <span><kbd>SHIFT</kbd> Snap</span>
+              </div>
+            </section>
+          </main>
         </div>
+
+        <footer class="kr-footer">
+          <span>Stalk. Snap. Win.</span>
+          <span class="kr-footer-dot">•</span>
+          <span>Browser FPS duel</span>
+        </footer>
       </div>
 
       <div id="hud" class="hud hidden">
         <div id="round-name"></div>
         <div id="message"></div>
+      </div>
+
+      <div id="post-match" class="post-match hidden">
+        <div class="post-match-panel panel">
+          <p class="post-match-badge">MATCH OVER</p>
+          <h2 id="post-match-title">Victory</h2>
+          <p id="post-match-subtitle"></p>
+          <p id="rematch-hint" class="rematch-hint"></p>
+          <div class="actions post-match-actions">
+            <button id="rematch-btn" class="btn btn-primary" type="button">REMATCH</button>
+            <button id="menu-btn" class="btn btn-secondary" type="button">MAIN MENU</button>
+          </div>
+        </div>
       </div>
 
       <div id="crosshair" class="crosshair hidden">

@@ -7,10 +7,17 @@ const hud = document.getElementById("hud")!;
 const crosshair = document.getElementById("crosshair")!;
 const flash = document.getElementById("flash")!;
 const statusEl = document.getElementById("status")!;
+const headerStatusEl = document.getElementById("header-status")!;
 const nameInput = document.getElementById("name-input") as HTMLInputElement;
 const roomInput = document.getElementById("room-input") as HTMLInputElement;
 const messageEl = document.getElementById("message")!;
 const roundNameEl = document.getElementById("round-name")!;
+const postMatch = document.getElementById("post-match")!;
+const postMatchTitle = document.getElementById("post-match-title")!;
+const postMatchSubtitle = document.getElementById("post-match-subtitle")!;
+const rematchHint = document.getElementById("rematch-hint")!;
+const rematchBtn = document.getElementById("rematch-btn") as HTMLButtonElement;
+const menuBtn = document.getElementById("menu-btn") as HTMLButtonElement;
 
 const mount = document.getElementById("app")!;
 const net = new NetClient();
@@ -18,6 +25,7 @@ let game: Game | null = null;
 
 function setStatus(text: string): void {
   statusEl.textContent = text;
+  headerStatusEl.textContent = text;
 }
 
 function displayName(): string {
@@ -42,6 +50,61 @@ function hudApi() {
   };
 }
 
+function showLobby(): void {
+  lobby.classList.remove("hidden");
+  hud.classList.add("hidden");
+  postMatch.classList.add("hidden");
+  resetRematchUi();
+}
+
+function hidePostMatch(): void {
+  postMatch.classList.add("hidden");
+  resetRematchUi();
+}
+
+function resetRematchUi(): void {
+  rematchBtn.disabled = false;
+  rematchBtn.textContent = "REMATCH";
+  rematchHint.textContent = "";
+}
+
+function showPostMatch(msg: ServerMessage): void {
+  const didWin = Boolean(msg.didWin);
+  const winnerName = String(msg.winnerName ?? "Unknown");
+
+  postMatchTitle.textContent = didWin ? "Victory" : "Defeat";
+  postMatchSubtitle.textContent = didWin
+    ? "You win!"
+    : `${winnerName} wins!`;
+
+  resetRematchUi();
+  postMatch.classList.remove("hidden");
+  hudApi().setMessage("");
+}
+
+function updateRematchStatus(msg: ServerMessage): void {
+  const youReady = Boolean(msg.youReady);
+  const opponentReady = Boolean(msg.opponentReady);
+
+  if (youReady) {
+    rematchBtn.textContent = "WAITING…";
+    rematchBtn.disabled = true;
+  } else {
+    rematchBtn.textContent = "REMATCH";
+    rematchBtn.disabled = false;
+  }
+
+  if (youReady && opponentReady) {
+    rematchHint.textContent = "Starting rematch…";
+  } else if (youReady) {
+    rematchHint.textContent = "Waiting for opponent…";
+  } else if (opponentReady) {
+    rematchHint.textContent = "Opponent wants a rematch!";
+  } else {
+    rematchHint.textContent = "";
+  }
+}
+
 net.onStatus = setStatus;
 net.onMessage = (msg: ServerMessage) => {
   switch (msg.type) {
@@ -52,6 +115,7 @@ net.onMessage = (msg: ServerMessage) => {
       setStatus(`Joined room ${String(msg.roomCode)}`);
       break;
     case "match_started":
+      hidePostMatch();
       lobby.classList.add("hidden");
       hud.classList.remove("hidden");
       if (!game) {
@@ -66,6 +130,7 @@ net.onMessage = (msg: ServerMessage) => {
       game?.startRound(spawn, opponentSpawn, String(round?.name ?? "Round"));
       lobby.classList.add("hidden");
       hud.classList.remove("hidden");
+      postMatch.classList.add("hidden");
       break;
     }
     case "opponent_state":
@@ -87,7 +152,13 @@ net.onMessage = (msg: ServerMessage) => {
       break;
     case "match_ended":
       game?.endMatch();
-      hudApi().setMessage(`Match over! Winner: ${String(msg.winnerSlot)}`);
+      showPostMatch(msg);
+      break;
+    case "rematch_status":
+      updateRematchStatus(msg);
+      break;
+    case "returned_to_menu":
+      showLobby();
       break;
     case "error":
       setStatus(`${String(msg.code)}: ${String(msg.message)}`);
@@ -106,6 +177,15 @@ document.getElementById("join-btn")!.addEventListener("click", () => {
     return;
   }
   net.joinRoom(code, displayName());
+});
+
+rematchBtn.addEventListener("click", () => {
+  net.requestRematch();
+});
+
+menuBtn.addEventListener("click", () => {
+  net.returnToMenu();
+  showLobby();
 });
 
 let last = performance.now();

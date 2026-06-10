@@ -48,6 +48,8 @@ function opponentSlot(slot: PlayerSlot): PlayerSlot {
   return slot === "A" ? "B" : "A";
 }
 
+export type MatchEndHandler = (players: Record<PlayerSlot, LobbyPlayer>) => void;
+
 export class MatchSession {
   readonly matchId = randomUUID();
   readonly matchConfig: MatchConfig;
@@ -55,9 +57,16 @@ export class MatchSession {
   private players: Record<PlayerSlot, LobbyPlayer>;
   private liveState: Record<PlayerSlot, LivePlayerState>;
   private syncTimer: NodeJS.Timeout | null = null;
+  private onMatchEnd?: MatchEndHandler;
 
-  constructor(matchConfig: MatchConfig, playerA: LobbyPlayer, playerB: LobbyPlayer) {
+  constructor(
+    matchConfig: MatchConfig,
+    playerA: LobbyPlayer,
+    playerB: LobbyPlayer,
+    onMatchEnd?: MatchEndHandler,
+  ) {
     this.matchConfig = matchConfig;
+    this.onMatchEnd = onMatchEnd;
     this.state = createMatchState(matchConfig);
     this.players = { A: playerA, B: playerB };
     this.liveState = {
@@ -232,12 +241,18 @@ export class MatchSession {
     this.state = endRound(this.state, reason, winner);
 
     if (this.state.phase === "match_end" && this.state.winner) {
-      broadcast([this.players.A, this.players.B], {
-        type: "match_ended",
-        winnerSlot: this.state.winner,
-        scores: this.state.scores,
-        reason,
-      });
+      const winner = this.state.winner;
+      for (const slot of ["A", "B"] as const) {
+        send(this.players[slot].socket, {
+          type: "match_ended",
+          winnerSlot: winner,
+          winnerName: this.players[winner].displayName,
+          didWin: slot === winner,
+          scores: this.state.scores,
+          reason,
+        });
+      }
+      this.onMatchEnd?.(this.players);
       return;
     }
 
@@ -251,6 +266,10 @@ export class MatchSession {
     setTimeout(() => {
       void this.beginNextRound();
     }, 3000);
+  }
+
+  getPlayers(): Record<PlayerSlot, LobbyPlayer> {
+    return this.players;
   }
 
   handleDisconnect(slot: PlayerSlot): void {

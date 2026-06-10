@@ -88,4 +88,12 @@ export class NetClient {
       aspectRatio,
     });
   }
+
+  requestRematch(): void {
+    this.send({ type: "rematch_request" });
+  }
+
+  returnToMenu(): void {
+    this.send({ type: "return_to_menu" });
+  }
 }
