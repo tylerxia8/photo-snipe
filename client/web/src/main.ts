@@ -1,10 +1,17 @@
 import { Game } from "./game/game.js";
 import { NetClient } from "./net/client.js";
 import type { ServerMessage } from "./net/client.js";
+import { getControlsHint } from "./settings/keybinds.js";
+import { initKeybindSettings } from "./settings/keybind-settings.js";
 
 const lobby = document.getElementById("lobby")!;
 const hud = document.getElementById("hud")!;
 const crosshair = document.getElementById("crosshair")!;
+const cooldownRingProgress = crosshair.querySelector(
+  ".cooldown-ring-progress",
+) as SVGCircleElement;
+const COOLDOWN_RING_CIRC = 125.66;
+let readyPulseTimer: ReturnType<typeof setTimeout> | null = null;
 const flash = document.getElementById("flash")!;
 const statusEl = document.getElementById("status")!;
 const headerStatusEl = document.getElementById("header-status")!;
@@ -18,6 +25,11 @@ const postMatchSubtitle = document.getElementById("post-match-subtitle")!;
 const rematchHint = document.getElementById("rematch-hint")!;
 const rematchBtn = document.getElementById("rematch-btn") as HTMLButtonElement;
 const menuBtn = document.getElementById("menu-btn") as HTMLButtonElement;
+const playPanel = document.getElementById("play-panel")!;
+const settingsPanel = document.getElementById("settings-panel")!;
+const controlsHint = document.getElementById("controls-hint")!;
+const navPlay = document.querySelector('[data-nav="play"]')!;
+const navSettings = document.querySelector('[data-nav="settings"]')!;
 
 const mount = document.getElementById("app")!;
 const net = new NetClient();
@@ -41,13 +53,60 @@ function hudApi() {
       flash.classList.add("active");
       setTimeout(() => flash.classList.remove("active"), 150);
     },
+    setPhotoCooldown: (remainingFraction: number) => {
+      if (readyPulseTimer) {
+        clearTimeout(readyPulseTimer);
+        readyPulseTimer = null;
+      }
+
+      if (remainingFraction <= 0) {
+        crosshair.classList.remove("cooldown-active");
+        cooldownRingProgress.style.strokeDashoffset = String(COOLDOWN_RING_CIRC);
+        return;
+      }
+
+      crosshair.classList.remove("ready-pulse");
+      crosshair.classList.add("cooldown-active");
+      cooldownRingProgress.style.strokeDashoffset = String(
+        COOLDOWN_RING_CIRC * (1 - remainingFraction),
+      );
+    },
+    setPhotoReady: () => {
+      crosshair.classList.remove("cooldown-active");
+      cooldownRingProgress.style.strokeDashoffset = String(COOLDOWN_RING_CIRC);
+      crosshair.classList.remove("ready-pulse");
+      void crosshair.offsetWidth;
+      crosshair.classList.add("ready-pulse");
+      if (readyPulseTimer) clearTimeout(readyPulseTimer);
+      readyPulseTimer = setTimeout(() => {
+        crosshair.classList.remove("ready-pulse");
+        readyPulseTimer = null;
+      }, 450);
+    },
     showCrosshair: () => {
       crosshair.classList.remove("hidden");
     },
     hideCrosshair: () => {
       crosshair.classList.add("hidden");
+      crosshair.classList.remove("cooldown-active", "ready-pulse");
+      cooldownRingProgress.style.strokeDashoffset = String(COOLDOWN_RING_CIRC);
+      if (readyPulseTimer) {
+        clearTimeout(readyPulseTimer);
+        readyPulseTimer = null;
+      }
     },
   };
+}
+
+function updateControlsHint(): void {
+  controlsHint.textContent = getControlsHint();
+}
+
+function setLobbyTab(tab: "play" | "settings"): void {
+  playPanel.classList.toggle("hidden", tab !== "play");
+  settingsPanel.classList.toggle("hidden", tab !== "settings");
+  navPlay.classList.toggle("active", tab === "play");
+  navSettings.classList.toggle("active", tab === "settings");
 }
 
 function showLobby(): void {
@@ -55,6 +114,7 @@ function showLobby(): void {
   hud.classList.add("hidden");
   postMatch.classList.add("hidden");
   resetRematchUi();
+  setLobbyTab("play");
 }
 
 function hidePostMatch(): void {
@@ -140,12 +200,13 @@ net.onMessage = (msg: ServerMessage) => {
       );
       break;
     case "photo_exposure":
-      hudApi().flash();
       hudApi().setMessage("You heard a shutter nearby!");
       break;
     case "photo_result":
       if (msg.valid) {
         hudApi().setMessage("Valid capture!");
+      } else if (msg.reason === "cooldown") {
+        hudApi().setMessage("Camera cooling down…");
       } else {
         hudApi().setMessage("Miss");
       }
@@ -197,4 +258,10 @@ function frame(now: number): void {
 }
 
 net.connect();
+initKeybindSettings(updateControlsHint);
+updateControlsHint();
+
+navPlay.addEventListener("click", () => setLobbyTab("play"));
+navSettings.addEventListener("click", () => setLobbyTab("settings"));
+
 requestAnimationFrame(frame);

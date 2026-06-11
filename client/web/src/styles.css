@@ -213,14 +213,14 @@ canvas {
   position: absolute;
   left: 50%;
   bottom: 2.5rem;
-  width: 88px;
-  height: 140px;
+  width: 72px;
+  height: 128px;
   transform: translateX(-50%);
   background:
-    linear-gradient(#f39c12 0 18%, transparent 18%),
-    linear-gradient(#e74c3c 18% 42%, transparent 42%),
-    linear-gradient(#2c3e50 42% 68%, transparent 68%),
-    linear-gradient(#34495e 68% 100%, transparent 100%);
+    linear-gradient(#3b2a1a 0 10%, transparent 10%),
+    linear-gradient(#c6946a 10% 28%, transparent 28%),
+    linear-gradient(#00aaaa 28% 52%, transparent 52%),
+    linear-gradient(#3b4cc0 52% 100%, transparent 100%);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
   image-rendering: pixelated;
 }
@@ -369,27 +369,61 @@ canvas {
 }
 
 .kr-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem 1rem;
   margin-top: 1rem;
   padding-top: 0.85rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.88rem;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
   color: #9aa8ba;
 }
 
-.kr-controls kbd {
-  display: inline-block;
-  min-width: 3.2rem;
-  margin-right: 0.35rem;
-  padding: 0.15rem 0.4rem;
+.keybind-rows {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.keybind-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.keybind-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #dce4ef;
+}
+
+.keybind-btn {
+  min-width: 6.5rem;
+  padding: 0.55rem 0.85rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(0, 0, 0, 0.35);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
   color: #6dffd2;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s, color 0.12s;
+}
+
+.keybind-btn:hover {
+  border-color: rgba(33, 150, 243, 0.55);
+}
+
+.keybind-btn.listening {
+  border-color: rgba(109, 255, 210, 0.75);
+  box-shadow: 0 0 0 2px rgba(109, 255, 210, 0.15);
+  color: #fff;
+}
+
+.keybind-reset {
+  width: 100%;
+  margin-top: 1.15rem;
 }
 
 .kr-footer {
@@ -564,6 +598,63 @@ canvas {
   margin: -2px 0 0 -2px;
   background: #6dffd2;
   box-shadow: 0 0 6px rgba(109, 255, 210, 0.9);
+  border-radius: 50%;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.cooldown-ring {
+  position: absolute;
+  inset: -10px;
+  width: 44px;
+  height: 44px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.crosshair.cooldown-active .cooldown-ring {
+  opacity: 1;
+}
+
+.crosshair.cooldown-active .crosshair-v,
+.crosshair.cooldown-active .crosshair-h {
+  opacity: 0.45;
+}
+
+.crosshair.cooldown-active .crosshair-dot {
+  background: #ffb347;
+  box-shadow: 0 0 8px rgba(255, 179, 71, 0.95);
+}
+
+.cooldown-ring-bg {
+  stroke: rgba(255, 255, 255, 0.18);
+}
+
+.cooldown-ring-progress {
+  stroke: #ffb347;
+  stroke-linecap: round;
+}
+
+.crosshair.ready-pulse .crosshair-dot {
+  animation: crosshair-ready-pulse 0.45s ease-out;
+}
+
+@keyframes crosshair-ready-pulse {
+  0% {
+    transform: scale(1);
+    background: #6dffd2;
+    box-shadow: 0 0 6px rgba(109, 255, 210, 0.9);
+  }
+  45% {
+    transform: scale(1.75);
+    background: #6dffd2;
+    box-shadow: 0 0 14px rgba(109, 255, 210, 1);
+  }
+  100% {
+    transform: scale(1);
+    background: #6dffd2;
+    box-shadow: 0 0 6px rgba(109, 255, 210, 0.9);
+  }
 }
 
 .flash {

@@ -30,7 +30,7 @@
         <div class="kr-shell">
           <nav class="kr-sidebar" aria-label="Main navigation">
             <button class="kr-nav-item active" type="button" data-nav="play">PLAY</button>
-            <button class="kr-nav-item disabled" type="button" disabled>CLASSES</button>
+            <button class="kr-nav-item" type="button" data-nav="settings">SETTINGS</button>
             <button class="kr-nav-item disabled" type="button" disabled>SOCIAL</button>
             <button class="kr-nav-item disabled" type="button" disabled>SHOP</button>
           </nav>
@@ -50,7 +50,7 @@
               </ul>
             </section>
 
-            <section class="kr-menu-window panel">
+            <section id="play-panel" class="kr-menu-window panel">
               <div class="kr-menu-header">
                 <h2>QUICK MATCH</h2>
                 <p>Host a room or join with a code</p>
@@ -73,11 +73,21 @@
 
               <p id="status" class="status">Connecting…</p>
 
-              <div class="kr-controls">
-                <span><kbd>WASD</kbd> Move</span>
-                <span><kbd>SPACE</kbd> Jump</span>
-                <span><kbd>SHIFT</kbd> Snap</span>
+              <p id="controls-hint" class="kr-controls"></p>
+            </section>
+
+            <section id="settings-panel" class="kr-menu-window panel hidden">
+              <div class="kr-menu-header">
+                <h2>KEYBINDS</h2>
+                <p>Click a binding, then press a key. Escape cancels.</p>
               </div>
+
+              <div id="keybind-rows" class="keybind-rows"></div>
+
+              <button id="keybind-reset" class="btn btn-secondary keybind-reset" type="button">
+                RESET DEFAULTS
+              </button>
+              <p id="keybind-status" class="status"></p>
             </section>
           </main>
         </div>
@@ -108,6 +118,20 @@
       </div>
 
       <div id="crosshair" class="crosshair hidden">
+        <svg class="cooldown-ring" viewBox="0 0 44 44" aria-hidden="true">
+          <circle cx="22" cy="22" r="20" class="cooldown-ring-bg" fill="none" stroke-width="2" />
+          <circle
+            cx="22"
+            cy="22"
+            r="20"
+            class="cooldown-ring-progress"
+            fill="none"
+            stroke-width="2"
+            stroke-dasharray="125.66"
+            stroke-dashoffset="125.66"
+            transform="rotate(-90 22 22)"
+          />
+        </svg>
         <span class="crosshair-v"></span>
         <span class="crosshair-h"></span>
         <span class="crosshair-dot"></span>

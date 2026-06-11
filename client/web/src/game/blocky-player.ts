@@ -1,48 +1,85 @@
 import * as THREE from "three";
 
-/** Krunker / Pixel Gun-style blocky humanoid. Origin at feet. */
-export function createBlockyPlayer(primaryColor: number, accentColor: number): THREE.Group {
-  const group = new THREE.Group();
-  const skin = flatMat(0xffcc99);
-  const primary = flatMat(primaryColor);
-  const accent = flatMat(accentColor);
-  const dark = flatMat(0x2a2a2a);
+export interface MinecraftPlayerRig {
+  root: THREE.Group;
+  setPose: (options: { walkPhase: number; airborne: boolean }) => void;
+}
 
-  const head = box(0.55, 0.55, 0.55, skin);
-  head.position.y = 1.55;
-  group.add(head);
+/** Minecraft-style Steve proportions. Origin at feet, total height ~1.8. */
+export function createBlockyPlayer(shirtColor: number, pantsColor: number): MinecraftPlayerRig {
+  const root = new THREE.Group();
+  root.scale.setScalar(0.9);
 
-  const torso = box(0.72, 0.78, 0.38, primary);
-  torso.position.y = 0.98;
-  group.add(torso);
+  const skin = flatMat(0xc6946a);
+  const hair = flatMat(0x3b2a1a);
+  const shirt = flatMat(shirtColor);
+  const pants = flatMat(pantsColor);
 
-  const belt = box(0.74, 0.12, 0.4, accent);
-  belt.position.y = 0.62;
-  group.add(belt);
+  const body = box(0.5, 0.75, 0.25, shirt);
+  body.position.y = 1.125;
+  root.add(body);
 
-  for (const side of [-1, 1]) {
-    const leg = box(0.26, 0.62, 0.28, dark);
-    leg.position.set(0.17 * side, 0.31, 0);
-    group.add(leg);
+  const head = box(0.5, 0.5, 0.5, skin);
+  head.position.y = 1.75;
+  root.add(head);
 
-    const boot = box(0.28, 0.14, 0.32, accent);
-    boot.position.set(0.17 * side, 0.07, 0.02);
-    group.add(boot);
+  const hairCap = box(0.52, 0.18, 0.52, hair);
+  hairCap.position.y = 1.96;
+  root.add(hairCap);
 
-    const arm = box(0.22, 0.58, 0.22, primary);
-    arm.position.set(0.48 * side, 1.02, 0);
-    group.add(arm);
+  const leftLegPivot = new THREE.Group();
+  leftLegPivot.position.set(-0.125, 0.75, 0);
+  const leftLeg = box(0.25, 0.75, 0.25, pants);
+  leftLeg.position.y = -0.375;
+  leftLegPivot.add(leftLeg);
+  root.add(leftLegPivot);
 
-    const hand = box(0.18, 0.18, 0.18, skin);
-    hand.position.set(0.48 * side, 0.68, 0);
-    group.add(hand);
+  const rightLegPivot = new THREE.Group();
+  rightLegPivot.position.set(0.125, 0.75, 0);
+  const rightLeg = box(0.25, 0.75, 0.25, pants);
+  rightLeg.position.y = -0.375;
+  rightLegPivot.add(rightLeg);
+  root.add(rightLegPivot);
+
+  const leftArmPivot = new THREE.Group();
+  leftArmPivot.position.set(-0.375, 1.375, 0);
+  const leftArm = box(0.25, 0.75, 0.25, shirt);
+  leftArm.position.y = -0.375;
+  leftArmPivot.add(leftArm);
+  root.add(leftArmPivot);
+
+  const rightArmPivot = new THREE.Group();
+  rightArmPivot.position.set(0.375, 1.375, 0);
+  const rightArm = box(0.25, 0.75, 0.25, shirt);
+  rightArm.position.y = -0.375;
+  rightArmPivot.add(rightArm);
+  root.add(rightArmPivot);
+
+  const limbSwing = 0.95;
+
+  function setPose({ walkPhase, airborne }: { walkPhase: number; airborne: boolean }): void {
+    if (airborne) {
+      leftLegPivot.rotation.x = -0.45;
+      rightLegPivot.rotation.x = 0.35;
+      leftArmPivot.rotation.x = -2.75;
+      rightArmPivot.rotation.x = -2.55;
+      leftArmPivot.rotation.z = -0.08;
+      rightArmPivot.rotation.z = 0.08;
+      return;
+    }
+
+    const swing = Math.sin(walkPhase) * limbSwing;
+    leftLegPivot.rotation.x = swing;
+    rightLegPivot.rotation.x = -swing;
+    leftArmPivot.rotation.x = -swing;
+    rightArmPivot.rotation.x = swing;
+    leftArmPivot.rotation.z = 0;
+    rightArmPivot.rotation.z = 0;
   }
 
-  const visor = box(0.56, 0.18, 0.08, accent);
-  visor.position.set(0, 1.58, 0.24);
-  group.add(visor);
+  setPose({ walkPhase: 0, airborne: false });
 
-  return group;
+  return { root, setPose };
 }
 
 function flatMat(color: number): THREE.MeshLambertMaterial {

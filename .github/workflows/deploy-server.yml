@@ -6,6 +6,7 @@ on:
     paths:
       - "server/**"
       - "core/**"
+      - "client/web/**"
       - "data/**"
       - "Dockerfile"
       - "package.json"

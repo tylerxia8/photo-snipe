@@ -3,19 +3,20 @@ import { PointerLockControls } from "three/examples/jsm/controls/PointerLockCont
 import type { NetClient } from "../net/client.js";
 import {
   buildWarehouse,
-  getHighestSurfaceBelow,
-  PLAYER_RADIUS,
-  resolveCollision,
+  clampFeetToArena,
   supportsFeetAt,
   type StandSurface,
 } from "./warehouse.js";
-import { createBlockyPlayer } from "./blocky-player.js";
+import { moveFeet, PLAYER_HALF_WIDTH, type FeetPosition } from "./minecraft-collide.js";
+import { createBlockyPlayer, type MinecraftPlayerRig } from "./blocky-player.js";
+import { getControlsHint, getKeybinds, onKeybindsChange } from "../settings/keybinds.js";
 
 const WALK_SPEED = 3;
 const JUMP_VELOCITY = 8;
 const GRAVITY = 18;
 const EYE_OFFSET = 0.6;
-const STAND_SKIN = 0.02;
+const STAND_SKIN = 0.05;
+const PHOTO_COOLDOWN_MS = 2000;
 
 export class Game {
   readonly scene = new THREE.Scene();
@@ -24,8 +25,7 @@ export class Game {
   readonly opponent = new THREE.Group();
 
   private controls: PointerLockControls | null = null;
-  private colliders: THREE.Box3[] = [];
-  private propColliders: THREE.Box3[] = [];
+  private solidColliders: THREE.Box3[] = [];
   private standSurfaces: StandSurface[] = [];
   private defaultFeetY = 1;
   private standingFeetY = 1;
@@ -39,6 +39,14 @@ export class Game {
   private onFloor = true;
   private jumpQueued = false;
   private groundEyeY = 1.6;
+  private lastPhotoAttemptMs = 0;
+  private photoCooldownReady = true;
+  private opponentRig: MinecraftPlayerRig;
+  private opponentPrevPos = new THREE.Vector3();
+  private opponentTargetPos = new THREE.Vector3();
+  private opponentTargetYaw = 0;
+  private opponentWalkPhase = 0;
+  private opponentLastGroundY = 1;
 
   constructor(
     private net: NetClient,
@@ -46,6 +54,8 @@ export class Game {
       setMessage: (text: string) => void;
       setRoundName: (text: string) => void;
       flash: () => void;
+      setPhotoCooldown: (remainingFraction: number) => void;
+      setPhotoReady: () => void;
       showCrosshair: () => void;
       hideCrosshair: () => void;
     },
@@ -75,16 +85,15 @@ export class Game {
     fill.position.set(-10, 14, -12);
     this.scene.add(fill);
 
-    const opponentModel = createBlockyPlayer(0xe74c3c, 0xf39c12);
-    this.opponent.add(opponentModel);
+    this.opponentRig = createBlockyPlayer(0x00aaaa, 0x3b4cc0);
+    this.opponent.add(this.opponentRig.root);
     this.scene.add(this.opponent);
 
     this.controls = new PointerLockControls(this.camera, this.renderer.domElement);
     this.scene.add(this.controls.getObject());
 
     const warehouse = buildWarehouse(this.scene);
-    this.colliders = warehouse.wallColliders;
-    this.propColliders = warehouse.propColliders;
+    this.solidColliders = warehouse.solidColliders;
     this.standSurfaces = warehouse.standSurfaces;
     this.defaultFeetY = warehouse.defaultFeetY;
 
@@ -106,6 +115,7 @@ export class Game {
       }
     });
     window.addEventListener("contextmenu", (e) => e.preventDefault());
+    onKeybindsChange(() => this.clearInputState());
   }
 
   isActive(): boolean {
@@ -119,7 +129,7 @@ export class Game {
   ): void {
     this.active = true;
     this.hud.setRoundName(roundName);
-    this.hud.setMessage("WASD move · Space jump · Left Shift to snap a photo");
+    this.hud.setMessage(getControlsHint());
 
     const [x, y, z] = spawn.position;
     const [, rotY] = spawn.rotation;
@@ -131,6 +141,9 @@ export class Game {
     this.verticalVelocity = 0;
     this.onFloor = true;
     this.jumpQueued = false;
+    this.lastPhotoAttemptMs = 0;
+    this.photoCooldownReady = true;
+    this.hud.setPhotoCooldown(0);
     this.clearInputState();
 
     const obj = this.controls!.getObject();
@@ -138,6 +151,18 @@ export class Game {
     obj.rotation.set(0, this.yaw, 0, "YXZ");
 
     this.updateOpponent(opponentSpawn.position, opponentSpawn.rotation);
+    this.opponentTargetPos.set(
+      opponentSpawn.position[0],
+      opponentSpawn.position[1],
+      opponentSpawn.position[2],
+    );
+    this.opponentTargetYaw = THREE.MathUtils.degToRad(opponentSpawn.rotation[1]);
+    this.opponent.position.copy(this.opponentTargetPos);
+    this.opponent.rotation.y = this.opponentTargetYaw;
+    this.opponentPrevPos.copy(this.opponentTargetPos);
+    this.opponentLastGroundY = opponentSpawn.position[1];
+    this.opponentWalkPhase = 0;
+    this.opponentRig.setPose({ walkPhase: 0, airborne: false });
   }
 
   endMatch(): void {
@@ -154,14 +179,55 @@ export class Game {
   }
 
   updateOpponent(position: number[], rotation: number[]): void {
-    this.opponent.position.set(position[0], position[1], position[2]);
-    this.opponent.rotation.set(0, THREE.MathUtils.degToRad(rotation[1]), 0);
+    this.opponentTargetPos.set(position[0], position[1], position[2]);
+    this.opponentTargetYaw = THREE.MathUtils.degToRad(rotation[1]);
+  }
+
+  private updateOpponentAnimation(delta: number): void {
+    const pos = this.opponent.position;
+    const blend = 1 - Math.exp(-14 * delta);
+    pos.lerp(this.opponentTargetPos, blend);
+    this.opponent.rotation.y = THREE.MathUtils.lerp(
+      this.opponent.rotation.y,
+      this.opponentTargetYaw,
+      blend,
+    );
+
+    const horizontalMove = Math.hypot(
+      pos.x - this.opponentPrevPos.x,
+      pos.z - this.opponentPrevPos.z,
+    );
+    const verticalMove = pos.y - this.opponentPrevPos.y;
+    const rising = verticalMove > 0.015;
+    const falling = verticalMove < -0.015;
+
+    if (!rising && Math.abs(verticalMove) < 0.03) {
+      this.opponentLastGroundY = pos.y;
+    }
+
+    const airborne =
+      rising || (pos.y > this.opponentLastGroundY + 0.08 && !falling);
+
+    if (horizontalMove > 0.001 && !airborne) {
+      this.opponentWalkPhase += horizontalMove * 9.5;
+    } else if (!airborne) {
+      this.opponentWalkPhase *= Math.pow(0.2, delta);
+    }
+
+    this.opponentRig.setPose({
+      walkPhase: this.opponentWalkPhase,
+      airborne,
+    });
+
+    this.opponentPrevPos.copy(pos);
   }
 
   tick(delta: number): void {
     if (!this.active) return;
 
     this.updateMovement(delta);
+    this.updateOpponentAnimation(delta);
+    this.updatePhotoCooldown();
     if (this.controls?.isLocked) {
       this.hud.showCrosshair();
     }
@@ -200,16 +266,6 @@ export class Game {
     return feetY + EYE_OFFSET;
   }
 
-  private findLandingFeetY(x: number, z: number, maxFeetY: number): number {
-    return getHighestSurfaceBelow(
-      x,
-      z,
-      this.standSurfaces,
-      this.defaultFeetY,
-      maxFeetY,
-    );
-  }
-
   private updateMovement(delta: number): void {
     if (!this.controls?.isLocked) return;
 
@@ -221,24 +277,31 @@ export class Game {
     forward.normalize();
     const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
 
-    const move = new THREE.Vector3();
-    if (this.keys.has("KeyW")) move.add(forward);
-    if (this.keys.has("KeyS")) move.sub(forward);
-    if (this.keys.has("KeyA")) move.sub(right);
-    if (this.keys.has("KeyD")) move.add(right);
-    if (move.lengthSq() > 0) {
-      move.normalize().multiplyScalar(speed);
-      obj.position.add(move);
-      obj.position.copy(
-        resolveCollision(
-          obj.position,
-          [...this.colliders, ...this.propColliders],
-          PLAYER_RADIUS,
-          1.8,
-          this.getCurrentFeetY(obj.position.y),
-        ),
-      );
+    let dx = 0;
+    let dz = 0;
+    const binds = getKeybinds();
+    if (this.keys.has(binds.moveForward)) {
+      dx += forward.x * speed;
+      dz += forward.z * speed;
     }
+    if (this.keys.has(binds.moveBack)) {
+      dx -= forward.x * speed;
+      dz -= forward.z * speed;
+    }
+    if (this.keys.has(binds.moveLeft)) {
+      dx -= right.x * speed;
+      dz -= right.z * speed;
+    }
+    if (this.keys.has(binds.moveRight)) {
+      dx += right.x * speed;
+      dz += right.z * speed;
+    }
+
+    let feet: FeetPosition = {
+      x: obj.position.x,
+      y: this.onFloor ? this.standingFeetY : this.getCurrentFeetY(obj.position.y),
+      z: obj.position.z,
+    };
 
     if (this.jumpQueued && this.onFloor) {
       this.verticalVelocity = JUMP_VELOCITY;
@@ -246,44 +309,85 @@ export class Game {
       this.jumpQueued = false;
     }
 
+    let dy = 0;
     if (!this.onFloor) {
       this.verticalVelocity -= GRAVITY * delta;
-      obj.position.y += this.verticalVelocity * delta;
+      dy = this.verticalVelocity * delta;
+    }
 
-      const currentFeetY = this.getCurrentFeetY(obj.position.y);
-      const landingFeetY = this.findLandingFeetY(obj.position.x, obj.position.z, currentFeetY);
-      const landingEyeY = this.eyeYFromFeet(landingFeetY + STAND_SKIN);
+    const moved = moveFeet(feet, { x: dx, y: dy, z: dz }, this.solidColliders);
+    feet = moved;
 
-      if (obj.position.y <= landingEyeY && this.verticalVelocity <= 0) {
-        this.standingFeetY = landingFeetY + STAND_SKIN;
-        obj.position.y = this.eyeYFromFeet(this.standingFeetY);
-        this.groundEyeY = obj.position.y;
-        this.verticalVelocity = 0;
-        this.onFloor = true;
-      }
-    } else if (
-      supportsFeetAt(
-        obj.position.x,
-        obj.position.z,
-        this.standSurfaces,
-        this.defaultFeetY,
-        this.standingFeetY,
-      )
-    ) {
-      obj.position.y = this.eyeYFromFeet(this.standingFeetY);
-      this.groundEyeY = obj.position.y;
-    } else {
-      this.onFloor = false;
+    if (moved.hitCeiling) {
       this.verticalVelocity = 0;
     }
+
+    if (moved.onGround) {
+      this.onFloor = true;
+      this.verticalVelocity = 0;
+      this.standingFeetY = feet.y;
+    } else if (this.onFloor) {
+      if (
+        supportsFeetAt(
+          feet.x,
+          feet.z,
+          this.standSurfaces,
+          this.defaultFeetY,
+          feet.y,
+          0.08,
+        )
+      ) {
+        this.standingFeetY = feet.y;
+      } else {
+        this.onFloor = false;
+        this.verticalVelocity = 0;
+      }
+    }
+
+    const clamped = clampFeetToArena(feet.x, feet.z, PLAYER_HALF_WIDTH);
+    feet.x = clamped.x;
+    feet.z = clamped.z;
+
+    obj.position.set(feet.x, this.eyeYFromFeet(feet.y), feet.z);
+    this.groundEyeY = obj.position.y;
 
     this.yaw = obj.rotation.y;
     this.pitch = obj.rotation.x;
     this.camera.position.copy(obj.position);
   }
 
+  private getPhotoCooldownRemaining(): number {
+    return Math.max(0, PHOTO_COOLDOWN_MS - (performance.now() - this.lastPhotoAttemptMs));
+  }
+
+  private updatePhotoCooldown(): void {
+    if (!this.active) return;
+
+    const remaining = this.getPhotoCooldownRemaining();
+    if (remaining > 0) {
+      this.photoCooldownReady = false;
+      this.hud.setPhotoCooldown(remaining / PHOTO_COOLDOWN_MS);
+      return;
+    }
+
+    this.hud.setPhotoCooldown(0);
+    if (!this.photoCooldownReady) {
+      this.photoCooldownReady = true;
+      this.hud.setPhotoReady();
+    }
+  }
+
   private snapPhoto(): void {
     if (!this.active || !this.controls?.isLocked) return;
+
+    if (this.getPhotoCooldownRemaining() > 0) {
+      return;
+    }
+
+    this.lastPhotoAttemptMs = performance.now();
+    this.photoCooldownReady = false;
+    this.hud.setPhotoCooldown(1);
+
     this.net.sendPhotoAttempt(
       [this.camera.position.x, this.camera.position.y, this.camera.position.z],
       this.getCameraRotationDeg(),
@@ -300,17 +404,25 @@ export class Game {
   }
 
   private onKeyDown(e: KeyboardEvent): void {
-    if (e.code === "Space") {
+    const binds = getKeybinds();
+    if (e.code === binds.jump) {
       if (this.onFloor) this.jumpQueued = true;
       e.preventDefault();
       return;
     }
-    if (e.code === "ShiftLeft") {
+    if (e.code === binds.snap) {
       if (!e.repeat) this.snapPhoto();
       e.preventDefault();
       return;
     }
-    this.keys.add(e.code);
+    if (
+      e.code === binds.moveForward ||
+      e.code === binds.moveBack ||
+      e.code === binds.moveLeft ||
+      e.code === binds.moveRight
+    ) {
+      this.keys.add(e.code);
+    }
   }
 
   private onKeyUp(e: KeyboardEvent): void {

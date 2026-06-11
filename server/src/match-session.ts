@@ -170,6 +170,20 @@ export class MatchSession {
 
     const rules = this.state.currentRound.rules;
     const timestampMs = Date.now();
+    const lastAttemptMs = this.liveState[slot].lastPhotoAttemptMs;
+
+    if (
+      lastAttemptMs !== undefined &&
+      timestampMs - lastAttemptMs < rules.photoCooldownSec * 1000
+    ) {
+      send(this.players[slot].socket, {
+        type: "photo_result",
+        valid: false,
+        reason: "cooldown",
+      });
+      return;
+    }
+
     const opponent = opponentSlot(slot);
     const oppState = this.liveState[opponent];
 

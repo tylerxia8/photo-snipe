@@ -86,15 +86,10 @@ func _build_cross_walls() -> void:
 	interior.name = "InteriorWalls"
 	add_child(interior)
 
-	# Partial walls with central door gaps — force players off the main axis
-	_add_box(interior, Vector3(-12, 2.5, -14), Vector3(16, 5, WALL_THICKNESS), _mat_wall, "Cross_N_W")
-	_add_box(interior, Vector3(12, 2.5, -14), Vector3(16, 5, WALL_THICKNESS), _mat_wall, "Cross_N_E")
-
-	_add_box(interior, Vector3(-12, 2.5, 0), Vector3(16, 5, WALL_THICKNESS), _mat_wall, "Cross_M_W")
-	_add_box(interior, Vector3(12, 2.5, 0), Vector3(16, 5, WALL_THICKNESS), _mat_wall, "Cross_M_E")
-
-	_add_box(interior, Vector3(-12, 2.5, 14), Vector3(16, 5, WALL_THICKNESS), _mat_wall, "Cross_S_W")
-	_add_box(interior, Vector3(12, 2.5, 14), Vector3(16, 5, WALL_THICKNESS), _mat_wall, "Cross_S_E")
+	# Outer-wing cross walls — wide center and side aisles stay open (x between -18 and 18)
+	for z in [-14, 0, 14]:
+		_add_box(interior, Vector3(-21, 2.5, z), Vector3(6, 5, WALL_THICKNESS), _mat_wall, "Cross_%d_W" % z)
+		_add_box(interior, Vector3(21, 2.5, z), Vector3(6, 5, WALL_THICKNESS), _mat_wall, "Cross_%d_E" % z)
 
 func _build_side_bays() -> void:
 	var bays := Node3D.new()
