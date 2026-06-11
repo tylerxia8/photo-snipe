@@ -68,6 +68,7 @@ function verticalOverlap(player: THREE.Box3, solid: THREE.Box3): boolean {
   return player.max.y > solid.min.y + SKIN && player.min.y < solid.max.y - SKIN;
 }
 
+export function clampFeet(feet: FeetPos, bounds: WorldColliders["bounds"]): FeetPos {
   return {
     x: THREE.MathUtils.clamp(feet.x, bounds.minX, bounds.maxX),
     y: THREE.MathUtils.clamp(feet.y, bounds.minY, bounds.maxY),
