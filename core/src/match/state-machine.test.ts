@@ -53,6 +53,15 @@ describe("match state machine", () => {
     expect(isMatchOver(state)).toBe(true);
   });
 
+  it("awards score and ends the match on forfeit", () => {
+    let state = createMatchState(matchConfig);
+    state = startRound(state, round);
+    state = endRound(state, "forfeit", "B");
+    expect(state.scores.B).toBe(1);
+    expect(state.phase).toBe("match_end");
+    expect(state.winner).toBe("B");
+  });
+
   it("does not award score on timeout draw", () => {
     let state = createMatchState(matchConfig);
     state = startRound(state, round);

@@ -40,7 +40,7 @@ export function endRound(
 ): MatchState {
   const scores = { ...state.scores };
 
-  if (reason === "valid_capture" && winner) {
+  if ((reason === "valid_capture" || reason === "forfeit") && winner) {
     scores[winner] += 1;
   }
 

@@ -57,6 +57,7 @@ export class MatchSession {
   private players: Record<PlayerSlot, LobbyPlayer>;
   private liveState: Record<PlayerSlot, LivePlayerState>;
   private syncTimer: NodeJS.Timeout | null = null;
+  private interRoundTimer: NodeJS.Timeout | null = null;
   private onMatchEnd?: MatchEndHandler;
 
   constructor(
@@ -246,11 +247,12 @@ export class MatchSession {
     reason: "valid_capture" | "timeout_draw" | "forfeit",
     winner: PlayerSlot | null,
   ): void {
-    if (this.state.phase !== "round_active") {
+    if (this.state.phase !== "round_active" && this.state.phase !== "round_end") {
       return;
     }
 
     this.clearSyncTimer();
+    this.clearInterRoundTimer();
 
     this.state = endRound(this.state, reason, winner);
 
@@ -277,7 +279,8 @@ export class MatchSession {
       scores: this.state.scores,
     });
 
-    setTimeout(() => {
+    this.interRoundTimer = setTimeout(() => {
+      this.interRoundTimer = null;
       void this.beginNextRound();
     }, 3000);
   }
@@ -286,8 +289,12 @@ export class MatchSession {
     return this.players;
   }
 
+  getPhase(): MatchState["phase"] {
+    return this.state.phase;
+  }
+
   handleDisconnect(slot: PlayerSlot): void {
-    if (this.state.phase === "round_active") {
+    if (this.state.phase === "round_active" || this.state.phase === "round_end") {
       this.finishRound("forfeit", opponentSlot(slot));
     }
   }
@@ -296,6 +303,13 @@ export class MatchSession {
     if (this.syncTimer) {
       clearInterval(this.syncTimer);
       this.syncTimer = null;
+    }
+  }
+
+  private clearInterRoundTimer(): void {
+    if (this.interRoundTimer) {
+      clearTimeout(this.interRoundTimer);
+      this.interRoundTimer = null;
     }
   }
 }

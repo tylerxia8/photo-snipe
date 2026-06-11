@@ -34,11 +34,48 @@ function sendRematchStatus(roomCode: string): void {
   for (const playerSlot of ["A", "B"] as const) {
     const player = session.players[playerSlot];
     const opponent = opponentSlot(playerSlot);
+    const opponentPlayer = session.players[opponent];
     send(player.socket, {
       type: "rematch_status",
       youReady: session.votes[playerSlot] === true,
       opponentReady: session.votes[opponent] === true,
+      opponentConnected:
+        opponentPlayer?.socket.readyState === opponentPlayer.socket.OPEN,
     });
+  }
+}
+
+function notifyOpponentLeft(
+  roomCode: string,
+  leftSlot: PlayerSlot,
+  match?: MatchSession,
+): void {
+  const remainingSlot = opponentSlot(leftSlot);
+  const rematchSession = rematch.get(roomCode);
+  if (rematchSession) {
+    const remaining = rematchSession.players[remainingSlot];
+    const leaver = rematchSession.players[leftSlot];
+    if (remaining) {
+      send(remaining.socket, {
+        type: "opponent_left",
+        phase: "rematch",
+        opponentName: leaver?.displayName ?? "Opponent",
+      });
+    }
+    return;
+  }
+
+  if (match && match.getPhase() !== "match_end") {
+    const players = match.getPlayers();
+    const remaining = players[remainingSlot];
+    const leaver = players[leftSlot];
+    if (remaining) {
+      send(remaining.socket, {
+        type: "opponent_left",
+        phase: "match",
+        opponentName: leaver?.displayName ?? "Opponent",
+      });
+    }
   }
 }
 
@@ -165,6 +202,10 @@ wss.on("connection", (socket) => {
     const ctx = clients.get(socket);
     if (!ctx) {
       return;
+    }
+
+    if (ctx.roomCode && ctx.slot) {
+      notifyOpponentLeft(ctx.roomCode, ctx.slot, ctx.match);
     }
 
     if (ctx.match && ctx.slot) {

@@ -131,20 +131,58 @@ function resetRematchUi(): void {
 function showPostMatch(msg: ServerMessage): void {
   const didWin = Boolean(msg.didWin);
   const winnerName = String(msg.winnerName ?? "Unknown");
+  const forfeit = msg.reason === "forfeit";
 
   postMatchTitle.textContent = didWin ? "Victory" : "Defeat";
-  postMatchSubtitle.textContent = didWin
-    ? "You win!"
-    : `${winnerName} wins!`;
+  if (forfeit && didWin) {
+    postMatchSubtitle.textContent = "Opponent left — you win!";
+  } else if (forfeit) {
+    postMatchSubtitle.textContent = "You left the match.";
+  } else {
+    postMatchSubtitle.textContent = didWin
+      ? "You win!"
+      : `${winnerName} wins!`;
+  }
 
   resetRematchUi();
   postMatch.classList.remove("hidden");
   hudApi().setMessage("");
 }
 
+function handleOpponentLeft(msg: ServerMessage): void {
+  const name = String(msg.opponentName ?? "Opponent");
+  const phase = String(msg.phase ?? "match");
+
+  if (phase === "rematch") {
+    rematchHint.textContent = `${name} left the game.`;
+    rematchBtn.disabled = true;
+    rematchBtn.textContent = "REMATCH";
+    return;
+  }
+
+  if (phase === "match") {
+    const message = `${name} left the match…`;
+    hudApi().setMessage(message);
+    setStatus(message);
+    return;
+  }
+
+  if (phase === "lobby") {
+    setStatus(`${name} left the room`);
+  }
+}
+
 function updateRematchStatus(msg: ServerMessage): void {
   const youReady = Boolean(msg.youReady);
   const opponentReady = Boolean(msg.opponentReady);
+  const opponentConnected = msg.opponentConnected !== false;
+
+  if (!opponentConnected) {
+    rematchHint.textContent = "Opponent left the game.";
+    rematchBtn.textContent = "REMATCH";
+    rematchBtn.disabled = true;
+    return;
+  }
 
   if (youReady) {
     rematchBtn.textContent = "WAITING…";
@@ -211,9 +249,17 @@ net.onMessage = (msg: ServerMessage) => {
         hudApi().setMessage("Miss");
       }
       break;
+    case "round_ended":
+      if (msg.reason === "forfeit") {
+        hudApi().setMessage("Opponent left the match…");
+      }
+      break;
     case "match_ended":
       game?.endMatch();
       showPostMatch(msg);
+      break;
+    case "opponent_left":
+      handleOpponentLeft(msg);
       break;
     case "rematch_status":
       updateRematchStatus(msg);
