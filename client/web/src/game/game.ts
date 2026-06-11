@@ -3,10 +3,12 @@ import { PointerLockControls } from "three/examples/jsm/controls/PointerLockCont
 import type { NetClient } from "../net/client.js";
 import {
   buildWarehouse,
+  getHighestSurfaceBelow,
+  PLAYER_RADIUS,
+  resolveCollision,
   supportsFeetAt,
   type StandSurface,
 } from "./warehouse.js";
-import { moveFeet, type FeetPosition, type MoveColliders } from "./minecraft-collide.js";
 import { createBlockyPlayer, type MinecraftPlayerRig } from "./blocky-player.js";
 import { getControlsHint, getKeybinds, onKeybindsChange } from "../settings/keybinds.js";
 
@@ -14,7 +16,7 @@ const WALK_SPEED = 3;
 const JUMP_VELOCITY = 8;
 const GRAVITY = 18;
 const EYE_OFFSET = 0.6;
-const STAND_SKIN = 0.05;
+const STAND_SKIN = 0.02;
 const PHOTO_COOLDOWN_MS = 2000;
 
 export class Game {
@@ -24,11 +26,8 @@ export class Game {
   readonly opponent = new THREE.Group();
 
   private controls: PointerLockControls | null = null;
-  private moveColliders: MoveColliders = {
-    blocks: [],
-    walls: [],
-    bounds: { minX: -23, maxX: 23, minY: 0, maxY: 4.2, minZ: -23, maxZ: 23 },
-  };
+  private colliders: THREE.Box3[] = [];
+  private propColliders: THREE.Box3[] = [];
   private standSurfaces: StandSurface[] = [];
   private defaultFeetY = 1;
   private standingFeetY = 1;
@@ -96,11 +95,8 @@ export class Game {
     this.scene.add(this.controls.getObject());
 
     const warehouse = buildWarehouse(this.scene);
-    this.moveColliders = {
-      blocks: warehouse.blockColliders,
-      walls: warehouse.wallColliders,
-      bounds: warehouse.arenaBounds,
-    };
+    this.colliders = warehouse.wallColliders;
+    this.propColliders = warehouse.propColliders;
     this.standSurfaces = warehouse.standSurfaces;
     this.defaultFeetY = warehouse.defaultFeetY;
 
@@ -273,6 +269,16 @@ export class Game {
     return feetY + EYE_OFFSET;
   }
 
+  private findLandingFeetY(x: number, z: number, maxFeetY: number): number {
+    return getHighestSurfaceBelow(
+      x,
+      z,
+      this.standSurfaces,
+      this.defaultFeetY,
+      maxFeetY,
+    );
+  }
+
   private updateMovement(delta: number): void {
     if (!this.controls?.isLocked) return;
 
@@ -284,31 +290,25 @@ export class Game {
     forward.normalize();
     const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
 
-    let dx = 0;
-    let dz = 0;
+    const move = new THREE.Vector3();
     const binds = getKeybinds();
-    if (this.keys.has(binds.moveForward)) {
-      dx += forward.x * speed;
-      dz += forward.z * speed;
+    if (this.keys.has(binds.moveForward)) move.add(forward);
+    if (this.keys.has(binds.moveBack)) move.sub(forward);
+    if (this.keys.has(binds.moveLeft)) move.sub(right);
+    if (this.keys.has(binds.moveRight)) move.add(right);
+    if (move.lengthSq() > 0) {
+      move.normalize().multiplyScalar(speed);
+      obj.position.add(move);
+      obj.position.copy(
+        resolveCollision(
+          obj.position,
+          [...this.colliders, ...this.propColliders],
+          PLAYER_RADIUS,
+          1.8,
+          this.getCurrentFeetY(obj.position.y),
+        ),
+      );
     }
-    if (this.keys.has(binds.moveBack)) {
-      dx -= forward.x * speed;
-      dz -= forward.z * speed;
-    }
-    if (this.keys.has(binds.moveLeft)) {
-      dx -= right.x * speed;
-      dz -= right.z * speed;
-    }
-    if (this.keys.has(binds.moveRight)) {
-      dx += right.x * speed;
-      dz += right.z * speed;
-    }
-
-    let feet: FeetPosition = {
-      x: obj.position.x,
-      y: this.onFloor ? this.standingFeetY : this.getCurrentFeetY(obj.position.y),
-      z: obj.position.z,
-    };
 
     if (this.jumpQueued && this.onFloor) {
       this.verticalVelocity = JUMP_VELOCITY;
@@ -316,44 +316,36 @@ export class Game {
       this.jumpQueued = false;
     }
 
-    let dy = 0;
     if (!this.onFloor) {
       this.verticalVelocity -= GRAVITY * delta;
-      dy = this.verticalVelocity * delta;
-    }
+      obj.position.y += this.verticalVelocity * delta;
 
-    const moved = moveFeet(feet, { x: dx, y: dy, z: dz }, this.moveColliders);
-    feet = moved;
+      const currentFeetY = this.getCurrentFeetY(obj.position.y);
+      const landingFeetY = this.findLandingFeetY(obj.position.x, obj.position.z, currentFeetY);
+      const landingEyeY = this.eyeYFromFeet(landingFeetY + STAND_SKIN);
 
-    if (moved.hitCeiling) {
-      this.verticalVelocity = 0;
-    }
-
-    if (moved.onGround) {
-      this.onFloor = true;
-      this.verticalVelocity = 0;
-      this.standingFeetY = feet.y;
-    } else if (this.onFloor) {
-      feet.y = this.standingFeetY;
-      if (
-        supportsFeetAt(
-          feet.x,
-          feet.z,
-          this.standSurfaces,
-          this.defaultFeetY,
-          feet.y,
-          0.08,
-        )
-      ) {
-        // Keep current height while walking on a supported surface.
-      } else {
-        this.onFloor = false;
+      if (obj.position.y <= landingEyeY && this.verticalVelocity <= 0) {
+        this.standingFeetY = landingFeetY + STAND_SKIN;
+        obj.position.y = this.eyeYFromFeet(this.standingFeetY);
+        this.groundEyeY = obj.position.y;
         this.verticalVelocity = 0;
+        this.onFloor = true;
       }
+    } else if (
+      supportsFeetAt(
+        obj.position.x,
+        obj.position.z,
+        this.standSurfaces,
+        this.defaultFeetY,
+        this.standingFeetY,
+      )
+    ) {
+      obj.position.y = this.eyeYFromFeet(this.standingFeetY);
+      this.groundEyeY = obj.position.y;
+    } else {
+      this.onFloor = false;
+      this.verticalVelocity = 0;
     }
-
-    obj.position.set(feet.x, this.eyeYFromFeet(feet.y), feet.z);
-    this.groundEyeY = obj.position.y;
 
     this.yaw = obj.rotation.y;
     this.pitch = obj.rotation.x;

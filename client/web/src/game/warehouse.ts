@@ -3,11 +3,9 @@ import * as THREE from "three";
 const WALL_HEIGHT = 6;
 const WALL_THICKNESS = 0.4;
 const DEFAULT_FEET_Y = 1;
-const PLAYER_HALF_WIDTH = 0.3;
-const PLAYER_HEIGHT = 1.8;
-const ARENA_HALF = 24;
+const PLAYER_RADIUS = 0.35;
 
-export { ARENA_HALF, WALL_HEIGHT };
+export { PLAYER_RADIUS, WALL_HEIGHT };
 
 export interface StandSurface {
   minX: number;
@@ -18,18 +16,10 @@ export interface StandSurface {
 }
 
 export interface WarehouseBuild {
-  blockColliders: THREE.Box3[];
   wallColliders: THREE.Box3[];
+  propColliders: THREE.Box3[];
   standSurfaces: StandSurface[];
   defaultFeetY: number;
-  arenaBounds: {
-    minX: number;
-    maxX: number;
-    minY: number;
-    maxY: number;
-    minZ: number;
-    maxZ: number;
-  };
 }
 
 function flatMat(color: number): THREE.MeshLambertMaterial {
@@ -216,57 +206,29 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
   spawnPad(0, -18, 0x3498db);
   spawnPad(0, 18, 0xe74c3c);
 
-  const floorCollider = new THREE.Box3(
-    new THREE.Vector3(-24, 0, -24),
-    new THREE.Vector3(24, DEFAULT_FEET_Y, 24),
+  const standSurfaces = allBoxes
+    .filter((box) => box !== floorBox && box !== ceilingBox && box.max.y > 0.2)
+    .map(boxToSurface);
+
+  const propColliders = allBoxes.filter(
+    (box) => box !== floorBox && box !== ceilingBox && !wallBoxes.includes(box),
   );
 
-  const standSurfaces = [
-    boxToSurface(floorCollider),
-    ...allBoxes
-      .filter((box) => box !== floorBox && box !== ceilingBox && box.max.y > 0.2)
-      .map(boxToSurface),
-  ];
-
-  const blockColliders = [
-    floorCollider,
-    ceilingBox,
-    ...allBoxes.filter((box) => box !== floorBox && box !== ceilingBox && !wallBoxes.includes(box)),
-  ];
-
-  const innerLimit = ARENA_HALF - WALL_THICKNESS * 0.5 - PLAYER_HALF_WIDTH - 0.01;
-  const arenaBounds = {
-    minX: -innerLimit,
-    maxX: innerLimit,
-    minY: 0,
-    maxY: WALL_HEIGHT - PLAYER_HEIGHT,
-    minZ: -innerLimit,
-    maxZ: innerLimit,
-  };
-
-  return { blockColliders, wallColliders: wallBoxes, standSurfaces, defaultFeetY: DEFAULT_FEET_Y, arenaBounds };
+  return { wallColliders: wallBoxes, propColliders, standSurfaces, defaultFeetY: DEFAULT_FEET_Y };
 }
 
 export function isPointOverSurface(
   x: number,
   z: number,
   surface: StandSurface,
-  inset = 0,
+  radius = PLAYER_RADIUS,
 ): boolean {
   return (
-    x >= surface.minX + inset &&
-    x <= surface.maxX - inset &&
-    z >= surface.minZ + inset &&
-    z <= surface.maxZ - inset
+    x >= surface.minX + radius &&
+    x <= surface.maxX - radius &&
+    z >= surface.minZ + radius &&
+    z <= surface.maxZ - radius
   );
-}
-
-export function isFeetCenterOverSurface(
-  x: number,
-  z: number,
-  surface: StandSurface,
-): boolean {
-  return isPointOverSurface(x, z, surface, 0);
 }
 
 export function supportsFeetAt(
@@ -275,10 +237,15 @@ export function supportsFeetAt(
   surfaces: StandSurface[],
   defaultFeetY: number,
   feetY: number,
+  radius = PLAYER_RADIUS,
   epsilon = 0.05,
 ): boolean {
+  if (Math.abs(feetY - defaultFeetY) <= epsilon) {
+    return true;
+  }
+
   for (const surface of surfaces) {
-    if (Math.abs(surface.feetY - feetY) <= epsilon && isFeetCenterOverSurface(x, z, surface)) {
+    if (Math.abs(surface.feetY - feetY) <= epsilon && isPointOverSurface(x, z, surface, radius)) {
       return true;
     }
   }
@@ -292,20 +259,13 @@ export function getHighestSurfaceBelow(
   surfaces: StandSurface[],
   defaultFeetY: number,
   maxFeetY: number,
+  radius = PLAYER_RADIUS,
   epsilon = 0.05,
-  minSurfaceFeetY?: number,
 ): number {
   let best = defaultFeetY;
   for (const surface of surfaces) {
     if (
-      minSurfaceFeetY !== undefined &&
-      surface.feetY < minSurfaceFeetY - epsilon &&
-      surface.feetY > defaultFeetY + epsilon
-    ) {
-      continue;
-    }
-    if (
-      isFeetCenterOverSurface(x, z, surface) &&
+      isPointOverSurface(x, z, surface, radius) &&
       surface.feetY <= maxFeetY + epsilon &&
       surface.feetY > best
     ) {
@@ -315,14 +275,37 @@ export function getHighestSurfaceBelow(
   return best;
 }
 
-export function clampFeetToArena(
-  feetX: number,
-  feetZ: number,
-  halfWidth = PLAYER_HALF_WIDTH,
-): { x: number; z: number } {
-  const limit = ARENA_HALF - WALL_THICKNESS * 0.5 - halfWidth - 0.01;
-  return {
-    x: THREE.MathUtils.clamp(feetX, -limit, limit),
-    z: THREE.MathUtils.clamp(feetZ, -limit, limit),
-  };
+export function resolveCollision(
+  pos: THREE.Vector3,
+  wallColliders: THREE.Box3[],
+  radius = PLAYER_RADIUS,
+  height = 1.8,
+  feetY?: number,
+): THREE.Vector3 {
+  const next = pos.clone();
+  const feet = feetY ?? pos.y - height * 0.5;
+  const playerBox = new THREE.Box3(
+    new THREE.Vector3(next.x - radius, next.y - height * 0.5, next.z - radius),
+    new THREE.Vector3(next.x + radius, next.y + height * 0.5, next.z + radius),
+  );
+
+  for (const wall of wallColliders) {
+    if (feet >= wall.max.y - 0.05) {
+      continue;
+    }
+
+    if (playerBox.intersectsBox(wall)) {
+      const dx = Math.min(wall.max.x - playerBox.min.x, playerBox.max.x - wall.min.x);
+      const dz = Math.min(wall.max.z - playerBox.min.z, playerBox.max.z - wall.min.z);
+      if (dx < dz) {
+        next.x += dx === wall.max.x - playerBox.min.x ? dx : -dx;
+      } else {
+        next.z += dz === wall.max.z - playerBox.min.z ? dz : -dz;
+      }
+      playerBox.setFromCenterAndSize(next, new THREE.Vector3(radius * 2, height, radius * 2));
+    }
+  }
+
+  next.y = pos.y;
+  return next;
 }
