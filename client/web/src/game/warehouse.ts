@@ -3,6 +3,8 @@ import * as THREE from "three";
 const WALL_HEIGHT = 6;
 const WALL_THICKNESS = 0.4;
 const DEFAULT_FEET_Y = 1;
+const PLAYER_HALF_WIDTH = 0.3;
+const PLAYER_HEIGHT = 1.8;
 const ARENA_HALF = 24;
 
 export { ARENA_HALF, WALL_HEIGHT };
@@ -16,9 +18,18 @@ export interface StandSurface {
 }
 
 export interface WarehouseBuild {
-  solidColliders: THREE.Box3[];
+  blockColliders: THREE.Box3[];
+  wallColliders: THREE.Box3[];
   standSurfaces: StandSurface[];
   defaultFeetY: number;
+  arenaBounds: {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+    minZ: number;
+    maxZ: number;
+  };
 }
 
 function flatMat(color: number): THREE.MeshLambertMaterial {
@@ -217,14 +228,23 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
       .map(boxToSurface),
   ];
 
-  const solidColliders = [
+  const blockColliders = [
     floorCollider,
     ceilingBox,
-    ...wallBoxes,
     ...allBoxes.filter((box) => box !== floorBox && box !== ceilingBox && !wallBoxes.includes(box)),
   ];
 
-  return { solidColliders, standSurfaces, defaultFeetY: DEFAULT_FEET_Y };
+  const innerLimit = ARENA_HALF - WALL_THICKNESS * 0.5 - PLAYER_HALF_WIDTH - 0.01;
+  const arenaBounds = {
+    minX: -innerLimit,
+    maxX: innerLimit,
+    minY: 0,
+    maxY: WALL_HEIGHT - PLAYER_HEIGHT,
+    minZ: -innerLimit,
+    maxZ: innerLimit,
+  };
+
+  return { blockColliders, wallColliders: wallBoxes, standSurfaces, defaultFeetY: DEFAULT_FEET_Y, arenaBounds };
 }
 
 export function isPointOverSurface(
@@ -257,10 +277,6 @@ export function supportsFeetAt(
   feetY: number,
   epsilon = 0.05,
 ): boolean {
-  if (Math.abs(feetY - defaultFeetY) <= epsilon) {
-    return true;
-  }
-
   for (const surface of surfaces) {
     if (Math.abs(surface.feetY - feetY) <= epsilon && isFeetCenterOverSurface(x, z, surface)) {
       return true;
@@ -299,8 +315,12 @@ export function getHighestSurfaceBelow(
   return best;
 }
 
-export function clampFeetToArena(feetX: number, feetZ: number, halfWidth = 0.3): { x: number; z: number } {
-  const limit = ARENA_HALF - halfWidth - 0.05;
+export function clampFeetToArena(
+  feetX: number,
+  feetZ: number,
+  halfWidth = PLAYER_HALF_WIDTH,
+): { x: number; z: number } {
+  const limit = ARENA_HALF - WALL_THICKNESS * 0.5 - halfWidth - 0.01;
   return {
     x: THREE.MathUtils.clamp(feetX, -limit, limit),
     z: THREE.MathUtils.clamp(feetZ, -limit, limit),

@@ -3,11 +3,10 @@ import { PointerLockControls } from "three/examples/jsm/controls/PointerLockCont
 import type { NetClient } from "../net/client.js";
 import {
   buildWarehouse,
-  clampFeetToArena,
   supportsFeetAt,
   type StandSurface,
 } from "./warehouse.js";
-import { moveFeet, PLAYER_HALF_WIDTH, type FeetPosition } from "./minecraft-collide.js";
+import { moveFeet, type FeetPosition, type MoveColliders } from "./minecraft-collide.js";
 import { createBlockyPlayer, type MinecraftPlayerRig } from "./blocky-player.js";
 import { getControlsHint, getKeybinds, onKeybindsChange } from "../settings/keybinds.js";
 
@@ -25,7 +24,11 @@ export class Game {
   readonly opponent = new THREE.Group();
 
   private controls: PointerLockControls | null = null;
-  private solidColliders: THREE.Box3[] = [];
+  private moveColliders: MoveColliders = {
+    blocks: [],
+    walls: [],
+    bounds: { minX: -23, maxX: 23, minY: 0, maxY: 4.2, minZ: -23, maxZ: 23 },
+  };
   private standSurfaces: StandSurface[] = [];
   private defaultFeetY = 1;
   private standingFeetY = 1;
@@ -93,7 +96,11 @@ export class Game {
     this.scene.add(this.controls.getObject());
 
     const warehouse = buildWarehouse(this.scene);
-    this.solidColliders = warehouse.solidColliders;
+    this.moveColliders = {
+      blocks: warehouse.blockColliders,
+      walls: warehouse.wallColliders,
+      bounds: warehouse.arenaBounds,
+    };
     this.standSurfaces = warehouse.standSurfaces;
     this.defaultFeetY = warehouse.defaultFeetY;
 
@@ -315,7 +322,7 @@ export class Game {
       dy = this.verticalVelocity * delta;
     }
 
-    const moved = moveFeet(feet, { x: dx, y: dy, z: dz }, this.solidColliders);
+    const moved = moveFeet(feet, { x: dx, y: dy, z: dz }, this.moveColliders);
     feet = moved;
 
     if (moved.hitCeiling) {
@@ -327,6 +334,7 @@ export class Game {
       this.verticalVelocity = 0;
       this.standingFeetY = feet.y;
     } else if (this.onFloor) {
+      feet.y = this.standingFeetY;
       if (
         supportsFeetAt(
           feet.x,
@@ -337,16 +345,12 @@ export class Game {
           0.08,
         )
       ) {
-        this.standingFeetY = feet.y;
+        // Keep current height while walking on a supported surface.
       } else {
         this.onFloor = false;
         this.verticalVelocity = 0;
       }
     }
-
-    const clamped = clampFeetToArena(feet.x, feet.z, PLAYER_HALF_WIDTH);
-    feet.x = clamped.x;
-    feet.z = clamped.z;
 
     obj.position.set(feet.x, this.eyeYFromFeet(feet.y), feet.z);
     this.groundEyeY = obj.position.y;
