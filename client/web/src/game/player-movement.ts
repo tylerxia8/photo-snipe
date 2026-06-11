@@ -64,6 +64,51 @@ function standingOnProp(feet: FeetPos, prop: THREE.Box3): boolean {
   );
 }
 
+/** Feet are on or slightly above a prop's top face — not inside its sides. */
+function supportedOnTop(feet: FeetPos, solid: THREE.Box3): boolean {
+  if (!feetOverFootprint(feet, solid)) {
+    return false;
+  }
+  return feet.y >= solid.max.y - ON_TOP_EPS;
+}
+
+function supportTopY(feet: FeetPos, surfaces: THREE.Box3[]): number | null {
+  let bestTop = -Infinity;
+  for (const surface of surfaces) {
+    if (!feetOverFootprint(feet, surface)) {
+      continue;
+    }
+    if (surface.max.y > bestTop) {
+      bestTop = surface.max.y;
+    }
+  }
+  return bestTop > -Infinity ? bestTop : null;
+}
+
+function isGroundedAt(
+  feet: FeetPos,
+  surfaces: THREE.Box3[],
+  verticalOnGround: boolean,
+  deltaY: number,
+): boolean {
+  if (verticalOnGround) {
+    return true;
+  }
+  const top = supportTopY(feet, surfaces);
+  if (top === null) {
+    return false;
+  }
+  return deltaY <= 0 && Math.abs(feet.y - top) <= ON_TOP_EPS;
+}
+
+function snapFeetToSupport(feet: FeetPos, surfaces: THREE.Box3[]): FeetPos {
+  const top = supportTopY(feet, surfaces);
+  if (top === null || feet.y >= top - ON_TOP_EPS) {
+    return feet;
+  }
+  return { ...feet, y: top };
+}
+
 function verticalOverlap(player: THREE.Box3, solid: THREE.Box3): boolean {
   return player.max.y > solid.min.y + SKIN && player.min.y < solid.max.y - SKIN;
 }
@@ -100,6 +145,9 @@ function resolveSolidOverlap(
 ): FeetPos {
   const player = playerAabb(feet);
   if (!player.intersectsBox(solid) || !verticalOverlap(player, solid)) {
+    return feet;
+  }
+  if (supportedOnTop(feet, solid)) {
     return feet;
   }
 
@@ -164,7 +212,7 @@ function resolveAllOverlaps(
     }
 
     for (const solid of props) {
-      if (standingOnProp(resolved, solid)) {
+      if (standingOnProp(resolved, solid) || supportedOnTop(resolved, solid)) {
         continue;
       }
       const next = resolveSolidOverlap(resolved, solid, bounds);
@@ -194,7 +242,7 @@ function clipAxisX(
     let changed = false;
 
     for (const solid of solids) {
-      if (skipWhenStandingOn && standingOnProp({ ...feet, x }, solid)) {
+      if (skipWhenStandingOn && (standingOnProp({ ...feet, x }, solid) || supportedOnTop({ ...feet, x }, solid))) {
         continue;
       }
 
@@ -243,7 +291,7 @@ function clipAxisZ(
     let changed = false;
 
     for (const solid of solids) {
-      if (skipWhenStandingOn && standingOnProp({ ...feet, z }, solid)) {
+      if (skipWhenStandingOn && (standingOnProp({ ...feet, z }, solid) || supportedOnTop({ ...feet, z }, solid))) {
         continue;
       }
 
@@ -364,16 +412,17 @@ function moveStep(feet: FeetPos, delta: MoveDelta, world: WorldColliders): MoveR
   );
   const vertical = clipVertical(horizontal, delta.y, world.surfaces, world.ceiling);
 
-  let settled = { ...horizontal, y: vertical.y };
+  let settled = snapFeetToSupport({ ...horizontal, y: vertical.y }, world.surfaces);
   if (delta.y !== 0) {
     settled = clipHorizontal(settled, 0, 0, world.walls, world.props, world.bounds);
+    settled = snapFeetToSupport(settled, world.surfaces);
   }
 
   const clamped = clampFeet(settled, world.bounds);
 
   return {
     ...clamped,
-    onGround: vertical.onGround,
+    onGround: isGroundedAt(clamped, world.surfaces, vertical.onGround, delta.y),
     hitCeiling: vertical.hitCeiling,
   };
 }

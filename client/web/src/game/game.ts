@@ -3,6 +3,7 @@ import { PointerLockControls } from "three/examples/jsm/controls/PointerLockCont
 import type { NetClient } from "../net/client.js";
 import {
   buildWarehouse,
+  getHighestSurfaceBelow,
   supportsFeetAt,
   type StandSurface,
 } from "./warehouse.js";
@@ -332,15 +333,21 @@ export class Game {
       this.verticalVelocity = 0;
       this.standingFeetY = feet.y;
     } else if (this.onFloor) {
-      if (
-        supportsFeetAt(
+      const supported = supportsFeetAt(
+        feet.x,
+        feet.z,
+        this.standSurfaces,
+        this.defaultFeetY,
+        this.standingFeetY,
+      );
+      if (supported) {
+        this.standingFeetY = getHighestSurfaceBelow(
           feet.x,
           feet.z,
           this.standSurfaces,
           this.defaultFeetY,
-          this.standingFeetY,
-        )
-      ) {
+          this.standingFeetY + 0.1,
+        );
         feet.y = this.standingFeetY;
       } else {
         this.onFloor = false;
