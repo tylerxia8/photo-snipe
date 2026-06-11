@@ -4,7 +4,9 @@ import * as THREE from "three";
 export const PLAYER_HALF_WIDTH = 0.3;
 export const PLAYER_HEIGHT = 1.8;
 const ON_TOP_EPS = 0.05;
+const SKIN = 0.001;
 const MAX_MOVE_STEP = 0.125;
+const SOLVE_PASSES = 4;
 
 export interface FeetPosition {
   x: number;
@@ -61,6 +63,10 @@ function isStandingOnTop(feet: FeetPosition, solid: THREE.Box3): boolean {
   );
 }
 
+function hasVerticalOverlap(player: THREE.Box3, solid: THREE.Box3): boolean {
+  return player.max.y > solid.min.y + SKIN && player.min.y < solid.max.y - SKIN;
+}
+
 export function clampFeetToBounds(feet: FeetPosition, bounds: ArenaBounds): FeetPosition {
   return {
     x: THREE.MathUtils.clamp(feet.x, bounds.minX, bounds.maxX),
@@ -69,7 +75,110 @@ export function clampFeetToBounds(feet: FeetPosition, bounds: ArenaBounds): Feet
   };
 }
 
-export function collideAxisY(
+function clipAxisX(feet: FeetPosition, dx: number, solid: THREE.Box3, skipTop: boolean): number {
+  if (skipTop && isStandingOnTop(feet, solid)) {
+    return feet.x;
+  }
+
+  const player = feetToPlayerBox(feet);
+  if (!player.intersectsBox(solid) || !hasVerticalOverlap(player, solid)) {
+    return feet.x;
+  }
+
+  if (dx > 0) {
+    return Math.min(feet.x, solid.min.x - PLAYER_HALF_WIDTH - SKIN);
+  }
+  if (dx < 0) {
+    return Math.max(feet.x, solid.max.x + PLAYER_HALF_WIDTH + SKIN);
+  }
+
+  const overlapLeft = player.max.x - solid.min.x;
+  const overlapRight = solid.max.x - player.min.x;
+  if (overlapLeft < overlapRight) {
+    return feet.x - overlapLeft - SKIN;
+  }
+  return feet.x + overlapRight + SKIN;
+}
+
+function clipAxisZ(feet: FeetPosition, dz: number, solid: THREE.Box3, skipTop: boolean): number {
+  if (skipTop && isStandingOnTop(feet, solid)) {
+    return feet.z;
+  }
+
+  const player = feetToPlayerBox(feet);
+  if (!player.intersectsBox(solid) || !hasVerticalOverlap(player, solid)) {
+    return feet.z;
+  }
+
+  if (dz > 0) {
+    return Math.min(feet.z, solid.min.z - PLAYER_HALF_WIDTH - SKIN);
+  }
+  if (dz < 0) {
+    return Math.max(feet.z, solid.max.z + PLAYER_HALF_WIDTH + SKIN);
+  }
+
+  const overlapBack = player.max.z - solid.min.z;
+  const overlapFront = solid.max.z - player.min.z;
+  if (overlapBack < overlapFront) {
+    return feet.z - overlapBack - SKIN;
+  }
+  return feet.z + overlapFront + SKIN;
+}
+
+function collideHorizontal(
+  feet: FeetPosition,
+  dx: number,
+  dz: number,
+  blocks: THREE.Box3[],
+  walls: THREE.Box3[],
+): FeetPosition {
+  let x = feet.x + dx;
+  let z = feet.z + dz;
+
+  for (let pass = 0; pass < SOLVE_PASSES; pass++) {
+    let moved = false;
+
+    for (const solid of walls) {
+      const nextX = clipAxisX({ ...feet, x, z }, dx, solid, false);
+      if (nextX !== x) {
+        x = nextX;
+        moved = true;
+      }
+    }
+
+    for (const solid of blocks) {
+      const nextX = clipAxisX({ ...feet, x, z }, dx, solid, true);
+      if (nextX !== x) {
+        x = nextX;
+        moved = true;
+      }
+    }
+
+    for (const solid of walls) {
+      const nextZ = clipAxisZ({ ...feet, x, z }, dz, solid, false);
+      if (nextZ !== z) {
+        z = nextZ;
+        moved = true;
+      }
+    }
+
+    for (const solid of blocks) {
+      const nextZ = clipAxisZ({ ...feet, x, z }, dz, solid, true);
+      if (nextZ !== z) {
+        z = nextZ;
+        moved = true;
+      }
+    }
+
+    if (!moved) {
+      break;
+    }
+  }
+
+  return { ...feet, x, z };
+}
+
+function collideAxisY(
   feet: FeetPosition,
   dy: number,
   blocks: THREE.Box3[],
@@ -81,146 +190,41 @@ export function collideAxisY(
   let y = feet.y + dy;
   let onGround = false;
   let hitCeiling = false;
-  let player = feetToPlayerBox({ ...feet, y });
 
   for (const solid of blocks) {
-    if (!player.intersectsBox(solid)) {
+    if (!isFeetCenterOverSolid(feet, solid)) {
       continue;
     }
 
     if (dy < 0) {
-      // Only land on a horizontal top face — never snap up the side of tall geometry.
-      if (feet.y + ON_TOP_EPS < solid.max.y) {
+      const top = solid.max.y;
+      if (feet.y + ON_TOP_EPS < top) {
         continue;
       }
-      if (!isFeetCenterOverSolid(feet, solid)) {
-        continue;
-      }
-
-      const pushUp = solid.max.y - player.min.y;
-      if (pushUp <= 0) {
+      const nextMinY = y;
+      if (nextMinY > top + ON_TOP_EPS) {
         continue;
       }
 
-      y += pushUp;
+      y = top;
       onGround = true;
-      player = feetToPlayerBox({ ...feet, y });
     } else {
-      // Only hit the underside of geometry above the player (ceiling, crate bottoms).
-      if (solid.min.y <= feet.y + ON_TOP_EPS) {
+      const bottom = solid.min.y;
+      if (bottom <= feet.y + ON_TOP_EPS) {
         continue;
       }
 
-      const pushDown = player.max.y - solid.min.y;
-      if (pushDown <= 0) {
+      const nextMaxY = y + PLAYER_HEIGHT;
+      if (nextMaxY < bottom - ON_TOP_EPS) {
         continue;
       }
 
-      y -= pushDown;
+      y = bottom - PLAYER_HEIGHT;
       hitCeiling = true;
-      player = feetToPlayerBox({ ...feet, y });
     }
   }
 
   return { y, onGround, hitCeiling };
-}
-
-function collideAxisX(
-  feet: FeetPosition,
-  dx: number,
-  blocks: THREE.Box3[],
-  walls: THREE.Box3[],
-): number {
-  if (dx === 0) {
-    return feet.x;
-  }
-
-  let x = feet.x + dx;
-  let player = feetToPlayerBox({ ...feet, x });
-
-  for (const solid of walls) {
-    if (!player.intersectsBox(solid)) {
-      continue;
-    }
-
-    const overlapLeft = player.max.x - solid.min.x;
-    const overlapRight = solid.max.x - player.min.x;
-    if (overlapLeft < overlapRight) {
-      x -= overlapLeft;
-    } else {
-      x += overlapRight;
-    }
-    player = feetToPlayerBox({ ...feet, x });
-  }
-
-  for (const solid of blocks) {
-    if (!player.intersectsBox(solid)) {
-      continue;
-    }
-    if (isStandingOnTop({ ...feet, x }, solid)) {
-      continue;
-    }
-
-    const overlapLeft = player.max.x - solid.min.x;
-    const overlapRight = solid.max.x - player.min.x;
-    if (overlapLeft < overlapRight) {
-      x -= overlapLeft;
-    } else {
-      x += overlapRight;
-    }
-    player = feetToPlayerBox({ ...feet, x });
-  }
-
-  return x;
-}
-
-function collideAxisZ(
-  feet: FeetPosition,
-  dz: number,
-  blocks: THREE.Box3[],
-  walls: THREE.Box3[],
-): number {
-  if (dz === 0) {
-    return feet.z;
-  }
-
-  let z = feet.z + dz;
-  let player = feetToPlayerBox({ ...feet, z });
-
-  for (const solid of walls) {
-    if (!player.intersectsBox(solid)) {
-      continue;
-    }
-
-    const overlapBack = player.max.z - solid.min.z;
-    const overlapFront = solid.max.z - player.min.z;
-    if (overlapBack < overlapFront) {
-      z -= overlapBack;
-    } else {
-      z += overlapFront;
-    }
-    player = feetToPlayerBox({ ...feet, z });
-  }
-
-  for (const solid of blocks) {
-    if (!player.intersectsBox(solid)) {
-      continue;
-    }
-    if (isStandingOnTop({ ...feet, z }, solid)) {
-      continue;
-    }
-
-    const overlapBack = player.max.z - solid.min.z;
-    const overlapFront = solid.max.z - player.min.z;
-    if (overlapBack < overlapFront) {
-      z -= overlapBack;
-    } else {
-      z += overlapFront;
-    }
-    player = feetToPlayerBox({ ...feet, z });
-  }
-
-  return z;
 }
 
 function moveFeetStep(
@@ -228,24 +232,33 @@ function moveFeetStep(
   delta: MoveDelta,
   colliders: MoveColliders,
 ): MoveResult {
-  const yResult = collideAxisY(feet, delta.y, colliders.blocks);
-  const next: FeetPosition = {
-    x: feet.x,
+  let horizontal = collideHorizontal(
+    feet,
+    delta.x,
+    delta.z,
+    colliders.blocks,
+    colliders.walls,
+  );
+
+  const yResult = collideAxisY(horizontal, delta.y, colliders.blocks);
+
+  horizontal = {
+    ...horizontal,
     y: yResult.y,
-    z: feet.z,
   };
 
-  next.x = collideAxisX(next, delta.x, colliders.blocks, colliders.walls);
-  next.z = collideAxisZ(next, delta.z, colliders.blocks, colliders.walls);
+  if (delta.y !== 0) {
+    horizontal = collideHorizontal(horizontal, 0, 0, colliders.blocks, colliders.walls);
+  }
 
   return {
-    ...clampFeetToBounds(next, colliders.bounds),
+    ...clampFeetToBounds(horizontal, colliders.bounds),
     onGround: yResult.onGround,
     hitCeiling: yResult.hitCeiling,
   };
 }
 
-/** Minecraft-style movement with sub-steps, wall/block split, and hard arena bounds. */
+/** Minecraft-style movement: horizontal slide first, then vertical, with sub-steps. */
 export function moveFeet(
   feet: FeetPosition,
   delta: MoveDelta,
