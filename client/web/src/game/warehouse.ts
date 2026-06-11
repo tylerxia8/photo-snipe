@@ -111,6 +111,16 @@ function addLightStrip(
   parent.add(glow);
 }
 
+const CROSS_WALL_X = 21;
+const CROSS_WALL_HALF_Z = 3;
+
+function makeInteriorWallCollider(cx: number, cz: number): THREE.Box3 {
+  return new THREE.Box3(
+    new THREE.Vector3(cx - WALL_THICKNESS * 0.5, 0, cz - CROSS_WALL_HALF_Z),
+    new THREE.Vector3(cx + WALL_THICKNESS * 0.5, WALL_HEIGHT, cz + CROSS_WALL_HALF_Z),
+  );
+}
+
 function boxToSurface(box: THREE.Box3): StandSurface {
   return {
     minX: box.min.x,
@@ -230,8 +240,11 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
       .map(boxToSurface),
   ];
 
-  const perimeterWallCount = 4;
-  const interiorWallColliders = wallBoxes.slice(perimeterWallCount);
+  const interiorWallColliders: THREE.Box3[] = [];
+  for (const z of [-14, 0, 14] as const) {
+    interiorWallColliders.push(makeInteriorWallCollider(-CROSS_WALL_X, z));
+    interiorWallColliders.push(makeInteriorWallCollider(CROSS_WALL_X, z));
+  }
 
   const propColliders = allBoxes.filter(
     (box) => box !== floorBox && box !== ceilingBox && !wallBoxes.includes(box),
