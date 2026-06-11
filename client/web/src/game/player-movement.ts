@@ -5,7 +5,7 @@ export const PLAYER_HEIGHT = 1.8;
 const ON_TOP_EPS = 0.05;
 const SKIN = 0.001;
 const MAX_STEP = 0.125;
-const SOLVE_PASSES = 4;
+const SOLVE_PASSES = 6;
 
 export interface FeetPos {
   x: number;
@@ -83,6 +83,75 @@ function penetrationDepth(player: THREE.Box3, solid: THREE.Box3): { x: number; z
   };
 }
 
+function isInsideBounds(x: number, z: number, bounds: WorldColliders["bounds"]): boolean {
+  return (
+    x >= bounds.minX &&
+    x <= bounds.maxX &&
+    z >= bounds.minZ &&
+    z <= bounds.maxZ
+  );
+}
+
+/** Push out of a solid using the smallest translation, preferring to stay inside arena bounds. */
+function depenetrateAxis(
+  feet: FeetPos,
+  axis: "x" | "z",
+  solid: THREE.Box3,
+  bounds: WorldColliders["bounds"],
+): FeetPos {
+  const player = playerAabb(feet);
+  if (!player.intersectsBox(solid) || !verticalOverlap(player, solid)) {
+    return feet;
+  }
+
+  const depth = penetrationDepth(player, solid);
+  if (axis === "x") {
+    if (depth.x > depth.z) {
+      return feet;
+    }
+
+    const pushWest = player.max.x - solid.min.x + SKIN;
+    const pushEast = solid.max.x - player.min.x + SKIN;
+    const west = { ...feet, x: feet.x - pushWest };
+    const east = { ...feet, x: feet.x + pushEast };
+    const westOk = isInsideBounds(west.x, west.z, bounds);
+    const eastOk = isInsideBounds(east.x, east.z, bounds);
+
+    if (westOk && eastOk) {
+      return pushWest < pushEast ? west : east;
+    }
+    if (westOk) {
+      return west;
+    }
+    if (eastOk) {
+      return east;
+    }
+    return pushWest < pushEast ? west : east;
+  }
+
+  if (depth.z > depth.x) {
+    return feet;
+  }
+
+  const pushNorth = player.max.z - solid.min.z + SKIN;
+  const pushSouth = solid.max.z - player.min.z + SKIN;
+  const north = { ...feet, z: feet.z - pushNorth };
+  const south = { ...feet, z: feet.z + pushSouth };
+  const northOk = isInsideBounds(north.x, north.z, bounds);
+  const southOk = isInsideBounds(south.x, south.z, bounds);
+
+  if (northOk && southOk) {
+    return pushNorth < pushSouth ? north : south;
+  }
+  if (northOk) {
+    return north;
+  }
+  if (southOk) {
+    return south;
+  }
+  return pushNorth < pushSouth ? north : south;
+}
+
 function clipAxisX(
   feet: FeetPos,
   dx: number,
@@ -90,6 +159,8 @@ function clipAxisX(
   skipWhenStandingOn: boolean,
 ): number {
   let x = feet.x + dx;
+  const startMinX = feet.x - PLAYER_HALF_WIDTH;
+  const startMaxX = feet.x + PLAYER_HALF_WIDTH;
 
   for (let pass = 0; pass < SOLVE_PASSES; pass++) {
     let changed = false;
@@ -104,24 +175,15 @@ function clipAxisX(
         continue;
       }
 
-      const depth = penetrationDepth(player, solid);
-      const resolveX = depth.x <= depth.z;
-      if (!resolveX) {
-        continue;
-      }
-
       let nextX = x;
-      if (dx > 0) {
+      if (dx > 0 && startMaxX <= solid.min.x + SKIN) {
         nextX = Math.min(x, solid.min.x - PLAYER_HALF_WIDTH - SKIN);
-      } else if (dx < 0) {
+      } else if (dx < 0 && startMinX >= solid.max.x - SKIN) {
         nextX = Math.max(x, solid.max.x + PLAYER_HALF_WIDTH + SKIN);
+      } else if (dx === 0) {
+        continue;
       } else {
-        const pushLeft = player.max.x - solid.min.x;
-        const pushRight = solid.max.x - player.min.x;
-        nextX =
-          pushLeft < pushRight
-            ? solid.min.x - PLAYER_HALF_WIDTH - SKIN
-            : solid.max.x + PLAYER_HALF_WIDTH + SKIN;
+        continue;
       }
 
       if (nextX !== x) {
@@ -145,6 +207,8 @@ function clipAxisZ(
   skipWhenStandingOn: boolean,
 ): number {
   let z = feet.z + dz;
+  const startMinZ = feet.z - PLAYER_HALF_WIDTH;
+  const startMaxZ = feet.z + PLAYER_HALF_WIDTH;
 
   for (let pass = 0; pass < SOLVE_PASSES; pass++) {
     let changed = false;
@@ -159,24 +223,15 @@ function clipAxisZ(
         continue;
       }
 
-      const depth = penetrationDepth(player, solid);
-      const resolveZ = depth.z <= depth.x;
-      if (!resolveZ) {
-        continue;
-      }
-
       let nextZ = z;
-      if (dz > 0) {
+      if (dz > 0 && startMaxZ <= solid.min.z + SKIN) {
         nextZ = Math.min(z, solid.min.z - PLAYER_HALF_WIDTH - SKIN);
-      } else if (dz < 0) {
+      } else if (dz < 0 && startMinZ >= solid.max.z - SKIN) {
         nextZ = Math.max(z, solid.max.z + PLAYER_HALF_WIDTH + SKIN);
+      } else if (dz === 0) {
+        continue;
       } else {
-        const pushBack = player.max.z - solid.min.z;
-        const pushFront = solid.max.z - player.min.z;
-        nextZ =
-          pushBack < pushFront
-            ? solid.min.z - PLAYER_HALF_WIDTH - SKIN
-            : solid.max.z + PLAYER_HALF_WIDTH + SKIN;
+        continue;
       }
 
       if (nextZ !== z) {
@@ -193,12 +248,61 @@ function clipAxisZ(
   return z;
 }
 
+function resolveEmbedding(
+  feet: FeetPos,
+  walls: THREE.Box3[],
+  props: THREE.Box3[],
+  bounds: WorldColliders["bounds"],
+): FeetPos {
+  let resolved = { ...feet };
+
+  for (let pass = 0; pass < SOLVE_PASSES; pass++) {
+    let changed = false;
+
+    for (const solid of walls) {
+      const next = depenetrateAxis(resolved, "x", solid, bounds);
+      if (next.x !== resolved.x) {
+        resolved = next;
+        changed = true;
+      }
+      const nextZ = depenetrateAxis(resolved, "z", solid, bounds);
+      if (nextZ.z !== resolved.z) {
+        resolved = nextZ;
+        changed = true;
+      }
+    }
+
+    for (const solid of props) {
+      if (standingOnProp(resolved, solid)) {
+        continue;
+      }
+      const next = depenetrateAxis(resolved, "x", solid, bounds);
+      if (next.x !== resolved.x) {
+        resolved = next;
+        changed = true;
+      }
+      const nextZ = depenetrateAxis(resolved, "z", solid, bounds);
+      if (nextZ.z !== resolved.z) {
+        resolved = nextZ;
+        changed = true;
+      }
+    }
+
+    if (!changed) {
+      break;
+    }
+  }
+
+  return resolved;
+}
+
 function clipHorizontal(
   feet: FeetPos,
   dx: number,
   dz: number,
   walls: THREE.Box3[],
   props: THREE.Box3[],
+  bounds: WorldColliders["bounds"],
 ): FeetPos {
   let x = clipAxisX(feet, dx, walls, false);
   x = clipAxisX({ ...feet, x }, dx, props, true);
@@ -206,16 +310,11 @@ function clipHorizontal(
   let z = clipAxisZ({ ...feet, x }, dz, walls, false);
   z = clipAxisZ({ ...feet, x, z }, dz, props, true);
 
-  if (dx === 0) {
-    x = clipAxisX({ ...feet, x, z }, 0, walls, false);
-    x = clipAxisX({ ...feet, x, z }, 0, props, true);
+  const moved = { ...feet, x, z };
+  if (dx === 0 && dz === 0) {
+    return resolveEmbedding(moved, walls, props, bounds);
   }
-  if (dz === 0) {
-    z = clipAxisZ({ ...feet, x, z }, 0, walls, false);
-    z = clipAxisZ({ ...feet, x, z }, 0, props, true);
-  }
-
-  return { ...feet, x, z };
+  return moved;
 }
 
 function clipVertical(
@@ -275,12 +374,19 @@ function clipVertical(
 }
 
 function moveStep(feet: FeetPos, delta: MoveDelta, world: WorldColliders): MoveResult {
-  const horizontal = clipHorizontal(feet, delta.x, delta.z, world.walls, world.props);
+  const horizontal = clipHorizontal(
+    feet,
+    delta.x,
+    delta.z,
+    world.walls,
+    world.props,
+    world.bounds,
+  );
   const vertical = clipVertical(horizontal, delta.y, world.surfaces, world.ceiling);
 
   let settled = { ...horizontal, y: vertical.y };
   if (delta.y !== 0) {
-    settled = clipHorizontal(settled, 0, 0, world.walls, world.props);
+    settled = clipHorizontal(settled, 0, 0, world.walls, world.props, world.bounds);
   }
 
   const clamped = clampFeet(settled, world.bounds);

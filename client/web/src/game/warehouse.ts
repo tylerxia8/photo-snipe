@@ -230,6 +230,9 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
       .map(boxToSurface),
   ];
 
+  const perimeterWallCount = 4;
+  const interiorWallColliders = wallBoxes.slice(perimeterWallCount);
+
   const propColliders = allBoxes.filter(
     (box) => box !== floorBox && box !== ceilingBox && !wallBoxes.includes(box),
   );
@@ -239,7 +242,7 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
   const inner = ARENA_HALF - WALL_THICKNESS * 0.5 - PLAYER_RADIUS - 0.01;
 
   return {
-    wallColliders: wallBoxes,
+    wallColliders: interiorWallColliders,
     propColliders,
     standColliders,
     ceilingCollider: ceilingBox,
