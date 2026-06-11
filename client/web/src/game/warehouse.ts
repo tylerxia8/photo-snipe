@@ -3,9 +3,11 @@ import * as THREE from "three";
 const WALL_HEIGHT = 6;
 const WALL_THICKNESS = 0.4;
 const DEFAULT_FEET_Y = 1;
-const PLAYER_RADIUS = 0.35;
+const PLAYER_RADIUS = 0.3;
+const PLAYER_HEIGHT = 1.8;
+const ARENA_HALF = 24;
 
-export { PLAYER_RADIUS, WALL_HEIGHT };
+export { PLAYER_RADIUS, WALL_HEIGHT, PLAYER_HEIGHT };
 
 export interface StandSurface {
   minX: number;
@@ -18,8 +20,18 @@ export interface StandSurface {
 export interface WarehouseBuild {
   wallColliders: THREE.Box3[];
   propColliders: THREE.Box3[];
+  standColliders: THREE.Box3[];
+  ceilingCollider: THREE.Box3;
   standSurfaces: StandSurface[];
   defaultFeetY: number;
+  worldBounds: {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+    minZ: number;
+    maxZ: number;
+  };
 }
 
 function flatMat(color: number): THREE.MeshLambertMaterial {
@@ -206,15 +218,55 @@ export function buildWarehouse(scene: THREE.Scene): WarehouseBuild {
   spawnPad(0, -18, 0x3498db);
   spawnPad(0, 18, 0xe74c3c);
 
-  const standSurfaces = allBoxes
-    .filter((box) => box !== floorBox && box !== ceilingBox && box.max.y > 0.2)
-    .map(boxToSurface);
+  const floorCollider = new THREE.Box3(
+    new THREE.Vector3(-ARENA_HALF, 0, -ARENA_HALF),
+    new THREE.Vector3(ARENA_HALF, DEFAULT_FEET_Y, ARENA_HALF),
+  );
+
+  const standSurfaces = [
+    boxToSurface(floorCollider),
+    ...allBoxes
+      .filter((box) => box !== floorBox && box !== ceilingBox && box.max.y > 0.2)
+      .map(boxToSurface),
+  ];
 
   const propColliders = allBoxes.filter(
     (box) => box !== floorBox && box !== ceilingBox && !wallBoxes.includes(box),
   );
 
-  return { wallColliders: wallBoxes, propColliders, standSurfaces, defaultFeetY: DEFAULT_FEET_Y };
+  const standColliders = [floorCollider, ...propColliders];
+
+  const inner = ARENA_HALF - WALL_THICKNESS * 0.5 - PLAYER_RADIUS - 0.01;
+
+  return {
+    wallColliders: wallBoxes,
+    propColliders,
+    standColliders,
+    ceilingCollider: ceilingBox,
+    standSurfaces,
+    defaultFeetY: DEFAULT_FEET_Y,
+    worldBounds: {
+      minX: -inner,
+      maxX: inner,
+      minY: 0,
+      maxY: WALL_HEIGHT - PLAYER_HEIGHT,
+      minZ: -inner,
+      maxZ: inner,
+    },
+  };
+}
+
+export function isFeetCenterOverSurface(
+  x: number,
+  z: number,
+  surface: StandSurface,
+): boolean {
+  return (
+    x >= surface.minX &&
+    x <= surface.maxX &&
+    z >= surface.minZ &&
+    z <= surface.maxZ
+  );
 }
 
 export function isPointOverSurface(
@@ -237,15 +289,23 @@ export function supportsFeetAt(
   surfaces: StandSurface[],
   defaultFeetY: number,
   feetY: number,
-  radius = PLAYER_RADIUS,
   epsilon = 0.05,
 ): boolean {
   if (Math.abs(feetY - defaultFeetY) <= epsilon) {
-    return true;
+    return isFeetCenterOverSurface(x, z, {
+      minX: -ARENA_HALF,
+      maxX: ARENA_HALF,
+      minZ: -ARENA_HALF,
+      maxZ: ARENA_HALF,
+      feetY: defaultFeetY,
+    });
   }
 
   for (const surface of surfaces) {
-    if (Math.abs(surface.feetY - feetY) <= epsilon && isPointOverSurface(x, z, surface, radius)) {
+    if (
+      Math.abs(surface.feetY - feetY) <= epsilon &&
+      isFeetCenterOverSurface(x, z, surface)
+    ) {
       return true;
     }
   }
@@ -259,13 +319,12 @@ export function getHighestSurfaceBelow(
   surfaces: StandSurface[],
   defaultFeetY: number,
   maxFeetY: number,
-  radius = PLAYER_RADIUS,
   epsilon = 0.05,
 ): number {
   let best = defaultFeetY;
   for (const surface of surfaces) {
     if (
-      isPointOverSurface(x, z, surface, radius) &&
+      isFeetCenterOverSurface(x, z, surface) &&
       surface.feetY <= maxFeetY + epsilon &&
       surface.feetY > best
     ) {
@@ -273,39 +332,4 @@ export function getHighestSurfaceBelow(
     }
   }
   return best;
-}
-
-export function resolveCollision(
-  pos: THREE.Vector3,
-  wallColliders: THREE.Box3[],
-  radius = PLAYER_RADIUS,
-  height = 1.8,
-  feetY?: number,
-): THREE.Vector3 {
-  const next = pos.clone();
-  const feet = feetY ?? pos.y - height * 0.5;
-  const playerBox = new THREE.Box3(
-    new THREE.Vector3(next.x - radius, next.y - height * 0.5, next.z - radius),
-    new THREE.Vector3(next.x + radius, next.y + height * 0.5, next.z + radius),
-  );
-
-  for (const wall of wallColliders) {
-    if (feet >= wall.max.y - 0.05) {
-      continue;
-    }
-
-    if (playerBox.intersectsBox(wall)) {
-      const dx = Math.min(wall.max.x - playerBox.min.x, playerBox.max.x - wall.min.x);
-      const dz = Math.min(wall.max.z - playerBox.min.z, playerBox.max.z - wall.min.z);
-      if (dx < dz) {
-        next.x += dx === wall.max.x - playerBox.min.x ? dx : -dx;
-      } else {
-        next.z += dz === wall.max.z - playerBox.min.z ? dz : -dz;
-      }
-      playerBox.setFromCenterAndSize(next, new THREE.Vector3(radius * 2, height, radius * 2));
-    }
-  }
-
-  next.y = pos.y;
-  return next;
 }
