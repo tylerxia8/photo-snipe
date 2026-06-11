@@ -9,6 +9,7 @@ export interface LobbyPlayer {
   socket: WebSocket;
   displayName: string;
   slot: PlayerSlot;
+  skinId: string;
 }
 
 export interface Room {
@@ -29,7 +30,12 @@ export function generateRoomCode(length = 4): string {
 export class LobbyManager {
   private rooms = new Map<string, Room>();
 
-  createRoom(socket: WebSocket, clientId: string, displayName: string): Room {
+  createRoom(
+    socket: WebSocket,
+    clientId: string,
+    displayName: string,
+    skinId: string,
+  ): Room {
     let code = generateRoomCode();
     while (this.rooms.has(code)) {
       code = generateRoomCode();
@@ -38,7 +44,7 @@ export class LobbyManager {
     const room: Room = {
       code,
       players: {
-        A: { clientId, socket, displayName, slot: "A" },
+        A: { clientId, socket, displayName, slot: "A", skinId },
       },
       createdAtMs: Date.now(),
     };
@@ -51,6 +57,7 @@ export class LobbyManager {
     socket: WebSocket,
     clientId: string,
     displayName: string,
+    skinId: string,
   ): { room: Room; slot: PlayerSlot } | null {
     const room = this.rooms.get(code.toUpperCase());
     if (!room) {
@@ -60,7 +67,7 @@ export class LobbyManager {
       return null;
     }
 
-    room.players.B = { clientId, socket, displayName, slot: "B" };
+    room.players.B = { clientId, socket, displayName, slot: "B", skinId };
     return { room, slot: "B" };
   }
 

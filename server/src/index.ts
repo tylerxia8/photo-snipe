@@ -7,6 +7,7 @@ import { MatchSession } from "./match-session.js";
 import { RematchManager } from "./rematch.js";
 import { serveWebClient, webClientAvailable } from "./static.js";
 import type { PlayerSlot } from "@photo-snipe/core";
+import { sanitizeSkinId } from "@photo-snipe/core";
 
 const PORT = Number(process.env.PORT ?? 8787);
 const HOST = process.env.HOST ?? "0.0.0.0";
@@ -105,6 +106,7 @@ async function startMatch(
     matchId: match.matchId,
     playerSlot: "A",
     opponentName: playerB.displayName,
+    opponentSkinId: playerB.skinId,
     matchConfig: {
       roundsToWin: matchConfig.roundsToWin,
       roundPool: matchConfig.roundPool,
@@ -116,6 +118,7 @@ async function startMatch(
     matchId: match.matchId,
     playerSlot: "B",
     opponentName: playerA.displayName,
+    opponentSkinId: playerA.skinId,
     matchConfig: {
       roundsToWin: matchConfig.roundsToWin,
       roundPool: matchConfig.roundPool,
@@ -241,7 +244,8 @@ async function handleMessage(
     case "create_room": {
       const displayName =
         typeof message.displayName === "string" ? message.displayName : "Player";
-      const room = lobby.createRoom(socket, ctx.clientId, displayName);
+      const skinId = sanitizeSkinId(message.skinId);
+      const room = lobby.createRoom(socket, ctx.clientId, displayName, skinId);
       ctx.roomCode = room.code;
       ctx.slot = "A";
       send(socket, {
@@ -257,7 +261,8 @@ async function handleMessage(
         typeof message.roomCode === "string" ? message.roomCode : "";
       const displayName =
         typeof message.displayName === "string" ? message.displayName : "Player";
-      const joined = lobby.joinRoom(roomCode, socket, ctx.clientId, displayName);
+      const skinId = sanitizeSkinId(message.skinId);
+      const joined = lobby.joinRoom(roomCode, socket, ctx.clientId, displayName, skinId);
 
       if (!joined) {
         const room = lobby.getRoom(roomCode);

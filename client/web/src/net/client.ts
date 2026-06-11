@@ -49,12 +49,12 @@ export class NetClient {
     }
   }
 
-  createRoom(displayName: string): void {
-    this.send({ type: "create_room", displayName });
+  createRoom(displayName: string, skinId: string): void {
+    this.send({ type: "create_room", displayName, skinId });
   }
 
-  joinRoom(roomCode: string, displayName: string): void {
-    this.send({ type: "join_room", roomCode, displayName });
+  joinRoom(roomCode: string, displayName: string, skinId: string): void {
+    this.send({ type: "join_room", roomCode, displayName, skinId });
   }
 
   sendPlayerState(

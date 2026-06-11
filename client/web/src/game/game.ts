@@ -9,6 +9,7 @@ import {
 } from "./warehouse.js";
 import { movePlayer, type FeetPos, type WorldColliders } from "./player-movement.js";
 import { createBlockyPlayer, type MinecraftPlayerRig } from "./blocky-player.js";
+import { getSkin, sanitizeSkinId } from "@photo-snipe/core";
 import { getControlsHint, getKeybinds, onKeybindsChange } from "../settings/keybinds.js";
 
 const WALK_SPEED = 3;
@@ -85,7 +86,8 @@ export class Game {
     fill.position.set(-10, 14, -12);
     this.scene.add(fill);
 
-    this.opponentRig = createBlockyPlayer(0x00aaaa, 0x3b4cc0);
+    const defaultSkin = getSkin("teal");
+    this.opponentRig = createBlockyPlayer(defaultSkin.shirtColor, defaultSkin.pantsColor);
     this.opponent.add(this.opponentRig.root);
     this.scene.add(this.opponent);
 
@@ -126,6 +128,11 @@ export class Game {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  setOpponentSkin(skinId: unknown): void {
+    const skin = getSkin(sanitizeSkinId(skinId));
+    this.opponentRig.setColors(skin.shirtColor, skin.pantsColor);
   }
 
   startRound(

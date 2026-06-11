@@ -3,6 +3,8 @@ import { NetClient } from "./net/client.js";
 import type { ServerMessage } from "./net/client.js";
 import { getControlsHint } from "./settings/keybinds.js";
 import { initKeybindSettings } from "./settings/keybind-settings.js";
+import { getSkinId } from "./settings/appearance.js";
+import { initAppearanceSettings, updateOperatorPreview } from "./settings/appearance-settings.js";
 
 const lobby = document.getElementById("lobby")!;
 const hud = document.getElementById("hud")!;
@@ -219,6 +221,7 @@ net.onMessage = (msg: ServerMessage) => {
       if (!game) {
         game = new Game(net, hudApi(), mount);
       }
+      game.setOpponentSkin(msg.opponentSkinId);
       setStatus(`Match vs ${String(msg.opponentName)}`);
       break;
     case "round_started": {
@@ -274,7 +277,7 @@ net.onMessage = (msg: ServerMessage) => {
 };
 
 document.getElementById("create-btn")!.addEventListener("click", () => {
-  net.createRoom(displayName());
+  net.createRoom(displayName(), getSkinId());
 });
 
 document.getElementById("join-btn")!.addEventListener("click", () => {
@@ -283,7 +286,7 @@ document.getElementById("join-btn")!.addEventListener("click", () => {
     setStatus("Enter a room code");
     return;
   }
-  net.joinRoom(code, displayName());
+  net.joinRoom(code, displayName(), getSkinId());
 });
 
 rematchBtn.addEventListener("click", () => {
@@ -305,6 +308,8 @@ function frame(now: number): void {
 
 net.connect();
 initKeybindSettings(updateControlsHint);
+initAppearanceSettings();
+updateOperatorPreview();
 updateControlsHint();
 
 navPlay.addEventListener("click", () => setLobbyTab("play"));

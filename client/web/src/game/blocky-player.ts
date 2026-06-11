@@ -3,6 +3,7 @@ import * as THREE from "three";
 export interface MinecraftPlayerRig {
   root: THREE.Group;
   setPose: (options: { walkPhase: number; airborne: boolean }) => void;
+  setColors: (shirtColor: number, pantsColor: number) => void;
 }
 
 /** Minecraft-style Steve proportions. Origin at feet, total height ~1.8. */
@@ -79,7 +80,14 @@ export function createBlockyPlayer(shirtColor: number, pantsColor: number): Mine
 
   setPose({ walkPhase: 0, airborne: false });
 
-  return { root, setPose };
+  return {
+    root,
+    setPose,
+    setColors(nextShirtColor: number, nextPantsColor: number) {
+      shirt.color.setHex(nextShirtColor);
+      pants.color.setHex(nextPantsColor);
+    },
+  };
 }
 
 function flatMat(color: number): THREE.MeshLambertMaterial {

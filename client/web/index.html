@@ -78,16 +78,25 @@
 
             <section id="settings-panel" class="kr-menu-window panel hidden">
               <div class="kr-menu-header">
-                <h2>KEYBINDS</h2>
-                <p>Click a binding, then press a key. Escape cancels.</p>
+                <h2>SETTINGS</h2>
+                <p>Customize your operator and controls.</p>
               </div>
 
-              <div id="keybind-rows" class="keybind-rows"></div>
+              <div class="settings-section">
+                <h3 class="settings-section-title">OPERATOR SKIN</h3>
+                <div id="skin-grid" class="skin-grid"></div>
+                <p id="skin-status" class="status skin-status"></p>
+              </div>
 
-              <button id="keybind-reset" class="btn btn-secondary keybind-reset" type="button">
-                RESET DEFAULTS
-              </button>
-              <p id="keybind-status" class="status"></p>
+              <div class="settings-section">
+                <h3 class="settings-section-title">KEYBINDS</h3>
+                <p class="settings-section-hint">Click a binding, then press a key. Escape cancels.</p>
+                <div id="keybind-rows" class="keybind-rows"></div>
+                <button id="keybind-reset" class="btn btn-secondary keybind-reset" type="button">
+                  RESET KEYBINDS
+                </button>
+                <p id="keybind-status" class="status"></p>
+              </div>
             </section>
           </main>
         </div>

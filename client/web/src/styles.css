@@ -381,7 +381,78 @@ canvas {
 .keybind-rows {
   display: grid;
   gap: 0.55rem;
-  margin-top: 1rem;
+  margin-top: 0.65rem;
+}
+
+.settings-section {
+  margin-top: 1.25rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.settings-section:first-of-type {
+  margin-top: 0.75rem;
+  padding-top: 0;
+  border-top: none;
+}
+
+.settings-section-title {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  color: #6dffd2;
+}
+
+.settings-section-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: #9aa8ba;
+}
+
+.skin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.skin-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s, transform 0.12s;
+}
+
+.skin-option:hover {
+  border-color: rgba(33, 150, 243, 0.55);
+}
+
+.skin-option.selected {
+  border-color: rgba(109, 255, 210, 0.85);
+  box-shadow: 0 0 0 2px rgba(109, 255, 210, 0.15);
+}
+
+.skin-swatch {
+  width: 42px;
+  height: 64px;
+  image-rendering: pixelated;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.skin-name {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #dce4ef;
+}
+
+.skin-status {
+  margin-top: 0.75rem;
 }
 
 .keybind-row {
