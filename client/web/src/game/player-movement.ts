@@ -76,6 +76,13 @@ export function clampFeet(feet: FeetPos, bounds: WorldColliders["bounds"]): Feet
   };
 }
 
+function penetrationDepth(player: THREE.Box3, solid: THREE.Box3): { x: number; z: number } {
+  return {
+    x: Math.min(player.max.x - solid.min.x, solid.max.x - player.min.x),
+    z: Math.min(player.max.z - solid.min.z, solid.max.z - player.min.z),
+  };
+}
+
 function clipAxisX(
   feet: FeetPos,
   dx: number,
@@ -94,6 +101,12 @@ function clipAxisX(
 
       const player = playerAabb({ ...feet, x });
       if (!player.intersectsBox(solid) || !verticalOverlap(player, solid)) {
+        continue;
+      }
+
+      const depth = penetrationDepth(player, solid);
+      const resolveX = depth.x <= depth.z;
+      if (!resolveX) {
         continue;
       }
 
@@ -146,6 +159,12 @@ function clipAxisZ(
         continue;
       }
 
+      const depth = penetrationDepth(player, solid);
+      const resolveZ = depth.z <= depth.x;
+      if (!resolveZ) {
+        continue;
+      }
+
       let nextZ = z;
       if (dz > 0) {
         nextZ = Math.min(z, solid.min.z - PLAYER_HALF_WIDTH - SKIN);
@@ -187,16 +206,13 @@ function clipHorizontal(
   let z = clipAxisZ({ ...feet, x }, dz, walls, false);
   z = clipAxisZ({ ...feet, x, z }, dz, props, true);
 
-  for (let pass = 0; pass < 2; pass++) {
-    const prevX = x;
-    const prevZ = z;
+  if (dx === 0) {
     x = clipAxisX({ ...feet, x, z }, 0, walls, false);
     x = clipAxisX({ ...feet, x, z }, 0, props, true);
+  }
+  if (dz === 0) {
     z = clipAxisZ({ ...feet, x, z }, 0, walls, false);
     z = clipAxisZ({ ...feet, x, z }, 0, props, true);
-    if (x === prevX && z === prevZ) {
-      break;
-    }
   }
 
   return { ...feet, x, z };
