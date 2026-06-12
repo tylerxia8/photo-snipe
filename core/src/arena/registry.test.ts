@@ -52,7 +52,7 @@ describe("arena registry", () => {
     const ducts = getOccludersForRound("duct-network-01");
     expect(warehouse.length).toBeGreaterThan(10);
     expect(rooftop.length).toBeGreaterThan(5);
-    expect(ducts.length).toBeGreaterThan(20);
-    expect(rooftop.length).toBeLessThan(warehouse.length);
+    expect(ducts.length).toBeGreaterThan(15);
+    expect(ducts.length).toBeLessThan(warehouse.length);
   });
 });

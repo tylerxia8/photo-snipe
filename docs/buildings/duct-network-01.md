@@ -1,6 +1,6 @@
 # Air Duct Network (duct-network-01)
 
-A cramped HVAC crawl space made of narrow metal duct runs and tight corners.
+Twin parallel duct trunks connected by cross passages — not a grid maze.
 
 ## Dimensions
 
@@ -8,35 +8,36 @@ A cramped HVAC crawl space made of narrow metal duct runs and tight corners.
 |---|---|
 | Footprint | 44m × 44m |
 | Duct height | 3.2m |
-| Passage width | ~2.6m |
+| Passage width | ~2.8m |
 | Floor Y | 0 |
+
+## Layout
+
+```
+        [West trunk]     cross     [East trunk]
+Player A ──── N-S ──── at z=±12,0 ──── N-S ──── Player B
+   (-12,-18)                              (12,18)
+```
+
+- **West trunk:** full north–south run at x = −12  
+- **East trunk:** full north–south run at x = +12  
+- **Cross ducts:** connect both trunks at z = −12, 0, and +12  
+- **Inter-duct barriers:** insulation blocks between trunks except at cross openings  
 
 ## Spawn points
 
 | Player | Position | Facing |
 |---|---|---|
-| A (north-west run) | `(-14, 1, -17)` | South (+Z) |
-| B (south-west run) | `(-10, 1, 17)` | North (-Z) |
-
-## Layout
-
-Serpentine duct path through the facility:
-
-```
-A spawn ──► south ──► east ──► south ──► west ──► south ──► B spawn
-```
-
-Non-walkable space is filled with solid duct mass so players stay inside the passages.
+| A | `(-12, 1, -18)` | South (+Z) along west trunk |
+| B | `(12, 1, 18)` | North (−Z) along east trunk |
 
 ## Gameplay intent
 
-- **Tight quarters** — limited room to dodge or flank
-- **Corner peeks** — 90° turns create ambush moments
-- **Low ceiling** — claustrophobic sight lines
-- **Fan block** — central blower unit breaks line of sight mid-map
+- Players start on **opposite corners** and can reach each other via any cross duct
+- Narrow trunks create ambush angles; center junction fan breaks sight lines
+- No gridded fill — only duct walls and large outer insulation panels
 
 ## Data & code
 
 - Round definition: `data/rounds/duct-network-01.json`
 - Authoritative solids: `core/src/arena/duct-layout.ts`
-- Web visuals: `client/web/src/game/arena.ts` (duct theme + hazard stripes)

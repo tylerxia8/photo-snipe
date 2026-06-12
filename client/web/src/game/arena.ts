@@ -248,19 +248,22 @@ function addRooftopDecor(group: THREE.Group, theme: ArenaTheme): void {
 
 function addDuctDecor(group: THREE.Group, theme: ArenaTheme): void {
   const stripeMat = flatMat(theme.accentColor);
-  for (const [x, z, sx, sz] of [
-    [-14, -10, 0.12, 8],
-    [0, -4, 18, 0.12],
-    [6, 3, 0.12, 10],
-    [-2, 10, 14, 0.12],
-    [-10, 15, 0.12, 8],
-  ] as const) {
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.08, sz), stripeMat);
-    stripe.position.set(x, 0.08, z);
+  for (const x of [-12, 12] as const) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 36), stripeMat);
+    stripe.position.set(x, 0.08, 0);
+    group.add(stripe);
+  }
+  for (const z of [-12, 0, 12] as const) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(22, 0.08, 0.12), stripeMat);
+    stripe.position.set(0, 0.08, z);
     group.add(stripe);
   }
 
-  for (const [x, z] of [[-14, -17], [-10, 17]] as const) {
+  for (const [x, z] of [
+    [-12, -17],
+    [12, 17],
+    [0, 0],
+  ] as const) {
     const lamp = new THREE.Mesh(
       new THREE.BoxGeometry(0.35, 0.12, 0.35),
       new THREE.MeshLambertMaterial({
