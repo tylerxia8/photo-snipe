@@ -167,7 +167,7 @@ export class Game {
     this.standSurfaces = arena.standSurfaces;
     this.defaultFeetY = arena.defaultFeetY;
     this.scene.background = new THREE.Color(arena.skyColor);
-    this.scene.fog = new THREE.Fog(arena.fogColor, 45, 95);
+    this.scene.fog = new THREE.Fog(arena.fogColor, arena.fogNear, arena.fogFar);
   }
 
   startRound(

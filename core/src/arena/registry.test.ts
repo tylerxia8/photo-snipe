@@ -9,7 +9,11 @@ import {
 
 describe("arena registry", () => {
   it("lists known arenas", () => {
-    expect(listArenaRoundIds()).toEqual(["warehouse-interior-01", "rooftop-01"]);
+    expect(listArenaRoundIds()).toEqual([
+      "warehouse-interior-01",
+      "rooftop-01",
+      "duct-network-01",
+    ]);
   });
 
   it("returns rooftop layout metadata", () => {
@@ -32,14 +36,23 @@ describe("arena registry", () => {
     expect(listArenaOptions()).toEqual([
       { id: "warehouse-interior-01", name: "Warehouse Interior" },
       { id: "rooftop-01", name: "City Rooftop" },
+      { id: "duct-network-01", name: "Air Duct Network" },
     ]);
+  });
+
+  it("returns duct layout metadata", () => {
+    const layout = getArenaLayout("duct-network-01");
+    expect(layout.name).toBe("Air Duct Network");
+    expect(layout.wallHeight).toBe(3.2);
   });
 
   it("provides photo occluders per arena", () => {
     const warehouse = getOccludersForRound("warehouse-interior-01");
     const rooftop = getOccludersForRound("rooftop-01");
+    const ducts = getOccludersForRound("duct-network-01");
     expect(warehouse.length).toBeGreaterThan(10);
     expect(rooftop.length).toBeGreaterThan(5);
+    expect(ducts.length).toBeGreaterThan(20);
     expect(rooftop.length).toBeLessThan(warehouse.length);
   });
 });

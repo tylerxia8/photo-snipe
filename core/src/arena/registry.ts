@@ -1,3 +1,4 @@
+import { DUCT_NETWORK_LAYOUT, DUCT_NETWORK_SOLID_BOXES } from "./duct-layout.js";
 import { ROOFTOP_LAYOUT, ROOFTOP_SOLID_BOXES } from "./rooftop-layout.js";
 import {
   boxToAabb,
@@ -22,6 +23,10 @@ const ARENAS: Record<string, ArenaDefinition> = {
   "rooftop-01": {
     layout: ROOFTOP_LAYOUT,
     solids: ROOFTOP_SOLID_BOXES,
+  },
+  "duct-network-01": {
+    layout: DUCT_NETWORK_LAYOUT,
+    solids: DUCT_NETWORK_SOLID_BOXES,
   },
 };
 

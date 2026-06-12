@@ -1,0 +1,33 @@
+{
+  "id": "duct-network-01",
+  "name": "Air Duct Network",
+  "building": {
+    "id": "duct-network-main",
+    "scene": "buildings/duct_network.tscn"
+  },
+  "spawns": {
+    "playerA": {
+      "position": [-14.0, 1.0, -17.0],
+      "rotation": [0, 0, 0]
+    },
+    "playerB": {
+      "position": [-10.0, 1.0, 17.0],
+      "rotation": [0, 180, 0]
+    }
+  },
+  "rules": {
+    "roundTimeLimitSec": 300,
+    "photoCooldownSec": 2.0,
+    "maxPhotoDistance": 50.0,
+    "minPhotoDistance": 1.0,
+    "requireAimMode": false,
+    "requireBodyInFrame": true,
+    "exposure": {
+      "flash": true,
+      "sound": true,
+      "soundAudibleRadius": 25.0,
+      "flashVisibleRadius": 40.0,
+      "flashDurationSec": 0.15
+    }
+  }
+}

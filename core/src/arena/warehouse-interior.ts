@@ -9,6 +9,7 @@ export {
 } from "./registry.js";
 export { WAREHOUSE_INTERIOR_SOLID_BOXES, WAREHOUSE_LAYOUT } from "./warehouse-layout.js";
 export { ROOFTOP_LAYOUT, ROOFTOP_SOLID_BOXES } from "./rooftop-layout.js";
+export { DUCT_NETWORK_LAYOUT, DUCT_NETWORK_SOLID_BOXES } from "./duct-layout.js";
 
 import { boxToAabb } from "./solid-box.js";
 import { getArenaSolids, getOccludersForRound } from "./registry.js";

@@ -36,6 +36,8 @@ export interface ArenaBuild {
   };
   skyColor: number;
   fogColor: number;
+  fogNear: number;
+  fogFar: number;
 }
 
 interface ArenaTheme {
@@ -74,6 +76,17 @@ const THEMES: Record<string, ArenaTheme> = {
     propColors: [0x78909c, 0x607d8b, 0x546e7a, 0x455a64, 0x90a4ae],
     accentColor: 0xffc107,
     openAir: true,
+  },
+  "duct-network-01": {
+    skyColor: 0x2a3038,
+    fogColor: 0x3d4654,
+    floorLight: "#5a6068",
+    floorDark: "#454b52",
+    wallColor: 0x6d7580,
+    wallTrim: 0x4a515a,
+    ceilingColor: 0x525963,
+    propColors: [0x707780, 0x5c636c, 0x666d75, 0x7a828a, 0x585f67],
+    accentColor: 0xffa000,
   },
 };
 
@@ -233,6 +246,34 @@ function addRooftopDecor(group: THREE.Group, theme: ArenaTheme): void {
   group.add(markH);
 }
 
+function addDuctDecor(group: THREE.Group, theme: ArenaTheme): void {
+  const stripeMat = flatMat(theme.accentColor);
+  for (const [x, z, sx, sz] of [
+    [-14, -10, 0.12, 8],
+    [0, -4, 18, 0.12],
+    [6, 3, 0.12, 10],
+    [-2, 10, 14, 0.12],
+    [-10, 15, 0.12, 8],
+  ] as const) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.08, sz), stripeMat);
+    stripe.position.set(x, 0.08, z);
+    group.add(stripe);
+  }
+
+  for (const [x, z] of [[-14, -17], [-10, 17]] as const) {
+    const lamp = new THREE.Mesh(
+      new THREE.BoxGeometry(0.35, 0.12, 0.35),
+      new THREE.MeshLambertMaterial({
+        color: 0xffcc66,
+        emissive: 0xff9900,
+        emissiveIntensity: 0.45,
+      }),
+    );
+    lamp.position.set(x, 2.85, z);
+    group.add(lamp);
+  }
+}
+
 export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
   const { layout, solids } = getArenaDefinition(roundId);
   const theme = THEMES[roundId] ?? THEMES["warehouse-interior-01"]!;
@@ -291,6 +332,8 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
     addWarehouseDecor(group, layout, theme);
   } else if (roundId === "rooftop-01") {
     addRooftopDecor(group, theme);
+  } else if (roundId === "duct-network-01") {
+    addDuctDecor(group, theme);
   }
 
   const floorCollider = new THREE.Box3(
@@ -317,6 +360,8 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
   const standColliders = [floorCollider, ...propColliders];
   const inner = layout.halfExtent - layout.wallThickness * 0.5 - PLAYER_RADIUS - 0.01;
   const maxY = theme.openAir ? 10 : layout.wallHeight - PLAYER_HEIGHT;
+  const fogNear = roundId === "duct-network-01" ? 8 : 45;
+  const fogFar = roundId === "duct-network-01" ? 55 : 95;
 
   return {
     group,
@@ -336,6 +381,8 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
     },
     skyColor: theme.skyColor,
     fogColor: theme.fogColor,
+    fogNear,
+    fogFar,
   };
 }
 
