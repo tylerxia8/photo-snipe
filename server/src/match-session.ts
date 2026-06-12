@@ -7,7 +7,7 @@ import {
   DEFAULT_BODY_RADIUS,
   endRound,
   fromArray,
-  getOccludersForBuilding,
+  getOccludersForRound,
   nextRoundId,
   startRound,
   validatePhoto,
@@ -226,7 +226,7 @@ export class MatchSession {
         lastAttemptMs: this.liveState[slot].lastPhotoAttemptMs,
         skipOcclusion: false,
         aspectRatio,
-        occluders: getOccludersForBuilding(this.state.currentRound.building.id),
+        occluders: getOccludersForRound(this.state.currentRound.id),
       },
     );
 

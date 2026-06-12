@@ -1,0 +1,56 @@
+import { ROOFTOP_LAYOUT, ROOFTOP_SOLID_BOXES } from "./rooftop-layout.js";
+import {
+  boxToAabb,
+  type ArenaLayoutConfig,
+  type ArenaSolidBox,
+  type AxisAlignedBox,
+} from "./solid-box.js";
+import { WAREHOUSE_INTERIOR_SOLID_BOXES, WAREHOUSE_LAYOUT } from "./warehouse-layout.js";
+
+export type { AxisAlignedBox, ArenaLayoutConfig, ArenaSolidBox };
+
+export interface ArenaDefinition {
+  layout: ArenaLayoutConfig;
+  solids: ArenaSolidBox[];
+}
+
+const ARENAS: Record<string, ArenaDefinition> = {
+  "warehouse-interior-01": {
+    layout: WAREHOUSE_LAYOUT,
+    solids: WAREHOUSE_INTERIOR_SOLID_BOXES,
+  },
+  "rooftop-01": {
+    layout: ROOFTOP_LAYOUT,
+    solids: ROOFTOP_SOLID_BOXES,
+  },
+};
+
+const DEFAULT_ARENA_ID = "warehouse-interior-01";
+
+export function getArenaDefinition(roundId: string): ArenaDefinition {
+  return ARENAS[roundId] ?? ARENAS[DEFAULT_ARENA_ID]!;
+}
+
+export function getArenaLayout(roundId: string): ArenaLayoutConfig {
+  return getArenaDefinition(roundId).layout;
+}
+
+export function getArenaSolids(roundId: string): ArenaSolidBox[] {
+  return getArenaDefinition(roundId).solids;
+}
+
+export function getOccludersForRound(roundId: string): AxisAlignedBox[] {
+  return getArenaSolids(roundId)
+    .filter((box) => box.occludesPhotos)
+    .map(boxToAabb);
+}
+
+/** @deprecated Use getOccludersForRound with round id instead. */
+export function getOccludersForBuilding(buildingId: string): AxisAlignedBox[] {
+  void buildingId;
+  return getOccludersForRound(DEFAULT_ARENA_ID);
+}
+
+export function listArenaRoundIds(): string[] {
+  return Object.keys(ARENAS);
+}

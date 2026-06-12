@@ -2,7 +2,8 @@
   "id": "duel-standard",
   "name": "Standard Duel",
   "roundPool": [
-    "warehouse-interior-01"
+    "warehouse-interior-01",
+    "rooftop-01"
   ],
   "roundsToWin": 1,
   "overtimeEnabled": false

@@ -1,43 +1,30 @@
-import type { Vector3 } from "../types.js";
-
-export interface AxisAlignedBox {
-  min: Vector3;
-  max: Vector3;
-}
-
-export type WarehouseBoxCategory = "floor" | "ceiling" | "wall" | "prop";
-
-export interface WarehouseSolidBox {
-  cx: number;
-  cy: number;
-  cz: number;
-  sx: number;
-  sy: number;
-  sz: number;
-  category: WarehouseBoxCategory;
-  occludesPhotos: boolean;
-}
+import { solidBox, type ArenaLayoutConfig, type ArenaSolidBox } from "./solid-box.js";
 
 const WALL_HEIGHT = 6;
 const WALL_THICKNESS = 0.4;
 const CROSS_WALL_WIDTH = 6;
 const CROSS_WALL_X = 21;
+const HALF_EXTENT = 24;
 
-function solidBox(
-  cx: number,
-  cy: number,
-  cz: number,
-  sx: number,
-  sy: number,
-  sz: number,
-  category: WarehouseBoxCategory,
-  occludesPhotos: boolean,
-): WarehouseSolidBox {
-  return { cx, cy, cz, sx, sy, sz, category, occludesPhotos };
-}
+export const WAREHOUSE_LAYOUT: ArenaLayoutConfig = {
+  id: "warehouse-interior-01",
+  name: "Warehouse Interior",
+  halfExtent: HALF_EXTENT,
+  wallHeight: WALL_HEIGHT,
+  wallThickness: WALL_THICKNESS,
+  defaultFeetY: 1,
+  interiorWalls: [
+    { x: -CROSS_WALL_X, z: -14, halfZ: 3 },
+    { x: CROSS_WALL_X, z: -14, halfZ: 3 },
+    { x: -CROSS_WALL_X, z: 0, halfZ: 3 },
+    { x: CROSS_WALL_X, z: 0, halfZ: 3 },
+    { x: -CROSS_WALL_X, z: 14, halfZ: 3 },
+    { x: CROSS_WALL_X, z: 14, halfZ: 3 },
+  ],
+};
 
 /** Authoritative warehouse solids — shared by client visuals and photo occlusion. */
-export const WAREHOUSE_INTERIOR_SOLID_BOXES: WarehouseSolidBox[] = [
+export const WAREHOUSE_INTERIOR_SOLID_BOXES: ArenaSolidBox[] = [
   solidBox(0, -0.1, 0, 48, 0.2, 48, "floor", false),
   solidBox(0, WALL_HEIGHT + 0.05, 0, 48, 0.1, 48, "ceiling", false),
 
@@ -89,35 +76,4 @@ const crates: Array<[number, number, number, number, number, number]> = [
 ];
 for (const [x, y, z, sx, sy, sz] of crates) {
   WAREHOUSE_INTERIOR_SOLID_BOXES.push(solidBox(x, y, z, sx, sy, sz, "prop", true));
-}
-
-export function warehouseBoxToAabb(box: WarehouseSolidBox): AxisAlignedBox {
-  return {
-    min: {
-      x: box.cx - box.sx / 2,
-      y: box.cy - box.sy / 2,
-      z: box.cz - box.sz / 2,
-    },
-    max: {
-      x: box.cx + box.sx / 2,
-      y: box.cy + box.sy / 2,
-      z: box.cz + box.sz / 2,
-    },
-  };
-}
-
-export function getWarehousePhotoOccluders(): AxisAlignedBox[] {
-  return WAREHOUSE_INTERIOR_SOLID_BOXES.filter((box) => box.occludesPhotos).map(warehouseBoxToAabb);
-}
-
-export function getWarehouseWallColliders(): AxisAlignedBox[] {
-  return WAREHOUSE_INTERIOR_SOLID_BOXES.filter((box) => box.category === "wall").map(
-    warehouseBoxToAabb,
-  );
-}
-
-export function getWarehousePropColliders(): AxisAlignedBox[] {
-  return WAREHOUSE_INTERIOR_SOLID_BOXES.filter((box) => box.category === "prop").map(
-    warehouseBoxToAabb,
-  );
 }

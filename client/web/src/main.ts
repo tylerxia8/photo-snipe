@@ -228,10 +228,15 @@ net.onMessage = (msg: ServerMessage) => {
       setStatus(`Match vs ${String(msg.opponentName)}`);
       break;
     case "round_started": {
-      const round = msg.round as { name?: string };
+      const round = msg.round as { id?: string; name?: string };
       const spawn = msg.yourSpawn as { position: number[]; rotation: number[] };
       const opponentSpawn = msg.opponentSpawn as { position: number[]; rotation: number[] };
-      game?.startRound(spawn, opponentSpawn, String(round?.name ?? "Round"));
+      game?.startRound(
+        String(round?.id ?? "warehouse-interior-01"),
+        spawn,
+        opponentSpawn,
+        String(round?.name ?? "Round"),
+      );
       lobby.classList.add("hidden");
       hud.classList.remove("hidden");
       postMatch.classList.add("hidden");

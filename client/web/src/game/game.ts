@@ -2,11 +2,11 @@ import * as THREE from "three";
 import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js";
 import type { NetClient } from "../net/client.js";
 import {
-  buildWarehouse,
+  buildArena,
   getHighestSurfaceBelow,
   supportsFeetAt,
   type StandSurface,
-} from "./warehouse.js";
+} from "./arena.js";
 import { movePlayer, type FeetPos, type WorldColliders } from "./player-movement.js";
 import { createBlockyPlayer, type MinecraftPlayerRig } from "./blocky-player.js";
 import { getSkin, sanitizeSkinId } from "@photo-snipe/core";
@@ -49,6 +49,9 @@ export class Game {
   private opponentTargetYaw = 0;
   private opponentWalkPhase = 0;
   private opponentLastGroundY = 1;
+  private arenaGroup: THREE.Group | null = null;
+  private arenaHalfExtent = 24;
+  private currentRoundId = "warehouse-interior-01";
 
   constructor(
     private net: NetClient,
@@ -95,16 +98,7 @@ export class Game {
     this.controls = new PointerLockControls(this.camera, this.renderer.domElement);
     this.scene.add(this.controls.getObject());
 
-    const warehouse = buildWarehouse(this.scene);
-    this.worldColliders = {
-      walls: warehouse.wallColliders,
-      props: warehouse.propColliders,
-      surfaces: warehouse.standColliders,
-      ceiling: warehouse.ceilingCollider,
-      bounds: warehouse.worldBounds,
-    };
-    this.standSurfaces = warehouse.standSurfaces;
-    this.defaultFeetY = warehouse.defaultFeetY;
+    this.loadArena("warehouse-interior-01");
 
     window.addEventListener("resize", () => this.onResize());
     window.addEventListener("keydown", (e) => this.onKeyDown(e));
@@ -138,11 +132,53 @@ export class Game {
     this.opponentRig.setColors(skin.shirtColor, skin.pantsColor);
   }
 
+  loadArena(roundId: string): void {
+    if (this.arenaGroup) {
+      this.scene.remove(this.arenaGroup);
+      this.arenaGroup.traverse((child) => {
+        const mesh = child as THREE.Mesh;
+        if (mesh.geometry) {
+          mesh.geometry.dispose();
+        }
+        if (mesh.material) {
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          for (const material of materials) {
+            material.dispose();
+          }
+        }
+      });
+      this.arenaGroup = null;
+    }
+
+    const arena = buildArena(this.scene, roundId);
+    this.arenaGroup = arena.group;
+    this.currentRoundId = roundId;
+    this.arenaHalfExtent = Math.max(
+      Math.abs(arena.worldBounds.minX),
+      Math.abs(arena.worldBounds.maxX),
+    );
+    this.worldColliders = {
+      walls: arena.wallColliders,
+      props: arena.propColliders,
+      surfaces: arena.standColliders,
+      ceiling: arena.ceilingCollider,
+      bounds: arena.worldBounds,
+    };
+    this.standSurfaces = arena.standSurfaces;
+    this.defaultFeetY = arena.defaultFeetY;
+    this.scene.background = new THREE.Color(arena.skyColor);
+    this.scene.fog = new THREE.Fog(arena.fogColor, 45, 95);
+  }
+
   startRound(
+    roundId: string,
     spawn: { position: number[]; rotation: number[] },
     opponentSpawn: { position: number[]; rotation: number[] },
     roundName: string,
   ): void {
+    if (roundId !== this.currentRoundId) {
+      this.loadArena(roundId);
+    }
     this.active = true;
     this.hud.setRoundName(roundName);
     this.hud.setMessage(getControlsHint());
@@ -350,6 +386,7 @@ export class Game {
         this.standSurfaces,
         this.defaultFeetY,
         this.standingFeetY,
+        this.arenaHalfExtent,
       );
       if (supported) {
         this.standingFeetY = getHighestSurfaceBelow(

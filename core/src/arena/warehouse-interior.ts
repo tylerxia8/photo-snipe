@@ -1,22 +1,28 @@
-import {
-  getWarehousePhotoOccluders,
-  getWarehouseWallColliders,
-} from "./warehouse-layout.js";
-import type { AxisAlignedBox } from "./warehouse-layout.js";
+export type { AxisAlignedBox, ArenaLayoutConfig, ArenaSolidBox } from "./solid-box.js";
+export {
+  getArenaDefinition,
+  getArenaLayout,
+  getArenaSolids,
+  getOccludersForBuilding,
+  getOccludersForRound,
+  listArenaRoundIds,
+} from "./registry.js";
+export { WAREHOUSE_INTERIOR_SOLID_BOXES, WAREHOUSE_LAYOUT } from "./warehouse-layout.js";
+export { ROOFTOP_LAYOUT, ROOFTOP_SOLID_BOXES } from "./rooftop-layout.js";
 
-export type { AxisAlignedBox };
+import { boxToAabb } from "./solid-box.js";
+import { getArenaSolids, getOccludersForRound } from "./registry.js";
+import type { AxisAlignedBox } from "./solid-box.js";
 
-/** Occluder geometry for warehouse-interior-01 — mirrors client warehouse layout. */
+/** @deprecated Use getOccludersForRound instead. */
 export function getWarehouseInteriorOccluders(): AxisAlignedBox[] {
-  return getWarehousePhotoOccluders();
+  return getOccludersForRound("warehouse-interior-01");
 }
 
-export function getOccludersForBuilding(buildingId: string): AxisAlignedBox[] {
-  void buildingId;
-  return getWarehouseInteriorOccluders();
-}
-
+/** @deprecated Use getArenaSolids + boxToAabb instead. */
 export function getWallCollidersForBuilding(buildingId: string): AxisAlignedBox[] {
   void buildingId;
-  return getWarehouseWallColliders();
+  return getArenaSolids("warehouse-interior-01")
+    .filter((box) => box.category === "wall")
+    .map(boxToAabb);
 }

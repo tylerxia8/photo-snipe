@@ -11,7 +11,7 @@ import type { MatchConfig, RoundDefinition } from "../types.js";
 const matchConfig: MatchConfig = {
   id: "duel-standard",
   name: "Standard Duel",
-  roundPool: ["warehouse-interior-01", "office-01"],
+  roundPool: ["warehouse-interior-01", "rooftop-01"],
   roundsToWin: 1,
 };
 
@@ -67,6 +67,6 @@ describe("match state machine", () => {
     state = startRound(state, round);
     state = endRound(state, "timeout_draw", null);
     expect(state.scores).toEqual({ A: 0, B: 0 });
-    expect(nextRoundId(state)).toBe("office-01");
+    expect(nextRoundId(state)).toBe("rooftop-01");
   });
 });
