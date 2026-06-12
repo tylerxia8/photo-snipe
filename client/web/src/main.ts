@@ -5,6 +5,12 @@ import { getControlsHint } from "./settings/keybinds.js";
 import { initKeybindSettings } from "./settings/keybind-settings.js";
 import { getSkinId } from "./settings/appearance.js";
 import { initAppearanceSettings, updateOperatorPreview } from "./settings/appearance-settings.js";
+import {
+  getArenaChoices,
+  getRoundId,
+  getRoundName,
+  setRoundId,
+} from "./settings/arena-settings.js";
 
 const lobby = document.getElementById("lobby")!;
 const hud = document.getElementById("hud")!;
@@ -32,10 +38,13 @@ const settingsPanel = document.getElementById("settings-panel")!;
 const controlsHint = document.getElementById("controls-hint")!;
 const navPlay = document.querySelector('[data-nav="play"]')!;
 const navSettings = document.querySelector('[data-nav="settings"]')!;
+const arenaSelect = document.getElementById("arena-select") as HTMLSelectElement;
+const arenaPreviewName = document.getElementById("arena-preview-name")!;
 
 const mount = document.getElementById("app")!;
 const net = new NetClient();
 let game: Game | null = null;
+let waitingForOpponent = false;
 
 function setStatus(text: string): void {
   statusEl.textContent = text;
@@ -114,12 +123,42 @@ function setLobbyTab(tab: "play" | "settings"): void {
   }
 }
 
+function updateArenaPreview(roundId = getRoundId()): void {
+  arenaPreviewName.textContent = getRoundName(roundId);
+}
+
+function setArenaSelectEnabled(enabled: boolean): void {
+  arenaSelect.disabled = !enabled;
+}
+
+function initArenaSelect(): void {
+  arenaSelect.replaceChildren();
+  for (const arena of getArenaChoices()) {
+    const option = document.createElement("option");
+    option.value = arena.id;
+    option.textContent = arena.name;
+    arenaSelect.append(option);
+  }
+
+  arenaSelect.value = getRoundId();
+  updateArenaPreview();
+
+  arenaSelect.addEventListener("change", () => {
+    setRoundId(arenaSelect.value);
+    updateArenaPreview();
+  });
+}
+
 function showLobby(): void {
   lobby.classList.remove("hidden");
   hud.classList.add("hidden");
   postMatch.classList.add("hidden");
   resetRematchUi();
   setLobbyTab("play");
+  waitingForOpponent = false;
+  setArenaSelectEnabled(true);
+  arenaSelect.value = getRoundId();
+  updateArenaPreview();
 }
 
 function hidePostMatch(): void {
@@ -211,12 +250,18 @@ function updateRematchStatus(msg: ServerMessage): void {
 net.onStatus = setStatus;
 net.onMessage = (msg: ServerMessage) => {
   switch (msg.type) {
-    case "room_created":
-      setStatus(`Room created! Code: ${String(msg.roomCode)} — waiting for opponent…`);
+    case "room_created": {
+      const arenaName = String(msg.selectedRoundName ?? getRoundName());
+      waitingForOpponent = true;
+      setArenaSelectEnabled(false);
+      setStatus(`Room created on ${arenaName}! Code: ${String(msg.roomCode)} — waiting for opponent…`);
       break;
-    case "room_joined":
-      setStatus(`Joined room ${String(msg.roomCode)}`);
+    }
+    case "room_joined": {
+      const arenaName = String(msg.selectedRoundName ?? "the selected arena");
+      setStatus(`Joined room ${String(msg.roomCode)} — arena: ${arenaName}`);
       break;
+    }
     case "match_started":
       hidePostMatch();
       lobby.classList.add("hidden");
@@ -285,7 +330,10 @@ net.onMessage = (msg: ServerMessage) => {
 };
 
 document.getElementById("create-btn")!.addEventListener("click", () => {
-  net.createRoom(displayName(), getSkinId());
+  if (waitingForOpponent) {
+    return;
+  }
+  net.createRoom(displayName(), getSkinId(), getRoundId());
 });
 
 document.getElementById("join-btn")!.addEventListener("click", () => {
@@ -315,6 +363,7 @@ function frame(now: number): void {
 }
 
 net.connect();
+initArenaSelect();
 initKeybindSettings(updateControlsHint);
 initAppearanceSettings();
 updateOperatorPreview();

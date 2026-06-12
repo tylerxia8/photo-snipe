@@ -16,6 +16,7 @@ export interface Room {
   code: string;
   players: Partial<Record<PlayerSlot, LobbyPlayer>>;
   createdAtMs: number;
+  selectedRoundId: string;
 }
 
 export function generateRoomCode(length = 4): string {
@@ -35,6 +36,7 @@ export class LobbyManager {
     clientId: string,
     displayName: string,
     skinId: string,
+    selectedRoundId: string,
   ): Room {
     let code = generateRoomCode();
     while (this.rooms.has(code)) {
@@ -47,6 +49,7 @@ export class LobbyManager {
         A: { clientId, socket, displayName, slot: "A", skinId },
       },
       createdAtMs: Date.now(),
+      selectedRoundId,
     };
     this.rooms.set(code, room);
     return room;

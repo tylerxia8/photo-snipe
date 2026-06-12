@@ -7,7 +7,7 @@ import { MatchSession } from "./match-session.js";
 import { RematchManager } from "./rematch.js";
 import { serveWebClient, webClientAvailable } from "./static.js";
 import type { PlayerSlot } from "@photo-snipe/core";
-import { sanitizeSkinId } from "@photo-snipe/core";
+import { getArenaLayout, sanitizeRoundId, sanitizeSkinId } from "@photo-snipe/core";
 
 const PORT = Number(process.env.PORT ?? 8787);
 const HOST = process.env.HOST ?? "0.0.0.0";
@@ -84,8 +84,14 @@ async function startMatch(
   playerA: LobbyPlayer,
   playerB: LobbyPlayer,
   roomCode: string,
+  selectedRoundId: string,
 ): Promise<MatchSession> {
-  const matchConfig = await loadMatchConfig();
+  const baseConfig = await loadMatchConfig();
+  const roundId = sanitizeRoundId(selectedRoundId);
+  const matchConfig = {
+    ...baseConfig,
+    roundPool: [roundId],
+  };
   const match = new MatchSession(matchConfig, playerA, playerB, () => {
     registerRematch(match, roomCode);
     clearMatchContext(match);
@@ -101,12 +107,16 @@ async function startMatch(
     ctxB.roomCode = roomCode;
   }
 
+  const roundName = getArenaLayout(roundId).name;
+
   send(playerA.socket, {
     type: "match_started",
     matchId: match.matchId,
     playerSlot: "A",
     opponentName: playerB.displayName,
     opponentSkinId: playerB.skinId,
+    selectedRoundId: roundId,
+    selectedRoundName: roundName,
     matchConfig: {
       roundsToWin: matchConfig.roundsToWin,
       roundPool: matchConfig.roundPool,
@@ -119,6 +129,8 @@ async function startMatch(
     playerSlot: "B",
     opponentName: playerA.displayName,
     opponentSkinId: playerA.skinId,
+    selectedRoundId: roundId,
+    selectedRoundName: roundName,
     matchConfig: {
       roundsToWin: matchConfig.roundsToWin,
       roundPool: matchConfig.roundPool,
@@ -245,13 +257,22 @@ async function handleMessage(
       const displayName =
         typeof message.displayName === "string" ? message.displayName : "Player";
       const skinId = sanitizeSkinId(message.skinId);
-      const room = lobby.createRoom(socket, ctx.clientId, displayName, skinId);
+      const selectedRoundId = sanitizeRoundId(message.roundId);
+      const room = lobby.createRoom(
+        socket,
+        ctx.clientId,
+        displayName,
+        skinId,
+        selectedRoundId,
+      );
       ctx.roomCode = room.code;
       ctx.slot = "A";
       send(socket, {
         type: "room_created",
         roomCode: room.code,
         playerSlot: "A",
+        selectedRoundId: room.selectedRoundId,
+        selectedRoundName: getArenaLayout(room.selectedRoundId).name,
       });
       break;
     }
@@ -281,6 +302,8 @@ async function handleMessage(
         type: "room_joined",
         roomCode: joined.room.code,
         playerSlot: joined.slot,
+        selectedRoundId: joined.room.selectedRoundId,
+        selectedRoundName: getArenaLayout(joined.room.selectedRoundId).name,
       });
 
       const playerA = joined.room.players.A;
@@ -289,7 +312,7 @@ async function handleMessage(
         return;
       }
 
-      await startMatch(playerA, playerB, joined.room.code);
+      await startMatch(playerA, playerB, joined.room.code, joined.room.selectedRoundId);
       break;
     }
 
@@ -317,7 +340,9 @@ async function handleMessage(
 
       if (rematch.bothReady(session)) {
         rematch.clear(ctx.roomCode);
-        await startMatch(session.players.A, session.players.B, ctx.roomCode);
+        const room = lobby.getRoom(ctx.roomCode);
+        const selectedRoundId = room?.selectedRoundId ?? sanitizeRoundId(undefined);
+        await startMatch(session.players.A, session.players.B, ctx.roomCode, selectedRoundId);
       }
       break;
     }

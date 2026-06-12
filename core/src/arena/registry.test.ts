@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   getArenaLayout,
   getOccludersForRound,
+  listArenaOptions,
   listArenaRoundIds,
+  sanitizeRoundId,
 } from "./registry.js";
 
 describe("arena registry", () => {
@@ -19,6 +21,18 @@ describe("arena registry", () => {
   it("falls back to warehouse for unknown round ids", () => {
     const layout = getArenaLayout("unknown-arena");
     expect(layout.id).toBe("warehouse-interior-01");
+  });
+
+  it("sanitizes unknown round ids to warehouse", () => {
+    expect(sanitizeRoundId("unknown-arena")).toBe("warehouse-interior-01");
+    expect(sanitizeRoundId("rooftop-01")).toBe("rooftop-01");
+  });
+
+  it("lists arena options with display names", () => {
+    expect(listArenaOptions()).toEqual([
+      { id: "warehouse-interior-01", name: "Warehouse Interior" },
+      { id: "rooftop-01", name: "City Rooftop" },
+    ]);
   });
 
   it("provides photo occluders per arena", () => {

@@ -27,6 +27,23 @@ const ARENAS: Record<string, ArenaDefinition> = {
 
 const DEFAULT_ARENA_ID = "warehouse-interior-01";
 
+export const DEFAULT_ROUND_ID = DEFAULT_ARENA_ID;
+
+export function isValidRoundId(value: unknown): value is string {
+  return typeof value === "string" && value in ARENAS;
+}
+
+export function sanitizeRoundId(value: unknown): string {
+  return isValidRoundId(value) ? value : DEFAULT_ARENA_ID;
+}
+
+export function listArenaOptions(): Array<{ id: string; name: string }> {
+  return listArenaRoundIds().map((id) => ({
+    id,
+    name: getArenaLayout(id).name,
+  }));
+}
+
 export function getArenaDefinition(roundId: string): ArenaDefinition {
   return ARENAS[roundId] ?? ARENAS[DEFAULT_ARENA_ID]!;
 }
