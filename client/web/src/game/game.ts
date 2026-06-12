@@ -10,7 +10,7 @@ import {
 import { movePlayer, type FeetPos, type WorldColliders } from "./player-movement.js";
 import { createBlockyPlayer, type MinecraftPlayerRig } from "./blocky-player.js";
 import { getSkin, sanitizeSkinId } from "@photo-snipe/core";
-import { getControlsHint, getKeybinds, onKeybindsChange } from "../settings/keybinds.js";
+import { getControlsHint, getKeybinds, mouseButtonToCode, onKeybindsChange } from "../settings/keybinds.js";
 
 const WALK_SPEED = 3;
 const JUMP_VELOCITY = 8;
@@ -31,6 +31,7 @@ export class Game {
   private defaultFeetY = 1;
   private standingFeetY = 1;
   private keys = new Set<string>();
+  private mouseButtons = new Set<string>();
   private sequence = 0;
   private stateTimer = 0;
   private active = false;
@@ -108,6 +109,8 @@ export class Game {
     window.addEventListener("resize", () => this.onResize());
     window.addEventListener("keydown", (e) => this.onKeyDown(e));
     window.addEventListener("keyup", (e) => this.onKeyUp(e));
+    window.addEventListener("mousedown", (e) => this.onMouseDown(e));
+    window.addEventListener("mouseup", (e) => this.onMouseUp(e));
     window.addEventListener("blur", () => this.clearInputState());
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) this.clearInputState();
@@ -293,19 +296,20 @@ export class Game {
     let dx = 0;
     let dz = 0;
     const binds = getKeybinds();
-    if (this.keys.has(binds.moveForward)) {
+    const pressed = (code: string) => this.keys.has(code) || this.mouseButtons.has(code);
+    if (pressed(binds.moveForward)) {
       dx += forward.x * speed;
       dz += forward.z * speed;
     }
-    if (this.keys.has(binds.moveBack)) {
+    if (pressed(binds.moveBack)) {
       dx -= forward.x * speed;
       dz -= forward.z * speed;
     }
-    if (this.keys.has(binds.moveLeft)) {
+    if (pressed(binds.moveLeft)) {
       dx -= right.x * speed;
       dz -= right.z * speed;
     }
-    if (this.keys.has(binds.moveRight)) {
+    if (pressed(binds.moveRight)) {
       dx += right.x * speed;
       dz += right.z * speed;
     }
@@ -414,33 +418,72 @@ export class Game {
 
   private clearInputState(): void {
     this.keys.clear();
+    this.mouseButtons.clear();
     this.jumpQueued = false;
   }
 
-  private onKeyDown(e: KeyboardEvent): void {
+  private handleBindingPress(code: string): void {
     const binds = getKeybinds();
-    if (e.code === binds.jump) {
-      if (this.onFloor) this.jumpQueued = true;
-      e.preventDefault();
+    if (code === binds.jump) {
+      if (this.onFloor) {
+        this.jumpQueued = true;
+      }
       return;
     }
-    if (e.code === binds.snap) {
-      if (!e.repeat) this.snapPhoto();
-      e.preventDefault();
+    if (code === binds.snap) {
+      this.snapPhoto();
+    }
+  }
+
+  private isMovementBinding(code: string): boolean {
+    const binds = getKeybinds();
+    return (
+      code === binds.moveForward ||
+      code === binds.moveBack ||
+      code === binds.moveLeft ||
+      code === binds.moveRight
+    );
+  }
+
+  private onKeyDown(e: KeyboardEvent): void {
+    if (e.repeat) {
       return;
     }
-    if (
-      e.code === binds.moveForward ||
-      e.code === binds.moveBack ||
-      e.code === binds.moveLeft ||
-      e.code === binds.moveRight
-    ) {
+    this.handleBindingPress(e.code);
+    if (this.isMovementBinding(e.code)) {
       this.keys.add(e.code);
+    }
+    const binds = getKeybinds();
+    if (
+      e.code === binds.jump ||
+      e.code === binds.snap ||
+      this.isMovementBinding(e.code)
+    ) {
+      e.preventDefault();
     }
   }
 
   private onKeyUp(e: KeyboardEvent): void {
     this.keys.delete(e.code);
+  }
+
+  private onMouseDown(e: MouseEvent): void {
+    const code = mouseButtonToCode(e.button);
+    if (!code) {
+      return;
+    }
+    this.handleBindingPress(code);
+    if (this.isMovementBinding(code)) {
+      this.mouseButtons.add(code);
+    }
+  }
+
+  private onMouseUp(e: MouseEvent): void {
+    const code = mouseButtonToCode(e.button);
+    if (!code) {
+      return;
+    }
+    this.mouseButtons.delete(code);
   }
 
   private onResize(): void {

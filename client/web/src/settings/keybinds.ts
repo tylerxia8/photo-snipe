@@ -99,8 +99,20 @@ export function onKeybindsChange(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
+export function mouseButtonToCode(button: number): string | null {
+  if (button === 0) {
+    return "MouseLeft";
+  }
+  if (button === 2) {
+    return "MouseRight";
+  }
+  return null;
+}
+
 export function formatKeyCode(code: string): string {
   const labels: Record<string, string> = {
+    MouseLeft: "L CLICK",
+    MouseRight: "R CLICK",
     Space: "SPACE",
     ShiftLeft: "L SHIFT",
     ShiftRight: "R SHIFT",

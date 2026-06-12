@@ -109,6 +109,9 @@ function setLobbyTab(tab: "play" | "settings"): void {
   settingsPanel.classList.toggle("hidden", tab !== "settings");
   navPlay.classList.toggle("active", tab === "play");
   navSettings.classList.toggle("active", tab === "settings");
+  if (tab === "settings") {
+    settingsPanel.scrollTop = 0;
+  }
 }
 
 function showLobby(): void {

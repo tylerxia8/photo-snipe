@@ -4,6 +4,7 @@ import {
   isReservedBindingCode,
   KEYBIND_ACTIONS,
   KEYBIND_LABELS,
+  mouseButtonToCode,
   resetKeybinds,
   setKeybind,
   type KeybindAction,
@@ -42,7 +43,24 @@ export function initKeybindSettings(onChange?: () => void): void {
     stopListening();
     listening = action;
     buttons.get(action)?.classList.add("listening");
-    setStatus(`Press a key for ${KEYBIND_LABELS[action].toLowerCase()}…`);
+    setStatus(`Press a key or mouse button for ${KEYBIND_LABELS[action].toLowerCase()}…`);
+  }
+
+  function applyBinding(code: string): void {
+    if (!listening) {
+      return;
+    }
+
+    const conflict = setKeybind(listening, code);
+    if (conflict) {
+      setStatus(`Already bound to ${conflict.toLowerCase()}.`);
+      return;
+    }
+
+    const action = listening;
+    stopListening();
+    refreshButtons();
+    setStatus(`Bound ${KEYBIND_LABELS[action].toLowerCase()} to ${formatKeyCode(code)}.`);
   }
 
   rowsEl.replaceChildren();
@@ -93,15 +111,21 @@ export function initKeybindSettings(onChange?: () => void): void {
       return;
     }
 
-    const conflict = setKeybind(listening, event.code);
-    if (conflict) {
-      setStatus(`Already bound to ${conflict.toLowerCase()}.`);
+    applyBinding(event.code);
+  });
+
+  window.addEventListener("mousedown", (event) => {
+    if (!listening) {
       return;
     }
 
-    const action = listening;
-    stopListening();
-    refreshButtons();
-    setStatus(`Bound ${KEYBIND_LABELS[action].toLowerCase()} to ${formatKeyCode(event.code)}.`);
+    const code = mouseButtonToCode(event.button);
+    if (!code) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    applyBinding(code);
   });
 }

@@ -131,6 +131,8 @@ canvas {
   gap: 1.25rem;
   padding: 1.25rem 1.5rem 0.75rem;
   min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .kr-sidebar {
@@ -275,6 +277,12 @@ canvas {
 
 .kr-menu-window {
   padding: 1.5rem 1.65rem 1.35rem;
+}
+
+#settings-panel {
+  max-height: min(72vh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .kr-menu-header h2 {
