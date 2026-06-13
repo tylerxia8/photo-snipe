@@ -260,8 +260,8 @@ function addDuctDecor(group: THREE.Group, theme: ArenaTheme): void {
   }
 
   for (const [x, z] of [
-    [-12, -17],
-    [12, 17],
+    [-12, -14],
+    [12, 14],
     [0, 0],
   ] as const) {
     const lamp = new THREE.Mesh(

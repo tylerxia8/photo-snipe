@@ -22,7 +22,8 @@ Player A ──── N-S ──── at z=±12,0 ──── N-S ────
 - **West trunk:** full north–south run at x = −12  
 - **East trunk:** full north–south run at x = +12  
 - **Cross ducts:** connect both trunks at z = −12, 0, and +12  
-- **Inter-duct barriers:** insulation blocks between trunks except at cross openings  
+- **Inter-duct barriers:** insulation fills only the gap *between* trunks (never the trunk corridors)  
+- **Trunk wall gaps:** side walls stop at each cross duct so players can enter the junction  
 
 ## Spawn points
 
