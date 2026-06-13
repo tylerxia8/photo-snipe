@@ -5,6 +5,7 @@ export * from "./arena/registry.js";
 export * from "./arena/warehouse-layout.js";
 export * from "./arena/rooftop-layout.js";
 export * from "./arena/duct-layout.js";
+export * from "./arena/corn-maze-layout.js";
 export * from "./arena/warehouse-interior.js";
 export * from "./photo-validation/validate.js";
 export * from "./photo-validation/occlusion.js";

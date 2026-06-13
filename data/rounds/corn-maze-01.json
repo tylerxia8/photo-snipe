@@ -1,0 +1,33 @@
+{
+  "id": "corn-maze-01",
+  "name": "Corn Maze",
+  "building": {
+    "id": "corn-maze-main",
+    "scene": "buildings/corn_maze.tscn"
+  },
+  "spawns": {
+    "playerA": {
+      "position": [-16.8, 1.0, -16.8],
+      "rotation": [0, 0, 0]
+    },
+    "playerB": {
+      "position": [8.4, 1.0, 16.8],
+      "rotation": [0, 180, 0]
+    }
+  },
+  "rules": {
+    "roundTimeLimitSec": 300,
+    "photoCooldownSec": 2.0,
+    "maxPhotoDistance": 55.0,
+    "minPhotoDistance": 1.0,
+    "requireAimMode": false,
+    "requireBodyInFrame": true,
+    "exposure": {
+      "flash": true,
+      "sound": true,
+      "soundAudibleRadius": 25.0,
+      "flashVisibleRadius": 40.0,
+      "flashDurationSec": 0.15
+    }
+  }
+}

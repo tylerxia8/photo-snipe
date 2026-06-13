@@ -1,3 +1,4 @@
+import { CORN_MAZE_LAYOUT, CORN_MAZE_SOLID_BOXES } from "./corn-maze-layout.js";
 import { DUCT_NETWORK_LAYOUT, DUCT_NETWORK_SOLID_BOXES } from "./duct-layout.js";
 import { ROOFTOP_LAYOUT, ROOFTOP_SOLID_BOXES } from "./rooftop-layout.js";
 import {
@@ -27,6 +28,10 @@ const ARENAS: Record<string, ArenaDefinition> = {
   "duct-network-01": {
     layout: DUCT_NETWORK_LAYOUT,
     solids: DUCT_NETWORK_SOLID_BOXES,
+  },
+  "corn-maze-01": {
+    layout: CORN_MAZE_LAYOUT,
+    solids: CORN_MAZE_SOLID_BOXES,
   },
 };
 

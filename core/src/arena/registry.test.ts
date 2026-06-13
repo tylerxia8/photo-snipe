@@ -13,6 +13,7 @@ describe("arena registry", () => {
       "warehouse-interior-01",
       "rooftop-01",
       "duct-network-01",
+      "corn-maze-01",
     ]);
   });
 
@@ -37,6 +38,7 @@ describe("arena registry", () => {
       { id: "warehouse-interior-01", name: "Warehouse Interior" },
       { id: "rooftop-01", name: "City Rooftop" },
       { id: "duct-network-01", name: "Air Duct Network" },
+      { id: "corn-maze-01", name: "Corn Maze" },
     ]);
   });
 
@@ -46,13 +48,21 @@ describe("arena registry", () => {
     expect(layout.wallHeight).toBe(3.2);
   });
 
+  it("returns corn maze layout metadata", () => {
+    const layout = getArenaLayout("corn-maze-01");
+    expect(layout.name).toBe("Corn Maze");
+    expect(layout.halfExtent).toBe(21);
+  });
+
   it("provides photo occluders per arena", () => {
     const warehouse = getOccludersForRound("warehouse-interior-01");
     const rooftop = getOccludersForRound("rooftop-01");
     const ducts = getOccludersForRound("duct-network-01");
+    const corn = getOccludersForRound("corn-maze-01");
     expect(warehouse.length).toBeGreaterThan(10);
     expect(rooftop.length).toBeGreaterThan(5);
     expect(ducts.length).toBeGreaterThan(15);
+    expect(corn.length).toBeGreaterThan(20);
     expect(ducts.length).toBeLessThan(warehouse.length);
   });
 });
