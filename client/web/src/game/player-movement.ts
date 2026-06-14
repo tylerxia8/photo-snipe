@@ -72,14 +72,22 @@ function supportedOnTop(feet: FeetPos, solid: THREE.Box3): boolean {
   return feet.y >= solid.max.y - ON_TOP_EPS;
 }
 
-function supportTopY(feet: FeetPos, surfaces: THREE.Box3[]): number | null {
+function supportTopY(
+  feet: FeetPos,
+  surfaces: THREE.Box3[],
+  maxFeetY = feet.y + ON_TOP_EPS,
+): number | null {
   let bestTop = -Infinity;
   for (const surface of surfaces) {
     if (!feetOverFootprint(feet, surface)) {
       continue;
     }
-    if (surface.max.y > bestTop) {
-      bestTop = surface.max.y;
+    const top = surface.max.y;
+    if (top > maxFeetY + ON_TOP_EPS) {
+      continue;
+    }
+    if (top > bestTop) {
+      bestTop = top;
     }
   }
   return bestTop > -Infinity ? bestTop : null;
@@ -102,7 +110,7 @@ function isGroundedAt(
 }
 
 function snapFeetToSupport(feet: FeetPos, surfaces: THREE.Box3[]): FeetPos {
-  const top = supportTopY(feet, surfaces);
+  const top = supportTopY(feet, surfaces, feet.y + ON_TOP_EPS);
   if (top === null || feet.y >= top - ON_TOP_EPS) {
     return feet;
   }

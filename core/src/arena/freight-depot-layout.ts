@@ -70,5 +70,12 @@ for (const [x, y, z, sx, sy, sz] of crates) {
   FREIGHT_DEPOT_SOLID_BOXES.push(solidBox(x, y, z, sx, sy, sz, "prop", true));
 }
 
+// Loading-bay door frames (match client dock decor — block walk-through).
+for (const z of [-12.2, 12.2] as const) {
+  FREIGHT_DEPOT_SOLID_BOXES.push(
+    solidBox(0, 2.1, z, 8, 4.2, 0.35, "prop", true),
+  );
+}
+
 export const FREIGHT_SPAWN_A = { x: 0, z: -18 } as const;
 export const FREIGHT_SPAWN_B = { x: 0, z: 18 } as const;
