@@ -446,7 +446,7 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
   }
 
   if (roundId === "warehouse-interior-01") {
-    addIndustrialDecor(group, layout, theme, { x: 2, z: -24 }, { x: 2, z: 24 });
+    addIndustrialDecor(group, layout, theme, { x: 2, z: -23.4 }, { x: 2, z: 23.4 });
   } else if (roundId === "freight-depot-01") {
     addFreightDepotDecor(group, layout, theme);
   } else if (roundId === "rooftop-01") {
@@ -486,7 +486,7 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
 
   return {
     group,
-    wallColliders: interiorWallColliders,
+    wallColliders: [...wallBoxes, ...interiorWallColliders],
     propColliders,
     standColliders,
     ceilingCollider: ceilingBox ?? new THREE.Box3(new THREE.Vector3(0, maxY, 0), new THREE.Vector3(0, maxY + 1, 0)),

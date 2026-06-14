@@ -13,14 +13,6 @@ export const WAREHOUSE_LAYOUT: ArenaLayoutConfig = {
   wallHeight: WALL_HEIGHT,
   wallThickness: WALL_THICKNESS,
   defaultFeetY: 1,
-  interiorWalls: [
-    { x: -CROSS_WALL_X, z: -14, halfZ: 3 },
-    { x: CROSS_WALL_X, z: -14, halfZ: 3 },
-    { x: -CROSS_WALL_X, z: 0, halfZ: 3 },
-    { x: CROSS_WALL_X, z: 0, halfZ: 3 },
-    { x: -CROSS_WALL_X, z: 14, halfZ: 3 },
-    { x: CROSS_WALL_X, z: 14, halfZ: 3 },
-  ],
 };
 
 /** Original warehouse — partial cross walls at ±12 with a narrow central aisle. */
@@ -78,5 +70,5 @@ for (const [x, y, z, sx, sy, sz] of crates) {
   WAREHOUSE_INTERIOR_SOLID_BOXES.push(solidBox(x, y, z, sx, sy, sz, "prop", true));
 }
 
-export const WAREHOUSE_SPAWN_A = { x: 2, z: -24 } as const;
-export const WAREHOUSE_SPAWN_B = { x: 2, z: 24 } as const;
+export const WAREHOUSE_SPAWN_A = { x: 2, z: -23.4 } as const;
+export const WAREHOUSE_SPAWN_B = { x: 2, z: 23.4 } as const;

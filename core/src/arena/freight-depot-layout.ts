@@ -13,14 +13,6 @@ export const FREIGHT_DEPOT_LAYOUT: ArenaLayoutConfig = {
   wallHeight: WALL_HEIGHT,
   wallThickness: WALL_THICKNESS,
   defaultFeetY: 1,
-  interiorWalls: [
-    { x: -CROSS_WALL_X, z: -14, halfZ: 3 },
-    { x: CROSS_WALL_X, z: -14, halfZ: 3 },
-    { x: -CROSS_WALL_X, z: 0, halfZ: 3 },
-    { x: CROSS_WALL_X, z: 0, halfZ: 3 },
-    { x: -CROSS_WALL_X, z: 14, halfZ: 3 },
-    { x: CROSS_WALL_X, z: 14, halfZ: 3 },
-  ],
 };
 
 /** Wide-aisle loading dock — wide cross-aisles and pallet cover. */

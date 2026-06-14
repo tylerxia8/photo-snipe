@@ -12,10 +12,6 @@ export const ROOFTOP_LAYOUT: ArenaLayoutConfig = {
   wallHeight: PARAPET,
   wallThickness: WALL_THICKNESS,
   defaultFeetY: 1,
-  interiorWalls: [
-    { x: -8, z: 0, halfZ: 5 },
-    { x: 8, z: 0, halfZ: 5 },
-  ],
 };
 
 /** Open-air rooftop with HVAC cover and low parapet walls. */
