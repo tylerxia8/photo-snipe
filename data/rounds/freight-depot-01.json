@@ -1,17 +1,17 @@
 {
-  "id": "warehouse-interior-01",
-  "name": "Warehouse Interior",
+  "id": "freight-depot-01",
+  "name": "Freight Depot",
   "building": {
-    "id": "warehouse-main",
-    "scene": "buildings/warehouse_interior.tscn"
+    "id": "freight-depot-main",
+    "scene": "buildings/freight_depot.tscn"
   },
   "spawns": {
     "playerA": {
-      "position": [2.0, 1.0, -24.0],
+      "position": [0.0, 1.0, -18.0],
       "rotation": [0, 0, 0]
     },
     "playerB": {
-      "position": [2.0, 1.0, 24.0],
+      "position": [0.0, 1.0, 18.0],
       "rotation": [0, 180, 0]
     }
   },

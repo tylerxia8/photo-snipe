@@ -57,13 +57,24 @@ const THEMES: Record<string, ArenaTheme> = {
   "warehouse-interior-01": {
     skyColor: 0x7eb8da,
     fogColor: 0x9ec9e0,
-    floorLight: "#6b7280",
-    floorDark: "#5b6170",
-    wallColor: 0x8b95a8,
-    wallTrim: 0x5f6775,
-    ceilingColor: 0x454b57,
-    propColors: [0xe67e22, 0x3498db, 0x2ecc71, 0x9b59b6, 0xf1c40f],
-    accentColor: 0xf39c12,
+    floorLight: "#56585c",
+    floorDark: "#484a4e",
+    wallColor: 0x737882,
+    wallTrim: 0x52565e,
+    ceilingColor: 0x5a5e66,
+    propColors: [0x856137, 0x474d56, 0x8c9094, 0x6b5a42, 0x5c6068],
+    accentColor: 0xc17817,
+  },
+  "freight-depot-01": {
+    skyColor: 0x6a7a8a,
+    fogColor: 0x8a949e,
+    floorLight: "#6e7378",
+    floorDark: "#585d62",
+    wallColor: 0x7a828a,
+    wallTrim: 0x4a5058,
+    ceilingColor: 0x3d434a,
+    propColors: [0x8b6914, 0x6b7280, 0x4a5568, 0x9ca3af, 0x78716c],
+    accentColor: 0xf1c40f,
   },
   "rooftop-01": {
     skyColor: 0x6eb5ff,
@@ -193,7 +204,13 @@ function materialForSolid(
   return flatMat(theme.propColors[propIndex % theme.propColors.length]!);
 }
 
-function addWarehouseDecor(group: THREE.Group, layout: ArenaLayoutConfig, theme: ArenaTheme): void {
+function addIndustrialDecor(
+  group: THREE.Group,
+  layout: ArenaLayoutConfig,
+  theme: ArenaTheme,
+  spawnA: { x: number; z: number },
+  spawnB: { x: number; z: number },
+): void {
   const wallHeight = layout.wallHeight;
   for (let i = 0; i < 5; i++) {
     const x = -18 + i * 9;
@@ -227,7 +244,7 @@ function addWarehouseDecor(group: THREE.Group, layout: ArenaLayoutConfig, theme:
       new THREE.BoxGeometry(1.2, 0.15, 1.2),
       flatMat(theme.accentColor),
     );
-    cap.position.set(x, 5.8, z);
+    cap.position.set(x, wallHeight - 0.2, z);
     group.add(cap);
   }
 
@@ -235,8 +252,54 @@ function addWarehouseDecor(group: THREE.Group, layout: ArenaLayoutConfig, theme:
     addBox(group, new THREE.Vector3(x, 0.02, z), new THREE.Vector3(3.2, 0.04, 3.2), flatMat(color), []);
     addBox(group, new THREE.Vector3(x, 0.06, z), new THREE.Vector3(2.4, 0.02, 2.4), flatMat(0xffffff), []);
   };
-  spawnPad(0, -18, 0x3498db);
-  spawnPad(0, 18, 0xe74c3c);
+  spawnPad(spawnA.x, spawnA.z, 0x3498db);
+  spawnPad(spawnB.x, spawnB.z, 0xe74c3c);
+}
+
+function addFreightDepotDecor(group: THREE.Group, layout: ArenaLayoutConfig, theme: ArenaTheme): void {
+  addIndustrialDecor(group, layout, theme, { x: 0, z: -18 }, { x: 0, z: 18 });
+
+  const hazardMat = flatMat(0xf1c40f);
+  const hazardDark = flatMat(0x2c2c2c);
+  for (const z of [-18, 18] as const) {
+    for (let i = 0; i < 6; i++) {
+      const stripe = new THREE.Mesh(
+        new THREE.BoxGeometry(0.9, 0.05, 0.45),
+        i % 2 === 0 ? hazardMat : hazardDark,
+      );
+      stripe.position.set(-2.4 + i * 0.9, 0.05, z + (z < 0 ? 1.8 : -1.8));
+      group.add(stripe);
+    }
+
+    const dockFrame = new THREE.Mesh(
+      new THREE.BoxGeometry(8, 4.2, 0.2),
+      flatMat(0x505862),
+    );
+    dockFrame.position.set(0, 2.1, z + (z < 0 ? 5.8 : -5.8));
+    group.add(dockFrame);
+
+    const dockDoor = new THREE.Mesh(
+      new THREE.BoxGeometry(6.8, 3.8, 0.08),
+      flatMat(0x3a4048),
+    );
+    dockDoor.position.set(0, 2, z + (z < 0 ? 5.7 : -5.7));
+    group.add(dockDoor);
+  }
+
+  for (const x of [-22, 22] as const) {
+    const bumper = new THREE.Mesh(
+      new THREE.BoxGeometry(0.35, 0.5, 10),
+      flatMat(0x111111),
+    );
+    bumper.position.set(x, 0.25, 0);
+    group.add(bumper);
+    const bumperStripe = new THREE.Mesh(
+      new THREE.BoxGeometry(0.36, 0.12, 2),
+      hazardMat,
+    );
+    bumperStripe.position.set(x, 0.55, 0);
+    group.add(bumperStripe);
+  }
 }
 
 function addRooftopDecor(group: THREE.Group, theme: ArenaTheme): void {
@@ -370,7 +433,7 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
       ceilingBox = box;
     } else if (solid.category === "wall") {
       wallBoxes.push(box);
-      if (roundId === "warehouse-interior-01") {
+      if (roundId === "warehouse-interior-01" || roundId === "freight-depot-01") {
         addBox(
           group,
           new THREE.Vector3(pos.x, pos.y - size.y * 0.5 + 0.075, pos.z),
@@ -383,7 +446,9 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
   }
 
   if (roundId === "warehouse-interior-01") {
-    addWarehouseDecor(group, layout, theme);
+    addIndustrialDecor(group, layout, theme, { x: 2, z: -24 }, { x: 2, z: 24 });
+  } else if (roundId === "freight-depot-01") {
+    addFreightDepotDecor(group, layout, theme);
   } else if (roundId === "rooftop-01") {
     addRooftopDecor(group, theme);
   } else if (roundId === "duct-network-01") {

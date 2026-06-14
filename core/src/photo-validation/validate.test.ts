@@ -126,24 +126,24 @@ describe("validatePhoto", () => {
     const occluders = getWarehouseInteriorOccluders();
     const result = validatePhoto(
       attemptFacingOpponent({
-        cameraPosition: { x: -22, y: 1.6, z: -5 },
+        cameraPosition: { x: -10, y: 1.6, z: -2 },
         cameraRotation: { x: 0, y: 0, z: 0 },
       }),
-      opponentAt(5, 180, -22),
+      opponentAt(5, 180, -10),
       baseRules,
       { skipOcclusion: false, occluders },
     );
     expect(result).toEqual({ valid: false, reason: "body_occluded" });
   });
 
-  it("accepts line of sight through the open side aisle", () => {
+  it("accepts line of sight through the open center aisle", () => {
     const occluders = getWarehouseInteriorOccluders();
     const result = validatePhoto(
       attemptFacingOpponent({
-        cameraPosition: { x: -12, y: 1.6, z: -10 },
+        cameraPosition: { x: 2, y: 1.6, z: -18 },
         cameraRotation: { x: 0, y: 0, z: 0 },
       }),
-      opponentAt(10, 180, -12),
+      opponentAt(-10, 180, 2),
       baseRules,
       { skipOcclusion: false, occluders },
     );

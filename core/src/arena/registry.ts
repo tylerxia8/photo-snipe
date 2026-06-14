@@ -1,4 +1,8 @@
 import { CORN_MAZE_LAYOUT, CORN_MAZE_SOLID_BOXES } from "./corn-maze-layout.js";
+import {
+  FREIGHT_DEPOT_LAYOUT,
+  FREIGHT_DEPOT_SOLID_BOXES,
+} from "./freight-depot-layout.js";
 import { DUCT_NETWORK_LAYOUT, DUCT_NETWORK_SOLID_BOXES } from "./duct-layout.js";
 import { ROOFTOP_LAYOUT, ROOFTOP_SOLID_BOXES } from "./rooftop-layout.js";
 import {
@@ -20,6 +24,10 @@ const ARENAS: Record<string, ArenaDefinition> = {
   "warehouse-interior-01": {
     layout: WAREHOUSE_LAYOUT,
     solids: WAREHOUSE_INTERIOR_SOLID_BOXES,
+  },
+  "freight-depot-01": {
+    layout: FREIGHT_DEPOT_LAYOUT,
+    solids: FREIGHT_DEPOT_SOLID_BOXES,
   },
   "rooftop-01": {
     layout: ROOFTOP_LAYOUT,

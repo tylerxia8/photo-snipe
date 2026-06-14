@@ -11,6 +11,7 @@ describe("arena registry", () => {
   it("lists known arenas", () => {
     expect(listArenaRoundIds()).toEqual([
       "warehouse-interior-01",
+      "freight-depot-01",
       "rooftop-01",
       "duct-network-01",
       "corn-maze-01",
@@ -36,10 +37,23 @@ describe("arena registry", () => {
   it("lists arena options with display names", () => {
     expect(listArenaOptions()).toEqual([
       { id: "warehouse-interior-01", name: "Warehouse Interior" },
+      { id: "freight-depot-01", name: "Freight Depot" },
       { id: "rooftop-01", name: "City Rooftop" },
       { id: "duct-network-01", name: "Air Duct Network" },
       { id: "corn-maze-01", name: "Corn Maze" },
     ]);
+  });
+
+  it("returns warehouse layout metadata", () => {
+    const layout = getArenaLayout("warehouse-interior-01");
+    expect(layout.name).toBe("Warehouse Interior");
+    expect(layout.wallHeight).toBe(5);
+  });
+
+  it("returns freight depot layout metadata", () => {
+    const layout = getArenaLayout("freight-depot-01");
+    expect(layout.name).toBe("Freight Depot");
+    expect(layout.wallHeight).toBe(6);
   });
 
   it("returns duct layout metadata", () => {

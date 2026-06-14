@@ -3,6 +3,7 @@ export * from "./math/vector.js";
 export * from "./arena/solid-box.js";
 export * from "./arena/registry.js";
 export * from "./arena/warehouse-layout.js";
+export * from "./arena/freight-depot-layout.js";
 export * from "./arena/rooftop-layout.js";
 export * from "./arena/duct-layout.js";
 export * from "./arena/corn-maze-layout.js";

@@ -22,13 +22,10 @@ First playable PhotoSnipe building — a single-floor industrial warehouse.
 ```
 [North wall]  ← Player A spawn
   Loading bay + crates
-  ─── outer-wing cross walls (open center + side aisles) ───
+  ─── partial cross walls at x=±12 (narrow center aisle) ───
   East/West shelf rows
-  ─── partial wall ───
   Central crate fort (blocks direct LOS)
-  ─── partial wall ───
   East/West shelf rows
-  Office/crate approach
 [South wall]  ← Player B spawn
 ```
 
