@@ -11,6 +11,7 @@ import {
   getRoundName,
   setRoundId,
 } from "./settings/arena-settings.js";
+import { initSocialSettings, type SocialSettingsHandle } from "./social/social-settings.js";
 
 const lobby = document.getElementById("lobby")!;
 const hud = document.getElementById("hud")!;
@@ -35,9 +36,11 @@ const rematchBtn = document.getElementById("rematch-btn") as HTMLButtonElement;
 const menuBtn = document.getElementById("menu-btn") as HTMLButtonElement;
 const playPanel = document.getElementById("play-panel")!;
 const settingsPanel = document.getElementById("settings-panel")!;
+const socialPanel = document.getElementById("social-panel")!;
 const controlsHint = document.getElementById("controls-hint")!;
 const navPlay = document.querySelector('[data-nav="play"]')!;
 const navSettings = document.querySelector('[data-nav="settings"]')!;
+const navSocial = document.querySelector('[data-nav="social"]')!;
 const arenaSelect = document.getElementById("arena-select") as HTMLSelectElement;
 const arenaPreviewName = document.getElementById("arena-preview-name")!;
 
@@ -113,13 +116,21 @@ function updateControlsHint(): void {
   controlsHint.textContent = getControlsHint();
 }
 
-function setLobbyTab(tab: "play" | "settings"): void {
+type LobbyTab = "play" | "settings" | "social";
+
+function setLobbyTab(tab: LobbyTab): void {
   playPanel.classList.toggle("hidden", tab !== "play");
   settingsPanel.classList.toggle("hidden", tab !== "settings");
+  socialPanel.classList.toggle("hidden", tab !== "social");
   navPlay.classList.toggle("active", tab === "play");
   navSettings.classList.toggle("active", tab === "settings");
+  navSocial.classList.toggle("active", tab === "social");
   if (tab === "settings") {
     settingsPanel.scrollTop = 0;
+  }
+  if (tab === "social") {
+    socialPanel.scrollTop = 0;
+    socialSettings.refreshInviteCode();
   }
 }
 
@@ -247,19 +258,34 @@ function updateRematchStatus(msg: ServerMessage): void {
   }
 }
 
+const socialSettings: SocialSettingsHandle = initSocialSettings({
+  getRoomCode: () => roomInput.value,
+  onGoToPlay: () => setLobbyTab("play"),
+});
+
 net.onStatus = setStatus;
 net.onMessage = (msg: ServerMessage) => {
   switch (msg.type) {
     case "room_created": {
       const arenaName = String(msg.selectedRoundName ?? getRoundName());
+      const code = String(msg.roomCode ?? "").toUpperCase();
       waitingForOpponent = true;
       setArenaSelectEnabled(false);
-      setStatus(`Room created on ${arenaName}! Code: ${String(msg.roomCode)} — waiting for opponent…`);
+      if (code) {
+        roomInput.value = code;
+      }
+      socialSettings.refreshInviteCode();
+      setStatus(`Room created on ${arenaName}! Code: ${code} — waiting for opponent…`);
       break;
     }
     case "room_joined": {
       const arenaName = String(msg.selectedRoundName ?? "the selected arena");
-      setStatus(`Joined room ${String(msg.roomCode)} — arena: ${arenaName}`);
+      const code = String(msg.roomCode ?? "").toUpperCase();
+      if (code) {
+        roomInput.value = code;
+      }
+      socialSettings.refreshInviteCode();
+      setStatus(`Joined room ${code} — arena: ${arenaName}`);
       break;
     }
     case "match_started":
@@ -371,5 +397,6 @@ updateControlsHint();
 
 navPlay.addEventListener("click", () => setLobbyTab("play"));
 navSettings.addEventListener("click", () => setLobbyTab("settings"));
+navSocial.addEventListener("click", () => setLobbyTab("social"));
 
 requestAnimationFrame(frame);

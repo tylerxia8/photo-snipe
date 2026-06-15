@@ -279,10 +279,117 @@ canvas {
   padding: 1.5rem 1.65rem 1.35rem;
 }
 
-#settings-panel {
+#settings-panel,
+#social-panel {
   max-height: min(72vh, 720px);
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.friend-list {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+
+.friend-list-empty {
+  margin: 0.85rem 0 0;
+  font-size: 0.85rem;
+  color: #9aa8ba;
+}
+
+.friend-list-empty.hidden {
+  display: none;
+}
+
+.friend-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.friend-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.friend-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #dce4ef;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friend-presence {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.friend-presence.offline {
+  color: #7a8799;
+}
+
+.friend-remove {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.72rem;
+}
+
+.friend-add-field {
+  margin-top: 1rem;
+}
+
+.friend-add-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+}
+
+.friend-add-row input {
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  outline: none;
+}
+
+.invite-code-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(109, 255, 210, 0.25);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.invite-room-code {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 1.35rem;
+  letter-spacing: 0.22em;
+  color: #6dffd2;
+}
+
+.invite-actions {
+  margin-top: 0.85rem;
+}
+
+.social-status {
+  margin-top: 0.85rem;
 }
 
 .kr-menu-header h2 {

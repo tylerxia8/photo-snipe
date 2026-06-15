@@ -31,7 +31,7 @@
           <nav class="kr-sidebar" aria-label="Main navigation">
             <button class="kr-nav-item active" type="button" data-nav="play">PLAY</button>
             <button class="kr-nav-item" type="button" data-nav="settings">SETTINGS</button>
-            <button class="kr-nav-item disabled" type="button" disabled>SOCIAL</button>
+            <button class="kr-nav-item" type="button" data-nav="social">SOCIAL</button>
             <button class="kr-nav-item disabled" type="button" disabled>SHOP</button>
           </nav>
 
@@ -103,6 +103,60 @@
                 </button>
                 <p id="keybind-status" class="status"></p>
               </div>
+            </section>
+
+            <section id="social-panel" class="kr-menu-window panel hidden">
+              <div class="kr-menu-header">
+                <h2>SOCIAL</h2>
+                <p>Friends list and match invites.</p>
+              </div>
+
+              <div class="settings-section">
+                <h3 class="settings-section-title">FRIENDS</h3>
+                <p class="settings-section-hint">
+                  Save operator names locally. Online status and invites sync in a future update.
+                </p>
+
+                <div id="friend-list" class="friend-list" aria-live="polite"></div>
+                <p id="friend-list-empty" class="friend-list-empty">No friends yet — add someone below.</p>
+
+                <label class="field friend-add-field">
+                  <span class="field-label">ADD FRIEND</span>
+                  <div class="friend-add-row">
+                    <input
+                      id="friend-add-input"
+                      type="text"
+                      placeholder="Operator username"
+                      maxlength="24"
+                      autocomplete="off"
+                    />
+                    <button id="friend-add-btn" class="btn btn-secondary" type="button">ADD</button>
+                  </div>
+                </label>
+              </div>
+
+              <div class="settings-section">
+                <h3 class="settings-section-title">INVITE TO MATCH</h3>
+                <p class="settings-section-hint">
+                  Host a room on Play, then share your code with a friend.
+                </p>
+
+                <div class="invite-code-row">
+                  <span class="field-label">YOUR ROOM CODE</span>
+                  <span id="invite-room-code" class="invite-room-code">—</span>
+                </div>
+
+                <div class="actions invite-actions">
+                  <button id="copy-invite-btn" class="btn btn-primary" type="button" disabled>
+                    COPY INVITE
+                  </button>
+                  <button id="host-invite-btn" class="btn btn-secondary" type="button">
+                    GO TO PLAY
+                  </button>
+                </div>
+              </div>
+
+              <p id="social-status" class="status social-status"></p>
             </section>
           </main>
         </div>
