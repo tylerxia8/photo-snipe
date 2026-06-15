@@ -9,6 +9,7 @@ import {
   CITY_STREETS_SPAWN_A,
   CITY_STREETS_SPAWN_B,
   CITY_STREETS_SOLID_BOXES,
+  parkFootprintOverlapsBuilding,
 } from "./city-streets-layout.js";
 
 function onRoad(x: number, z: number): boolean {
@@ -55,9 +56,9 @@ describe("city streets layout", () => {
     expect(spawnInsideBuilding(CITY_STREETS_SPAWN_B.x, CITY_STREETS_SPAWN_B.z)).toBe(false);
   });
 
-  it("defines a walkable park block", () => {
-    expect(CITY_STREETS_PARK.sx).toBeGreaterThan(12);
-    expect(onRoad(CITY_STREETS_PARK.cx, CITY_STREETS_PARK.cz)).toBe(false);
+  it("keeps the park footprint clear of building volumes", () => {
+    expect(parkFootprintOverlapsBuilding()).toBe(false);
+    expect(CITY_STREETS_PARK.cx + CITY_STREETS_PARK.sx / 2).toBeLessThanOrEqual(-22);
   });
 
   it("uses collider-only volumes for decor props like cars and park trees", () => {

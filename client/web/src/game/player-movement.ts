@@ -150,14 +150,19 @@ interface MoveHint {
   dz: number;
 }
 
-function resolveOnX(depth: { x: number; z: number }, hint: MoveHint): boolean {
-  if (hint.dx !== 0 && hint.dz === 0) {
-    return true;
-  }
-  return depth.x <= depth.z;
+function clearsSolidOverlap(feet: FeetPos, solid: THREE.Box3): boolean {
+  const player = playerAabb(feet);
+  return !player.intersectsBox(solid) || !verticalOverlap(player, solid) || supportedOnTop(feet, solid);
 }
 
-/** Push out of one solid by the smallest axis-aligned nudge. */
+interface SeparationCandidate {
+  feet: FeetPos;
+  push: number;
+  axis: "x" | "z";
+  dir: -1 | 1;
+}
+
+/** Push out of one solid using a candidate that actually clears overlap. */
 function resolveSolidOverlap(
   feet: FeetPos,
   solid: THREE.Box3,
@@ -172,45 +177,53 @@ function resolveSolidOverlap(
     return feet;
   }
 
-  const depth = penetrationDepth(player, solid);
+  const candidates: SeparationCandidate[] = [];
   const pushWest = player.max.x - solid.min.x + SKIN;
   const pushEast = solid.max.x - player.min.x + SKIN;
   const pushNorth = player.max.z - solid.min.z + SKIN;
   const pushSouth = solid.max.z - player.min.z + SKIN;
 
-  if (resolveOnX(depth, hint)) {
-    const west = { ...feet, x: feet.x - pushWest };
-    const east = { ...feet, x: feet.x + pushEast };
-    const westOk = isInsideBounds(west.x, west.z, bounds);
-    const eastOk = isInsideBounds(east.x, east.z, bounds);
-
-    if (westOk && eastOk) {
-      return pushWest <= pushEast ? west : east;
-    }
-    if (westOk) {
-      return west;
-    }
-    if (eastOk) {
-      return east;
-    }
-    return pushWest <= pushEast ? west : east;
+  if (pushWest > 0) {
+    candidates.push({ feet: { ...feet, x: feet.x - pushWest }, push: pushWest, axis: "x", dir: -1 });
+  }
+  if (pushEast > 0) {
+    candidates.push({ feet: { ...feet, x: feet.x + pushEast }, push: pushEast, axis: "x", dir: 1 });
+  }
+  if (pushNorth > 0) {
+    candidates.push({ feet: { ...feet, z: feet.z - pushNorth }, push: pushNorth, axis: "z", dir: -1 });
+  }
+  if (pushSouth > 0) {
+    candidates.push({ feet: { ...feet, z: feet.z + pushSouth }, push: pushSouth, axis: "z", dir: 1 });
   }
 
-  const north = { ...feet, z: feet.z - pushNorth };
-  const south = { ...feet, z: feet.z + pushSouth };
-  const northOk = isInsideBounds(north.x, north.z, bounds);
-  const southOk = isInsideBounds(south.x, south.z, bounds);
+  const valid = candidates.filter((candidate) => clearsSolidOverlap(candidate.feet, solid));
+  if (valid.length === 0) {
+    return feet;
+  }
 
-  if (northOk && southOk) {
-    return pushNorth <= pushSouth ? north : south;
-  }
-  if (northOk) {
-    return north;
-  }
-  if (southOk) {
-    return south;
-  }
-  return pushNorth <= pushSouth ? north : south;
+  const depth = penetrationDepth(player, solid);
+  const score = (candidate: SeparationCandidate): number => {
+    let value = candidate.push;
+    if (!isInsideBounds(candidate.feet.x, candidate.feet.z, bounds)) {
+      value += 1000;
+    }
+    if (candidate.axis === "x" && hint.dx !== 0 && Math.sign(hint.dx) === candidate.dir) {
+      value += 100;
+    }
+    if (candidate.axis === "z" && hint.dz !== 0 && Math.sign(hint.dz) === candidate.dir) {
+      value += 100;
+    }
+    if (candidate.axis === "x" && depth.z < depth.x) {
+      value += 10;
+    }
+    if (candidate.axis === "z" && depth.x < depth.z) {
+      value += 10;
+    }
+    return value;
+  };
+
+  valid.sort((a, b) => score(a) - score(b));
+  return valid[0]!.feet;
 }
 
 function resolveAllOverlaps(

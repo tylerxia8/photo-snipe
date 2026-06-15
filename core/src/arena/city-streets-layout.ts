@@ -4,12 +4,12 @@ export const CITY_STREETS_HALF = 32;
 export const CITY_STREETS_ROAD_HALF = 5;
 export const CITY_STREETS_SIDEWALK = 2.5;
 
-/** NW corner green — walkable, low cover only. */
+/** NW green — kept west of adjacent mid-rise blocks (x <= -22). */
 export const CITY_STREETS_PARK = {
-  cx: -22,
-  cz: -22,
-  sx: 18,
-  sz: 16,
+  cx: -27,
+  cz: -23,
+  sx: 10,
+  sz: 12,
 };
 
 const HALF = CITY_STREETS_HALF;
@@ -74,29 +74,47 @@ for (const [cx, cz, sx, sy, sz] of CITY_STREETS_BUILDINGS) {
   pushBuilding(CITY_STREETS_SOLID_BOXES, cx, cz, sx, sy, sz);
 }
 
-/** Park trees — kept west of adjacent mid-rise blocks. */
+/** Park trees — west of all nearby mid-rise footprints. */
 export const CITY_STREETS_PARK_TREES = [
-  [-27, -26],
-  [-29, -28],
-  [-24, -24],
+  [-30, -26],
+  [-28, -24],
+  [-31, -28],
   [-27, -22],
-  [-25, -27],
+  [-29, -25],
 ] as const;
 
 for (const [x, z] of CITY_STREETS_PARK_TREES) {
   CITY_STREETS_SOLID_BOXES.push(colliderBox(x, 1.75, z, 2.2, 3.5, 2.2, true));
 }
 
-CITY_STREETS_SOLID_BOXES.push(colliderBox(-22, 0.65, -22, 3.2, 1.3, 1.2, true));
-CITY_STREETS_SOLID_BOXES.push(colliderBox(-19, 0.65, -19, 3.2, 1.3, 1.2, true));
-CITY_STREETS_SOLID_BOXES.push(colliderBox(-24, 0.85, -24, 2.8, 1.7, 2.8, true));
+export const CITY_STREETS_PARK_FOUNTAIN = { x: -27, z: -23 };
+export const CITY_STREETS_PARK_BENCHES = [
+  { x: -25, z: -21 },
+  { x: -29, z: -25 },
+] as const;
 
-/** Park fence — three sides plus a south gate; east side uses building walls. */
+CITY_STREETS_SOLID_BOXES.push(
+  colliderBox(CITY_STREETS_PARK_BENCHES[0].x, 0.65, CITY_STREETS_PARK_BENCHES[0].z, 3.2, 1.3, 1.2, true),
+);
+CITY_STREETS_SOLID_BOXES.push(
+  colliderBox(CITY_STREETS_PARK_BENCHES[1].x, 0.65, CITY_STREETS_PARK_BENCHES[1].z, 3.2, 1.3, 1.2, true),
+);
+CITY_STREETS_SOLID_BOXES.push(
+  colliderBox(
+    CITY_STREETS_PARK_FOUNTAIN.x,
+    0.85,
+    CITY_STREETS_PARK_FOUNTAIN.z,
+    2.8,
+    1.7,
+    2.8,
+    true,
+  ),
+);
+
+/** Park fence on north and west only — south/east stay open to the sidewalk. */
 export const CITY_STREETS_FENCE_SEGMENTS: Array<[number, number, number, number]> = [
   [park.cx, park.cz - park.sz * 0.5 + 0.2, park.sx + 0.4, 0.4],
   [park.cx - park.sx * 0.5 + 0.2, park.cz, 0.4, park.sz + 0.4],
-  [park.cx - 4, park.cz + park.sz * 0.5 - 0.2, 7, 0.4],
-  [park.cx + 4.5, park.cz + park.sz * 0.5 - 0.2, 6, 0.4],
 ];
 
 for (const [cx, cz, sx, sz] of CITY_STREETS_FENCE_SEGMENTS) {
@@ -149,7 +167,7 @@ CITY_STREETS_SOLID_BOXES.push(
   ),
 );
 
-/** Hot dog carts, newsstands, and bus shelters near sidewalks. */
+/** Hot dog carts, newsstands, and bus shelter near sidewalks. */
 export const CITY_STREETS_VENDORS: Array<[number, number, number, number, number, number]> = [
   [-7.5, 0.75, 8, 1.4, 1.5, 1.1],
   [7.5, 0.75, -9, 1.4, 1.5, 1.1],
@@ -187,3 +205,25 @@ for (const [x, z] of [
 
 export const CITY_STREETS_SPAWN_A = { x: -19, z: -30 };
 export const CITY_STREETS_SPAWN_B = { x: 19, z: 30 };
+
+export function parkFootprintOverlapsBuilding(): boolean {
+  const parkBox = {
+    minX: park.cx - park.sx / 2,
+    maxX: park.cx + park.sx / 2,
+    minZ: park.cz - park.sz / 2,
+    maxZ: park.cz + park.sz / 2,
+  };
+
+  return CITY_STREETS_BUILDINGS.some(([cx, cz, sx, , sz]) => {
+    const minX = cx - sx / 2;
+    const maxX = cx + sx / 2;
+    const minZ = cz - sz / 2;
+    const maxZ = cz + sz / 2;
+    return (
+      parkBox.maxX > minX &&
+      parkBox.minX < maxX &&
+      parkBox.maxZ > minZ &&
+      parkBox.minZ < maxZ
+    );
+  });
+}

@@ -4,6 +4,8 @@ import {
   CITY_STREETS_BUILDINGS,
   CITY_STREETS_HALF,
   CITY_STREETS_PARK,
+  CITY_STREETS_PARK_BENCHES,
+  CITY_STREETS_PARK_FOUNTAIN,
   CITY_STREETS_PARKED_CARS,
   CITY_STREETS_FENCE_SEGMENTS,
   CITY_STREETS_PARK_TREES,
@@ -553,14 +555,20 @@ function addCityStreetsDecor(group: THREE.Group, theme: ArenaTheme): void {
   }
 
   const fountain = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.55, 2.8), flatMat(0x95a5a6));
-  fountain.position.set(-24, 0.35, -24);
+  fountain.position.set(CITY_STREETS_PARK_FOUNTAIN.x, 0.35, CITY_STREETS_PARK_FOUNTAIN.z);
   group.add(fountain);
   const water = new THREE.Mesh(
     new THREE.BoxGeometry(1.8, 0.08, 1.8),
     new THREE.MeshLambertMaterial({ color: 0x5dade2, emissive: 0x3498db, emissiveIntensity: 0.25 }),
   );
-  water.position.set(-24, 0.62, -24);
+  water.position.set(CITY_STREETS_PARK_FOUNTAIN.x, 0.62, CITY_STREETS_PARK_FOUNTAIN.z);
   group.add(water);
+
+  for (const bench of CITY_STREETS_PARK_BENCHES) {
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.18, 1.2), flatMat(0x6b4f3a));
+    seat.position.set(bench.x, 0.55, bench.z);
+    group.add(seat);
+  }
 
   const windowMat = flatMat(0xbfd7ea);
   const neonMat = new THREE.MeshLambertMaterial({
