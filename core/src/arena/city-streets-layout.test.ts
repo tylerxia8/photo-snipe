@@ -36,9 +36,21 @@ describe("city streets layout", () => {
     }
   });
 
-  it("places spawns on the boulevard", () => {
-    expect(onRoad(CITY_STREETS_SPAWN_A.x, CITY_STREETS_SPAWN_A.z)).toBe(true);
-    expect(onRoad(CITY_STREETS_SPAWN_B.x, CITY_STREETS_SPAWN_B.z)).toBe(true);
+  it("places spawns behind blocks, off the open boulevard", () => {
+    expect(onRoad(CITY_STREETS_SPAWN_A.x, CITY_STREETS_SPAWN_A.z)).toBe(false);
+    expect(onRoad(CITY_STREETS_SPAWN_B.x, CITY_STREETS_SPAWN_B.z)).toBe(false);
+
+    const buildings = CITY_STREETS_SOLID_BOXES.filter(
+      (solid) => solid.category === "prop" && solid.sy >= 10,
+    );
+    const spawnInsideBuilding = (x: number, z: number) =>
+      buildings.some((building) => {
+        const box = boxToAabb(building);
+        return x >= box.min.x && x <= box.max.x && z >= box.min.z && z <= box.max.z;
+      });
+
+    expect(spawnInsideBuilding(CITY_STREETS_SPAWN_A.x, CITY_STREETS_SPAWN_A.z)).toBe(false);
+    expect(spawnInsideBuilding(CITY_STREETS_SPAWN_B.x, CITY_STREETS_SPAWN_B.z)).toBe(false);
   });
 
   it("defines a walkable park block", () => {

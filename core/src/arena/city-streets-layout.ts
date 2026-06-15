@@ -175,5 +175,5 @@ for (const [x, z] of [
   CITY_STREETS_SOLID_BOXES.push(solidBox(x, 1.85, z, 0.35, 3.7, 0.35, "prop", true));
 }
 
-export const CITY_STREETS_SPAWN_A = { x: 0, z: -29 };
-export const CITY_STREETS_SPAWN_B = { x: 0, z: 29 };
+export const CITY_STREETS_SPAWN_A = { x: -19, z: -30 };
+export const CITY_STREETS_SPAWN_B = { x: 19, z: 30 };

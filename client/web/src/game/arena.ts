@@ -138,6 +138,14 @@ function flatMat(color: number): THREE.MeshLambertMaterial {
   return new THREE.MeshLambertMaterial({ color });
 }
 
+function groundOverlayMat(color: number): THREE.MeshLambertMaterial {
+  const mat = flatMat(color);
+  mat.polygonOffset = true;
+  mat.polygonOffsetFactor = -1;
+  mat.polygonOffsetUnits = -4;
+  return mat;
+}
+
 function flatTexMat(texture: THREE.Texture, color = 0xffffff): THREE.MeshLambertMaterial {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
@@ -358,63 +366,79 @@ function addRooftopDecor(group: THREE.Group, theme: ArenaTheme): void {
 }
 
 function addCityStreetsDecor(group: THREE.Group, theme: ArenaTheme): void {
-  const asphaltMat = flatMat(0x2f343a);
-  const sidewalkMat = flatMat(0x9aa0a8);
-  const grassMat = flatMat(0x4f8f46);
-  const laneMat = flatMat(theme.accentColor);
-  const whiteMat = flatMat(0xf5f5f5);
+  const asphaltMat = groundOverlayMat(0x2f343a);
+  const sidewalkMat = groundOverlayMat(0x9aa0a8);
+  const grassMat = groundOverlayMat(0x4f8f46);
+  const laneMat = groundOverlayMat(theme.accentColor);
+  const whiteMat = groundOverlayMat(0xf5f5f5);
   const roadHalf = CITY_STREETS_ROAD_HALF;
+  const roadWidth = roadHalf * 2;
+  const armLength = CITY_STREETS_HALF - roadHalf;
+  const armCenter = roadHalf + armLength * 0.5;
+  const sidewalkOffset = roadHalf + 1.75;
+  const sidewalkWidth = 2.8;
 
-  const roadSlab = (cx: number, cz: number, sx: number, sz: number) => {
-    const road = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.06, sz), asphaltMat);
-    road.position.set(cx, 0.04, cz);
-    road.receiveShadow = true;
-    group.add(road);
+  const GROUND = {
+    asphalt: 0.03,
+    sidewalk: 0.06,
+    grass: 0.045,
+    marking: 0.08,
   };
 
-  roadSlab(0, 0, roadHalf * 2 + 1, CITY_STREETS_HALF * 2 - 2);
-  roadSlab(0, 0, CITY_STREETS_HALF * 2 - 2, roadHalf * 2 + 1);
+  const groundSlab = (
+    cx: number,
+    cz: number,
+    sx: number,
+    sz: number,
+    mat: THREE.MeshLambertMaterial,
+    y: number,
+    renderOrder = 0,
+  ) => {
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.04, sz), mat);
+    slab.position.set(cx, y, cz);
+    slab.receiveShadow = true;
+    slab.renderOrder = renderOrder;
+    group.add(slab);
+  };
+
+  groundSlab(0, 0, roadWidth, roadWidth, asphaltMat, GROUND.asphalt, 1);
+  groundSlab(0, armCenter, roadWidth, armLength, asphaltMat, GROUND.asphalt, 1);
+  groundSlab(0, -armCenter, roadWidth, armLength, asphaltMat, GROUND.asphalt, 1);
+  groundSlab(armCenter, 0, armLength, roadWidth, asphaltMat, GROUND.asphalt, 1);
+  groundSlab(-armCenter, 0, armLength, roadWidth, asphaltMat, GROUND.asphalt, 1);
+  groundSlab(armCenter, armCenter, armLength, armLength, asphaltMat, GROUND.asphalt, 1);
+  groundSlab(-armCenter, armCenter, armLength, armLength, asphaltMat, GROUND.asphalt, 1);
+  groundSlab(armCenter, -armCenter, armLength, armLength, asphaltMat, GROUND.asphalt, 1);
+  groundSlab(-armCenter, -armCenter, armLength, armLength, asphaltMat, GROUND.asphalt, 1);
 
   const park = CITY_STREETS_PARK;
-  const turf = new THREE.Mesh(
-    new THREE.BoxGeometry(park.sx - 1, 0.05, park.sz - 1),
-    grassMat,
-  );
-  turf.position.set(park.cx, 0.035, park.cz);
-  turf.receiveShadow = true;
-  group.add(turf);
+  groundSlab(park.cx, park.cz, park.sx - 1, park.sz - 1, grassMat, GROUND.grass, 2);
 
-  const addSidewalk = (cx: number, cz: number, sx: number, sz: number) => {
-    const walk = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.05, sz), sidewalkMat);
-    walk.position.set(cx, 0.045, cz);
-    group.add(walk);
+  const addSidewalkRun = (cx: number, cz: number, sx: number, sz: number) => {
+    groundSlab(cx, cz, sx, sz, sidewalkMat, GROUND.sidewalk, 3);
   };
 
-  for (const side of [-1, 1] as const) {
-    addSidewalk(side * (CITY_STREETS_ROAD_HALF + 1.75), 0, 2.8, CITY_STREETS_HALF * 2 - 4);
-    addSidewalk(0, side * (CITY_STREETS_ROAD_HALF + 1.75), CITY_STREETS_HALF * 2 - 4, 2.8);
-  }
+  addSidewalkRun(-sidewalkOffset, armCenter, sidewalkWidth, armLength);
+  addSidewalkRun(-sidewalkOffset, -armCenter, sidewalkWidth, armLength);
+  addSidewalkRun(sidewalkOffset, armCenter, sidewalkWidth, armLength);
+  addSidewalkRun(sidewalkOffset, -armCenter, sidewalkWidth, armLength);
+  addSidewalkRun(armCenter, sidewalkOffset, armLength, sidewalkWidth);
+  addSidewalkRun(-armCenter, sidewalkOffset, armLength, sidewalkWidth);
+  addSidewalkRun(armCenter, -sidewalkOffset, armLength, sidewalkWidth);
+  addSidewalkRun(-armCenter, -sidewalkOffset, armLength, sidewalkWidth);
 
-  for (const z of [-24, -12, 0, 12, 24] as const) {
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.03, 8), laneMat);
-    stripe.position.set(0, 0.07, z);
-    group.add(stripe);
+  for (const z of [-24, -12, 12, 24] as const) {
+    groundSlab(0, z, 0.35, 8, laneMat, GROUND.marking, 4);
   }
-  for (const x of [-24, -12, 0, 12, 24] as const) {
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(8, 0.03, 0.35), laneMat);
-    stripe.position.set(x, 0.07, 0);
-    group.add(stripe);
+  for (const x of [-24, -12, 12, 24] as const) {
+    groundSlab(x, 0, 8, 0.35, laneMat, GROUND.marking, 4);
   }
 
   for (const z of [-1.4, 0, 1.4] as const) {
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(roadHalf * 2 + 0.4, 0.04, 0.9), whiteMat);
-    stripe.position.set(0, 0.08, z);
-    group.add(stripe);
+    groundSlab(0, z, roadWidth + 0.2, 0.9, whiteMat, GROUND.marking, 4);
   }
   for (const x of [-1.4, 0, 1.4] as const) {
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.04, roadHalf * 2 + 0.4), whiteMat);
-    stripe.position.set(x, 0.08, 0);
-    group.add(stripe);
+    groundSlab(x, 0, 0.9, roadWidth + 0.2, whiteMat, GROUND.marking, 4);
   }
 
   const addCar = (
@@ -645,7 +669,10 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
     roundId === "city-streets-01" ? 16 : layout.halfExtent >= 24 ? 12 : 9,
   );
   floorTex.repeat.set(layout.halfExtent / 2, layout.halfExtent / 2);
-  const floorMat = flatTexMat(floorTex);
+  const floorMat =
+    roundId === "city-streets-01"
+      ? flatMat(0x3a4048)
+      : flatTexMat(floorTex);
   const wallMat = flatMat(theme.wallColor);
   const ceilingMat = flatMat(theme.ceilingColor);
 

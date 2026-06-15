@@ -14,8 +14,8 @@ Open-air downtown duel — boulevard, cross street, skyscrapers, a park, and str
 
 | Player | Position | Facing |
 |---|---|---|
-| A (north) | `(0, 1, -29)` | South (+Z) |
-| B (south) | `(0, 1, 29)` | North (-Z) |
+| A (north-west) | `(-19, 1, -30)` | South (+Z) |
+| B (south-east) | `(19, 1, 30)` | North (-Z) |
 
 ## Layout zones
 
