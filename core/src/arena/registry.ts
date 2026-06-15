@@ -1,3 +1,4 @@
+import { CITY_STREETS_LAYOUT, CITY_STREETS_SOLID_BOXES } from "./city-streets-layout.js";
 import { CORN_MAZE_LAYOUT, CORN_MAZE_SOLID_BOXES } from "./corn-maze-layout.js";
 import {
   FREIGHT_DEPOT_LAYOUT,
@@ -40,6 +41,10 @@ const ARENAS: Record<string, ArenaDefinition> = {
   "corn-maze-01": {
     layout: CORN_MAZE_LAYOUT,
     solids: CORN_MAZE_SOLID_BOXES,
+  },
+  "city-streets-01": {
+    layout: CITY_STREETS_LAYOUT,
+    solids: CITY_STREETS_SOLID_BOXES,
   },
 };
 

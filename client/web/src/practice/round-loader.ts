@@ -8,6 +8,7 @@ const roundModules: Record<string, () => Promise<unknown>> = {
   "rooftop-01": () => import("../../../../data/rounds/rooftop-01.json"),
   "duct-network-01": () => import("../../../../data/rounds/duct-network-01.json"),
   "corn-maze-01": () => import("../../../../data/rounds/corn-maze-01.json"),
+  "city-streets-01": () => import("../../../../data/rounds/city-streets-01.json"),
 };
 
 export async function loadRoundDefinition(roundId: string): Promise<RoundDefinition> {

@@ -96,6 +96,14 @@ export const SHOP_ARENA_PASSES: ShopItem[] = [
     price: 500,
     arenaId: "corn-maze-01",
   },
+  {
+    id: "pass-city-streets",
+    type: "arena_pass",
+    name: "Urban Streets Pass",
+    description: "Unlock hosting on Urban Streets early.",
+    price: 650,
+    arenaId: "city-streets-01",
+  },
 ];
 
 export const SHOP_ITEMS: ShopItem[] = [...SHOP_SKINS, ...SHOP_ARENA_PASSES];

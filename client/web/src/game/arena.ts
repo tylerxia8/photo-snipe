@@ -111,6 +111,18 @@ const THEMES: Record<string, ArenaTheme> = {
     accentColor: 0xe67e22,
     openAir: true,
   },
+  "city-streets-01": {
+    skyColor: 0x8aa4c8,
+    fogColor: 0xb8c4d4,
+    floorLight: "#4a4f58",
+    floorDark: "#353940",
+    wallColor: 0x6b7280,
+    wallTrim: 0x4b5563,
+    ceilingColor: 0x9ca3af,
+    propColors: [0x374151, 0x4b5563, 0x6b7280, 0x1f2937, 0x9ca3af],
+    accentColor: 0xf97316,
+    openAir: true,
+  },
 };
 
 function flatMat(color: number): THREE.MeshLambertMaterial {
@@ -321,6 +333,59 @@ function addRooftopDecor(group: THREE.Group, theme: ArenaTheme): void {
   group.add(markH);
 }
 
+function addCityStreetsDecor(group: THREE.Group, theme: ArenaTheme): void {
+  const crosswalkMat = flatMat(0xe5e7eb);
+  for (const z of [-1.2, 0, 1.2] as const) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.04, 0.9), crosswalkMat);
+    stripe.position.set(0, 0.05, z);
+    group.add(stripe);
+  }
+  for (const x of [-1.2, 0, 1.2] as const) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.04, 6.2), crosswalkMat);
+    stripe.position.set(x, 0.05, 0);
+    group.add(stripe);
+  }
+
+  const laneMat = flatMat(theme.accentColor);
+  for (const z of [-17, 17] as const) {
+    const lane = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.03, 4), laneMat);
+    lane.position.set(0, 0.04, z);
+    group.add(lane);
+  }
+
+  const neonMat = new THREE.MeshLambertMaterial({
+    color: theme.accentColor,
+    emissive: theme.accentColor,
+    emissiveIntensity: 0.35,
+  });
+  for (const [x, z] of [
+    [-14, -14],
+    [14, -14],
+    [-14, 14],
+    [14, 14],
+  ] as const) {
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.5, 0.12), neonMat);
+    sign.position.set(x, 6.5, z + (z < 0 ? 5.4 : -5.4));
+    group.add(sign);
+  }
+
+  const lampMat = new THREE.MeshLambertMaterial({
+    color: 0xffe8a3,
+    emissive: 0xffb347,
+    emissiveIntensity: 0.4,
+  });
+  for (const [x, z] of [
+    [0, -8],
+    [0, 8],
+    [-8, 0],
+    [8, 0],
+  ] as const) {
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.15, 0.5), lampMat);
+    lamp.position.set(x, 3.65, z);
+    group.add(lamp);
+  }
+}
+
 function addCornMazeDecor(group: THREE.Group, theme: ArenaTheme): void {
   const spawnMarker = (x: number, z: number, color: number) => {
     const pumpkin = new THREE.Mesh(
@@ -455,6 +520,8 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
     addDuctDecor(group, theme);
   } else if (roundId === "corn-maze-01") {
     addCornMazeDecor(group, theme);
+  } else if (roundId === "city-streets-01") {
+    addCityStreetsDecor(group, theme);
   }
 
   const floorCollider = new THREE.Box3(
@@ -481,8 +548,8 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
   const standColliders = [floorCollider, ...propColliders];
   const inner = layout.halfExtent - layout.wallThickness * 0.5 - PLAYER_RADIUS - 0.01;
   const maxY = theme.openAir ? 10 : layout.wallHeight - PLAYER_HEIGHT;
-  const fogNear = roundId === "duct-network-01" ? 8 : roundId === "corn-maze-01" ? 30 : 45;
-  const fogFar = roundId === "duct-network-01" ? 55 : roundId === "corn-maze-01" ? 80 : 95;
+  const fogNear = roundId === "duct-network-01" ? 8 : roundId === "corn-maze-01" ? 30 : roundId === "city-streets-01" ? 35 : 45;
+  const fogFar = roundId === "duct-network-01" ? 55 : roundId === "corn-maze-01" ? 80 : roundId === "city-streets-01" ? 88 : 95;
 
   return {
     group,
