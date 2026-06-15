@@ -1,12 +1,12 @@
 # Urban Streets (city-streets-01)
 
-Open-air downtown duel — a grid of avenues, corner towers, and street-level cover.
+Open-air downtown duel — boulevard, cross street, skyscrapers, a park, and street-level life.
 
 ## Dimensions
 
 | Property | Value |
 |---|---|
-| Footprint | 40m × 40m |
+| Footprint | 64m × 64m |
 | Curb height | 1.2m |
 | Floor Y | 0 |
 
@@ -14,29 +14,29 @@ Open-air downtown duel — a grid of avenues, corner towers, and street-level co
 
 | Player | Position | Facing |
 |---|---|---|
-| A (north) | `(0, 1, -17)` | South (+Z) |
-| B (south) | `(0, 1, 17)` | North (-Z) |
+| A (north) | `(0, 1, -29)` | South (+Z) |
+| B (south) | `(0, 1, 29)` | North (-Z) |
 
 ## Layout zones
 
 ```
 [North curb]  ← Player A spawn
-  Corner towers (NE/NW)
-  Alley mid-rises + parked cars
-  ═══ Main avenue (x = 0) ═══
-  Central intersection + bus shelters
-  Cross street (z = 0)
-  Alley flanks + dumpsters
-  Corner towers (SE/SW)
+  NW park (trees, benches, fountain)
+  NE financial towers
+  ═══ Main boulevard (10m) ═══
+  Central intersection + crosswalks
+  Cross street + yellow taxi
+  Hot dog carts + parked cars on curbs
+  SW / SE mid-rise blocks + skyscrapers
 [South curb]  ← Player B spawn
 ```
 
 ## Gameplay intent
 
-- **Street grid** creates lanes, alleys, and a contested center intersection.
-- **Corner towers** block long angles and force mid-block flanks.
-- **Cars, kiosks, and shelters** provide low cover without a full indoor maze.
-- **Open sky** keeps sight lines readable at medium range.
+- **Readable city grid** with asphalt roads, sidewalks, and green park space.
+- **Skyscrapers** block long angles; alleys and side streets enable flanks.
+- **Street cover** — parked cars, vendor carts, shelters, and newsstands.
+- **Open sky** with light urban haze for medium-range duels on a larger map.
 
 ## Data & code
 

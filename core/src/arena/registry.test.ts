@@ -73,7 +73,7 @@ describe("arena registry", () => {
   it("returns city streets layout metadata", () => {
     const layout = getArenaLayout("city-streets-01");
     expect(layout.name).toBe("Urban Streets");
-    expect(layout.halfExtent).toBe(20);
+    expect(layout.halfExtent).toBe(32);
   });
 
   it("provides photo occluders per arena", () => {

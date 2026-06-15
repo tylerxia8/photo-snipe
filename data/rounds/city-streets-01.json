@@ -7,18 +7,18 @@
   },
   "spawns": {
     "playerA": {
-      "position": [0.0, 1.0, -17.0],
+      "position": [0.0, 1.0, -29.0],
       "rotation": [0, 0, 0]
     },
     "playerB": {
-      "position": [0.0, 1.0, 17.0],
+      "position": [0.0, 1.0, 29.0],
       "rotation": [0, 180, 0]
     }
   },
   "rules": {
     "roundTimeLimitSec": 300,
     "photoCooldownSec": 2.0,
-    "maxPhotoDistance": 55.0,
+    "maxPhotoDistance": 70.0,
     "minPhotoDistance": 1.0,
     "requireAimMode": false,
     "requireBodyInFrame": true,

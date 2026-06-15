@@ -1,6 +1,15 @@
 import * as THREE from "three";
 import {
   getArenaDefinition,
+  CITY_STREETS_BUILDINGS,
+  CITY_STREETS_HALF,
+  CITY_STREETS_PARK,
+  CITY_STREETS_PARKED_CARS,
+  CITY_STREETS_ROAD_HALF,
+  CITY_STREETS_SPAWN_A,
+  CITY_STREETS_SPAWN_B,
+  CITY_STREETS_TAXI,
+  CITY_STREETS_VENDORS,
   type ArenaLayoutConfig,
   type ArenaSolidBox,
 } from "@photo-snipe/core";
@@ -112,15 +121,15 @@ const THEMES: Record<string, ArenaTheme> = {
     openAir: true,
   },
   "city-streets-01": {
-    skyColor: 0x8aa4c8,
-    fogColor: 0xb8c4d4,
-    floorLight: "#4a4f58",
-    floorDark: "#353940",
-    wallColor: 0x6b7280,
-    wallTrim: 0x4b5563,
-    ceilingColor: 0x9ca3af,
-    propColors: [0x374151, 0x4b5563, 0x6b7280, 0x1f2937, 0x9ca3af],
-    accentColor: 0xf97316,
+    skyColor: 0x7da8d8,
+    fogColor: 0xa8b8c8,
+    floorLight: "#3d4249",
+    floorDark: "#2b3036",
+    wallColor: 0x5c6370,
+    wallTrim: 0x3f4650,
+    ceilingColor: 0xb8c4d0,
+    propColors: [0xc0392b, 0x2980b9, 0x2c3e50, 0x7f8c8d, 0x34495e],
+    accentColor: 0xf1c40f,
     openAir: true,
   },
 };
@@ -203,6 +212,7 @@ function materialForSolid(
   wallMat: THREE.Material,
   ceilingMat: THREE.Material,
   propIndex: number,
+  roundId: string,
 ): THREE.Material {
   if (solid.category === "floor") {
     return floorMat;
@@ -212,6 +222,20 @@ function materialForSolid(
   }
   if (solid.category === "wall") {
     return wallMat;
+  }
+  if (roundId === "city-streets-01") {
+    if (solid.sy >= 14) {
+      return flatMat(0x7f8fa6);
+    }
+    if (solid.sy >= 10) {
+      return flatMat(0x6b7280);
+    }
+    if (solid.sy >= 2.5) {
+      return flatMat(0x4a7c59);
+    }
+    if (solid.sy >= 1.4 && solid.sx >= 1.2 && solid.sz >= 1) {
+      return flatMat(theme.propColors[propIndex % theme.propColors.length]!);
+    }
   }
   return flatMat(theme.propColors[propIndex % theme.propColors.length]!);
 }
@@ -334,56 +358,201 @@ function addRooftopDecor(group: THREE.Group, theme: ArenaTheme): void {
 }
 
 function addCityStreetsDecor(group: THREE.Group, theme: ArenaTheme): void {
-  const crosswalkMat = flatMat(0xe5e7eb);
-  for (const z of [-1.2, 0, 1.2] as const) {
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.04, 0.9), crosswalkMat);
-    stripe.position.set(0, 0.05, z);
-    group.add(stripe);
-  }
-  for (const x of [-1.2, 0, 1.2] as const) {
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.04, 6.2), crosswalkMat);
-    stripe.position.set(x, 0.05, 0);
-    group.add(stripe);
-  }
-
+  const asphaltMat = flatMat(0x2f343a);
+  const sidewalkMat = flatMat(0x9aa0a8);
+  const grassMat = flatMat(0x4f8f46);
   const laneMat = flatMat(theme.accentColor);
-  for (const z of [-17, 17] as const) {
-    const lane = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.03, 4), laneMat);
-    lane.position.set(0, 0.04, z);
-    group.add(lane);
+  const whiteMat = flatMat(0xf5f5f5);
+  const roadHalf = CITY_STREETS_ROAD_HALF;
+
+  const roadSlab = (cx: number, cz: number, sx: number, sz: number) => {
+    const road = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.06, sz), asphaltMat);
+    road.position.set(cx, 0.04, cz);
+    road.receiveShadow = true;
+    group.add(road);
+  };
+
+  roadSlab(0, 0, roadHalf * 2 + 1, CITY_STREETS_HALF * 2 - 2);
+  roadSlab(0, 0, CITY_STREETS_HALF * 2 - 2, roadHalf * 2 + 1);
+
+  const park = CITY_STREETS_PARK;
+  const turf = new THREE.Mesh(
+    new THREE.BoxGeometry(park.sx - 1, 0.05, park.sz - 1),
+    grassMat,
+  );
+  turf.position.set(park.cx, 0.035, park.cz);
+  turf.receiveShadow = true;
+  group.add(turf);
+
+  const addSidewalk = (cx: number, cz: number, sx: number, sz: number) => {
+    const walk = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.05, sz), sidewalkMat);
+    walk.position.set(cx, 0.045, cz);
+    group.add(walk);
+  };
+
+  for (const side of [-1, 1] as const) {
+    addSidewalk(side * (CITY_STREETS_ROAD_HALF + 1.75), 0, 2.8, CITY_STREETS_HALF * 2 - 4);
+    addSidewalk(0, side * (CITY_STREETS_ROAD_HALF + 1.75), CITY_STREETS_HALF * 2 - 4, 2.8);
   }
 
+  for (const z of [-24, -12, 0, 12, 24] as const) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.03, 8), laneMat);
+    stripe.position.set(0, 0.07, z);
+    group.add(stripe);
+  }
+  for (const x of [-24, -12, 0, 12, 24] as const) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(8, 0.03, 0.35), laneMat);
+    stripe.position.set(x, 0.07, 0);
+    group.add(stripe);
+  }
+
+  for (const z of [-1.4, 0, 1.4] as const) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(roadHalf * 2 + 0.4, 0.04, 0.9), whiteMat);
+    stripe.position.set(0, 0.08, z);
+    group.add(stripe);
+  }
+  for (const x of [-1.4, 0, 1.4] as const) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.04, roadHalf * 2 + 0.4), whiteMat);
+    stripe.position.set(x, 0.08, 0);
+    group.add(stripe);
+  }
+
+  const addCar = (
+    x: number,
+    z: number,
+    alongZ: boolean,
+    bodyColor: number,
+    cabinColor = 0x1f2937,
+  ) => {
+    const car = new THREE.Group();
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(alongZ ? 1.9 : 4.2, 0.72, alongZ ? 4.2 : 1.9),
+      flatMat(bodyColor),
+    );
+    body.position.y = 0.55;
+    car.add(body);
+    const cabin = new THREE.Mesh(
+      new THREE.BoxGeometry(alongZ ? 1.55 : 2.3, 0.55, alongZ ? 2.3 : 1.55),
+      flatMat(cabinColor),
+    );
+    cabin.position.set(0, 0.98, alongZ ? -0.35 : 0);
+    car.add(cabin);
+    for (const [ox, oz] of [
+      [-0.75, -1.45],
+      [0.75, -1.45],
+      [-0.75, 1.45],
+      [0.75, 1.45],
+    ] as const) {
+      const wheel = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), flatMat(0x111111));
+      wheel.position.set(alongZ ? ox : oz, 0.25, alongZ ? oz : ox);
+      car.add(wheel);
+    }
+    car.position.set(x, 0, z);
+    if (!alongZ) {
+      car.rotation.y = Math.PI / 2;
+    }
+    group.add(car);
+  };
+
+  const carColors = [0xbdc3c7, 0x2c3e50, 0x922b21, 0x1f618d, 0x566573];
+  CITY_STREETS_PARKED_CARS.forEach(([cx, cz, sx, , sz], index) => {
+    const alongZ = sx < sz;
+    addCar(cx, cz, alongZ, carColors[index % carColors.length]!);
+  });
+
+  addCar(CITY_STREETS_TAXI.cx, CITY_STREETS_TAXI.cz, false, 0xf1c40f, 0x2c3e50);
+  const taxiSign = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.18, 0.9), flatMat(0x2c3e50));
+  taxiSign.position.set(CITY_STREETS_TAXI.cx, 1.35, CITY_STREETS_TAXI.cz);
+  group.add(taxiSign);
+
+  const addHotDogCart = (x: number, z: number) => {
+    const cart = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 0.8), flatMat(0x7f8c8d));
+    base.position.y = 0.55;
+    cart.add(base);
+    const umbrella = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 1.8), flatMat(0xe74c3c));
+    umbrella.position.y = 1.55;
+    cart.add(umbrella);
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.06, 0.35), flatMat(0xffffff));
+    stripe.position.set(0, 1.62, 0);
+    cart.add(stripe);
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.35, 0.08), flatMat(theme.accentColor));
+    sign.position.set(0, 1.05, 0.46);
+    cart.add(sign);
+    cart.position.set(x, 0, z);
+    group.add(cart);
+  };
+
+  for (const [x, , z] of CITY_STREETS_VENDORS.slice(0, 4)) {
+    addHotDogCart(x, z);
+  }
+
+  const addTree = (x: number, z: number) => {
+    const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.4, 0.45), flatMat(0x6b4423));
+    trunk.position.set(x, 0.7, z);
+    group.add(trunk);
+    const foliage = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.2, 2.2), flatMat(0x3d8b37));
+    foliage.position.set(x, 2.35, z);
+    group.add(foliage);
+  };
+
+  for (const [x, z] of [
+    [-26, -24],
+    [-18, -26],
+    [-28, -18],
+    [-16, -20],
+    [-24, -16],
+  ] as const) {
+    addTree(x, z);
+  }
+
+  const fountain = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.55, 2.8), flatMat(0x95a5a6));
+  fountain.position.set(-24, 0.35, -24);
+  group.add(fountain);
+  const water = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 0.08, 1.8),
+    new THREE.MeshLambertMaterial({ color: 0x5dade2, emissive: 0x3498db, emissiveIntensity: 0.25 }),
+  );
+  water.position.set(-24, 0.62, -24);
+  group.add(water);
+
+  const windowMat = flatMat(0xbfd7ea);
   const neonMat = new THREE.MeshLambertMaterial({
     color: theme.accentColor,
     emissive: theme.accentColor,
     emissiveIntensity: 0.35,
   });
-  for (const [x, z] of [
-    [-14, -14],
-    [14, -14],
-    [-14, 14],
-    [14, 14],
-  ] as const) {
-    const sign = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.5, 0.12), neonMat);
-    sign.position.set(x, 6.5, z + (z < 0 ? 5.4 : -5.4));
-    group.add(sign);
+
+  for (const [cx, cz, sx, sy, sz] of CITY_STREETS_BUILDINGS) {
+    const faceTowardCenterX = cx > 0 ? -1 : 1;
+    const faceTowardCenterZ = cz > 0 ? -1 : 1;
+    const useXFace = Math.abs(cx) >= Math.abs(cz);
+    const rows = Math.max(3, Math.floor(sy / 2.4));
+    for (let row = 0; row < rows; row++) {
+      const pane = new THREE.Mesh(
+        new THREE.BoxGeometry(useXFace ? 0.08 : sx * 0.65, 0.55, useXFace ? sz * 0.65 : 0.08),
+        row % 3 === 0 ? windowMat : flatMat(0x596673),
+      );
+      pane.position.set(
+        useXFace ? cx + faceTowardCenterX * (sx * 0.5 + 0.06) : cx,
+        1.2 + row * 2.1,
+        useXFace ? cz : cz + faceTowardCenterZ * (sz * 0.5 + 0.06),
+      );
+      group.add(pane);
+    }
+    if (sy >= 16) {
+      const crown = new THREE.Mesh(new THREE.BoxGeometry(sx * 0.35, 0.35, sz * 0.35), neonMat);
+      crown.position.set(cx, sy - 0.4, cz);
+      group.add(crown);
+    }
   }
 
-  const lampMat = new THREE.MeshLambertMaterial({
-    color: 0xffe8a3,
-    emissive: 0xffb347,
-    emissiveIntensity: 0.4,
-  });
-  for (const [x, z] of [
-    [0, -8],
-    [0, 8],
-    [-8, 0],
-    [8, 0],
-  ] as const) {
-    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.15, 0.5), lampMat);
-    lamp.position.set(x, 3.65, z);
-    group.add(lamp);
-  }
+  const spawnPad = (x: number, z: number, color: number) => {
+    addBox(group, new THREE.Vector3(x, 0.02, z), new THREE.Vector3(3.4, 0.04, 3.4), flatMat(color), []);
+    addBox(group, new THREE.Vector3(x, 0.06, z), new THREE.Vector3(2.4, 0.02, 2.4), flatMat(0xffffff), []);
+  };
+  spawnPad(CITY_STREETS_SPAWN_A.x, CITY_STREETS_SPAWN_A.z, 0x3498db);
+  spawnPad(CITY_STREETS_SPAWN_B.x, CITY_STREETS_SPAWN_B.z, 0xe74c3c);
 }
 
 function addCornMazeDecor(group: THREE.Group, theme: ArenaTheme): void {
@@ -470,7 +639,11 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
   let ceilingBox: THREE.Box3 | null = null;
   let propIndex = 0;
 
-  const floorTex = createGridTexture(theme.floorLight, theme.floorDark, layout.halfExtent >= 24 ? 12 : 9);
+  const floorTex = createGridTexture(
+    theme.floorLight,
+    theme.floorDark,
+    roundId === "city-streets-01" ? 16 : layout.halfExtent >= 24 ? 12 : 9,
+  );
   floorTex.repeat.set(layout.halfExtent / 2, layout.halfExtent / 2);
   const floorMat = flatTexMat(floorTex);
   const wallMat = flatMat(theme.wallColor);
@@ -486,7 +659,7 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
 
     const pos = new THREE.Vector3(solid.cx, solid.cy, solid.cz);
     const size = new THREE.Vector3(solid.sx, solid.sy, solid.sz);
-    const mat = materialForSolid(solid, theme, floorMat, wallMat, ceilingMat, propIndex);
+    const mat = materialForSolid(solid, theme, floorMat, wallMat, ceilingMat, propIndex, roundId);
     if (solid.category === "prop") {
       propIndex += 1;
     }
@@ -548,8 +721,8 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
   const standColliders = [floorCollider, ...propColliders];
   const inner = layout.halfExtent - layout.wallThickness * 0.5 - PLAYER_RADIUS - 0.01;
   const maxY = theme.openAir ? 10 : layout.wallHeight - PLAYER_HEIGHT;
-  const fogNear = roundId === "duct-network-01" ? 8 : roundId === "corn-maze-01" ? 30 : roundId === "city-streets-01" ? 35 : 45;
-  const fogFar = roundId === "duct-network-01" ? 55 : roundId === "corn-maze-01" ? 80 : roundId === "city-streets-01" ? 88 : 95;
+  const fogNear = roundId === "duct-network-01" ? 8 : roundId === "corn-maze-01" ? 30 : roundId === "city-streets-01" ? 42 : 45;
+  const fogFar = roundId === "duct-network-01" ? 55 : roundId === "corn-maze-01" ? 80 : roundId === "city-streets-01" ? 118 : 95;
 
   return {
     group,
