@@ -239,7 +239,7 @@ function addIndustrialDecor(
     }
   }
 
-  for (const [x, z] of [[-11, -3], [-8, 6], [8, 6], [-8, -6]] as const) {
+  for (const [x, z] of [[8, -6], [-8, 6], [8, 6], [-8, -6]] as const) {
     const cap = new THREE.Mesh(
       new THREE.BoxGeometry(1.2, 0.15, 1.2),
       flatMat(theme.accentColor),
