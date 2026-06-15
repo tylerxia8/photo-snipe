@@ -96,4 +96,16 @@ export class NetClient {
   returnToMenu(): void {
     this.send({ type: "return_to_menu" });
   }
+
+  setPresence(displayName: string): void {
+    this.send({ type: "set_presence", displayName });
+  }
+
+  getPresence(names: string[]): void {
+    this.send({ type: "get_presence", names });
+  }
+
+  sendFriendInvite(targetName: string): void {
+    this.send({ type: "send_friend_invite", targetName });
+  }
 }

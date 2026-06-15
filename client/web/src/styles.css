@@ -312,6 +312,17 @@ canvas {
   background: rgba(0, 0, 0, 0.22);
 }
 
+.friend-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.friend-invite {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.72rem;
+}
+
 .friend-meta {
   display: flex;
   flex-direction: column;
@@ -337,6 +348,18 @@ canvas {
 
 .friend-presence.offline {
   color: #7a8799;
+}
+
+.friend-presence.menu {
+  color: #6dffd2;
+}
+
+.friend-presence.hosting {
+  color: #2196f3;
+}
+
+.friend-presence.in_match {
+  color: #ffb347;
 }
 
 .friend-remove {
@@ -390,6 +413,45 @@ canvas {
 
 .social-status {
   margin-top: 0.85rem;
+}
+
+.friend-invite-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(33, 150, 243, 0.45);
+  background: rgba(33, 150, 243, 0.12);
+}
+
+.friend-invite-banner.hidden {
+  display: none;
+}
+
+.friend-invite-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.friend-invite-copy strong {
+  color: #fff;
+  letter-spacing: 0.06em;
+}
+
+.friend-invite-copy span {
+  color: #9aa8ba;
+  font-size: 0.88rem;
+}
+
+.friend-invite-actions {
+  display: flex;
+  gap: 0.55rem;
+  flex-shrink: 0;
 }
 
 .kr-menu-header h2 {

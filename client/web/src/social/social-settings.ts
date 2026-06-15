@@ -4,14 +4,24 @@ import {
   removeFriend,
   subscribeFriends,
 } from "./friends.js";
+import {
+  getFriendPresence,
+  presenceLabel,
+  subscribePresence,
+} from "./presence.js";
 
 export interface SocialSettingsOptions {
   getRoomCode: () => string;
+  canSendInvite: () => boolean;
   onGoToPlay: () => void;
+  onInviteFriend: (name: string) => void;
+  refreshPresence: () => void;
 }
 
 export interface SocialSettingsHandle {
   refreshInviteCode: () => void;
+  refreshFriends: () => void;
+  setStatus: (text: string) => void;
 }
 
 export function initSocialSettings(options: SocialSettingsOptions): SocialSettingsHandle {
@@ -36,6 +46,7 @@ export function initSocialSettings(options: SocialSettingsOptions): SocialSettin
 
   function renderFriends(): void {
     const friends = getFriends();
+    const canInvite = options.canSendInvite();
     listEl.replaceChildren();
     emptyEl.classList.toggle("hidden", friends.length > 0);
 
@@ -51,10 +62,30 @@ export function initSocialSettings(options: SocialSettingsOptions): SocialSettin
       name.textContent = friend.name;
 
       const presence = document.createElement("span");
-      presence.className = "friend-presence offline";
-      presence.textContent = "Offline";
+      const online = getFriendPresence(friend.name);
+      if (online) {
+        presence.className = `friend-presence ${online.status}`;
+        presence.textContent = presenceLabel(online.status);
+      } else {
+        presence.className = "friend-presence offline";
+        presence.textContent = "Offline";
+      }
 
       meta.append(name, presence);
+
+      const actions = document.createElement("div");
+      actions.className = "friend-actions";
+
+      if (online && canInvite) {
+        const inviteBtn = document.createElement("button");
+        inviteBtn.type = "button";
+        inviteBtn.className = "btn btn-primary friend-invite";
+        inviteBtn.textContent = "INVITE";
+        inviteBtn.addEventListener("click", () => {
+          options.onInviteFriend(friend.name);
+        });
+        actions.append(inviteBtn);
+      }
 
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
@@ -63,9 +94,11 @@ export function initSocialSettings(options: SocialSettingsOptions): SocialSettin
       removeBtn.addEventListener("click", () => {
         removeFriend(friend.id);
         setStatus(`Removed ${friend.name}.`);
+        options.refreshPresence();
       });
 
-      row.append(meta, removeBtn);
+      actions.append(removeBtn);
+      row.append(meta, actions);
       listEl.append(row);
     }
   }
@@ -78,6 +111,7 @@ export function initSocialSettings(options: SocialSettingsOptions): SocialSettin
     }
     addInput.value = "";
     setStatus("Operator added to your friends list.");
+    options.refreshPresence();
   }
 
   addBtn.addEventListener("click", submitAddFriend);
@@ -109,11 +143,17 @@ export function initSocialSettings(options: SocialSettingsOptions): SocialSettin
     setStatus("Host a match, then share your room code.");
   });
 
-  subscribeFriends(renderFriends);
+  subscribeFriends(() => {
+    renderFriends();
+    options.refreshPresence();
+  });
+  subscribePresence(renderFriends);
   renderFriends();
   refreshInviteCode();
 
   return {
     refreshInviteCode,
+    refreshFriends: renderFriends,
+    setStatus,
   };
 }

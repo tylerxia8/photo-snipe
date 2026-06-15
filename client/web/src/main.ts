@@ -12,6 +12,8 @@ import {
   setRoundId,
 } from "./settings/arena-settings.js";
 import { initSocialSettings, type SocialSettingsHandle } from "./social/social-settings.js";
+import { getFriends } from "./social/friends.js";
+import { applyPresenceSnapshot, type FriendPresence } from "./social/presence.js";
 
 const lobby = document.getElementById("lobby")!;
 const hud = document.getElementById("hud")!;
@@ -43,11 +45,19 @@ const navSettings = document.querySelector('[data-nav="settings"]')!;
 const navSocial = document.querySelector('[data-nav="social"]')!;
 const arenaSelect = document.getElementById("arena-select") as HTMLSelectElement;
 const arenaPreviewName = document.getElementById("arena-preview-name")!;
+const friendInviteBanner = document.getElementById("friend-invite-banner")!;
+const friendInviteFrom = document.getElementById("friend-invite-from")!;
+const friendInviteDetail = document.getElementById("friend-invite-detail")!;
+const friendInviteJoin = document.getElementById("friend-invite-join") as HTMLButtonElement;
+const friendInviteDismiss = document.getElementById("friend-invite-dismiss") as HTMLButtonElement;
 
 const mount = document.getElementById("app")!;
 const net = new NetClient();
 let game: Game | null = null;
 let waitingForOpponent = false;
+let presencePollTimer: ReturnType<typeof setInterval> | null = null;
+let presenceDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingFriendInvite: { roomCode: string } | null = null;
 
 function setStatus(text: string): void {
   statusEl.textContent = text;
@@ -118,6 +128,55 @@ function updateControlsHint(): void {
 
 type LobbyTab = "play" | "settings" | "social";
 
+function syncPresence(): void {
+  net.setPresence(displayName());
+}
+
+function refreshSocialPresence(): void {
+  const names = getFriends().map((friend) => friend.name);
+  if (names.length > 0) {
+    net.getPresence(names);
+  }
+}
+
+function startPresencePolling(): void {
+  stopPresencePolling();
+  refreshSocialPresence();
+  presencePollTimer = setInterval(refreshSocialPresence, 10_000);
+}
+
+function stopPresencePolling(): void {
+  if (presencePollTimer) {
+    clearInterval(presencePollTimer);
+    presencePollTimer = null;
+  }
+}
+
+function canSendInvite(): boolean {
+  return waitingForOpponent && roomInput.value.trim().length === 4;
+}
+
+function hideFriendInvite(): void {
+  friendInviteBanner.classList.add("hidden");
+  pendingFriendInvite = null;
+}
+
+function showFriendInvite(fromName: string, roomCode: string, arenaName: string): void {
+  const code = roomCode.trim().toUpperCase();
+  if (code.length !== 4) {
+    return;
+  }
+
+  pendingFriendInvite = { roomCode: code };
+  friendInviteFrom.textContent = `${fromName} invited you`;
+  friendInviteDetail.textContent = `${arenaName} · room ${code}`;
+  friendInviteBanner.classList.remove("hidden");
+
+  if (!lobby.classList.contains("hidden")) {
+    setStatus(`${fromName} invited you to a match.`);
+  }
+}
+
 function setLobbyTab(tab: LobbyTab): void {
   playPanel.classList.toggle("hidden", tab !== "play");
   settingsPanel.classList.toggle("hidden", tab !== "settings");
@@ -131,6 +190,10 @@ function setLobbyTab(tab: LobbyTab): void {
   if (tab === "social") {
     socialPanel.scrollTop = 0;
     socialSettings.refreshInviteCode();
+    socialSettings.refreshFriends();
+    startPresencePolling();
+  } else {
+    stopPresencePolling();
   }
 }
 
@@ -170,6 +233,10 @@ function showLobby(): void {
   setArenaSelectEnabled(true);
   arenaSelect.value = getRoundId();
   updateArenaPreview();
+  socialSettings.refreshFriends();
+  if (pendingFriendInvite) {
+    friendInviteBanner.classList.remove("hidden");
+  }
 }
 
 function hidePostMatch(): void {
@@ -260,12 +327,32 @@ function updateRematchStatus(msg: ServerMessage): void {
 
 const socialSettings: SocialSettingsHandle = initSocialSettings({
   getRoomCode: () => roomInput.value,
+  canSendInvite: () => canSendInvite(),
   onGoToPlay: () => setLobbyTab("play"),
+  onInviteFriend: (name) => net.sendFriendInvite(name),
+  refreshPresence: refreshSocialPresence,
 });
 
 net.onStatus = setStatus;
 net.onMessage = (msg: ServerMessage) => {
   switch (msg.type) {
+    case "connected":
+      syncPresence();
+      refreshSocialPresence();
+      break;
+    case "presence_snapshot":
+      applyPresenceSnapshot((msg.entries as FriendPresence[] | undefined) ?? []);
+      break;
+    case "friend_invite":
+      showFriendInvite(
+        String(msg.fromName ?? "Friend"),
+        String(msg.roomCode ?? ""),
+        String(msg.arenaName ?? "Unknown arena"),
+      );
+      break;
+    case "friend_invite_sent":
+      socialSettings.setStatus(`Invite sent to ${String(msg.targetName)}.`);
+      break;
     case "room_created": {
       const arenaName = String(msg.selectedRoundName ?? getRoundName());
       const code = String(msg.roomCode ?? "").toUpperCase();
@@ -275,6 +362,7 @@ net.onMessage = (msg: ServerMessage) => {
         roomInput.value = code;
       }
       socialSettings.refreshInviteCode();
+      socialSettings.refreshFriends();
       setStatus(`Room created on ${arenaName}! Code: ${code} — waiting for opponent…`);
       break;
     }
@@ -349,9 +437,20 @@ net.onMessage = (msg: ServerMessage) => {
     case "returned_to_menu":
       showLobby();
       break;
-    case "error":
-      setStatus(`${String(msg.code)}: ${String(msg.message)}`);
+    case "error": {
+      const code = String(msg.code);
+      const message = String(msg.message);
+      setStatus(`${code}: ${message}`);
+      if (
+        code === "not_hosting" ||
+        code === "friend_offline" ||
+        code === "room_not_joinable" ||
+        code === "invalid_target"
+      ) {
+        socialSettings.setStatus(message);
+      }
       break;
+    }
   }
 };
 
@@ -378,6 +477,28 @@ rematchBtn.addEventListener("click", () => {
 menuBtn.addEventListener("click", () => {
   net.returnToMenu();
   showLobby();
+});
+
+friendInviteJoin.addEventListener("click", () => {
+  if (!pendingFriendInvite) {
+    return;
+  }
+  roomInput.value = pendingFriendInvite.roomCode;
+  hideFriendInvite();
+  setLobbyTab("play");
+  net.joinRoom(pendingFriendInvite.roomCode, displayName(), getSkinId());
+});
+
+friendInviteDismiss.addEventListener("click", hideFriendInvite);
+
+nameInput.addEventListener("input", () => {
+  if (presenceDebounceTimer) {
+    clearTimeout(presenceDebounceTimer);
+  }
+  presenceDebounceTimer = setTimeout(() => {
+    syncPresence();
+    refreshSocialPresence();
+  }, 400);
 });
 
 let last = performance.now();

@@ -6,6 +6,10 @@ import { LobbyManager, type LobbyPlayer } from "./lobby.js";
 import { MatchSession } from "./match-session.js";
 import { RematchManager } from "./rematch.js";
 import { serveWebClient, webClientAvailable } from "./static.js";
+import {
+  PresenceRegistry,
+  type PresenceStatus,
+} from "./social-presence.js";
 import type { PlayerSlot } from "@photo-snipe/core";
 import { getArenaLayout, sanitizeRoundId, sanitizeSkinId } from "@photo-snipe/core";
 
@@ -21,6 +25,7 @@ interface ClientContext {
 
 const lobby = new LobbyManager();
 const rematch = new RematchManager();
+const presence = new PresenceRegistry();
 const clients = new WeakMap<WebSocket, ClientContext>();
 
 function opponentSlot(slot: PlayerSlot): PlayerSlot {
@@ -138,6 +143,14 @@ async function startMatch(
   });
 
   match.start();
+  const ctxAForPresence = clients.get(playerA.socket);
+  const ctxBForPresence = clients.get(playerB.socket);
+  if (ctxAForPresence) {
+    updateConnectedPresence(ctxAForPresence, playerA.socket);
+  }
+  if (ctxBForPresence) {
+    updateConnectedPresence(ctxBForPresence, playerB.socket);
+  }
   return match;
 }
 
@@ -159,6 +172,45 @@ function send(socket: WebSocket, payload: Record<string, unknown>): void {
   if (socket.readyState === socket.OPEN) {
     socket.send(JSON.stringify(payload));
   }
+}
+
+function resolvePresenceStatus(
+  ctx: ClientContext,
+  room?: ReturnType<LobbyManager["getRoom"]>,
+): PresenceStatus {
+  if (ctx.match) {
+    return "in_match";
+  }
+  if (ctx.roomCode && ctx.slot === "A" && room && room.players.A && !room.players.B) {
+    return "hosting";
+  }
+  if (ctx.roomCode) {
+    return "in_match";
+  }
+  return "menu";
+}
+
+function syncClientPresence(
+  socket: WebSocket,
+  ctx: ClientContext,
+  displayName: string,
+): void {
+  const room = ctx.roomCode ? lobby.getRoom(ctx.roomCode) : undefined;
+  const status = resolvePresenceStatus(ctx, room);
+  presence.register(ctx.clientId, socket, displayName, status, ctx.roomCode);
+}
+
+function updateConnectedPresence(ctx: ClientContext, socket: WebSocket): void {
+  const existing = presence.get(ctx.clientId);
+  if (!existing) {
+    return;
+  }
+  const room = ctx.roomCode ? lobby.getRoom(ctx.roomCode) : undefined;
+  presence.updateStatus(
+    ctx.clientId,
+    resolvePresenceStatus(ctx, room),
+    ctx.roomCode,
+  );
 }
 
 function parseMessage(raw: Buffer | ArrayBuffer | Buffer[]): Record<string, unknown> | null {
@@ -233,6 +285,7 @@ wss.on("connection", (socket) => {
     }
 
     lobby.removePlayer(ctx.clientId);
+    presence.remove(ctx.clientId);
   });
 });
 
@@ -267,6 +320,7 @@ async function handleMessage(
       );
       ctx.roomCode = room.code;
       ctx.slot = "A";
+      syncClientPresence(socket, ctx, displayName);
       send(socket, {
         type: "room_created",
         roomCode: room.code,
@@ -297,6 +351,7 @@ async function handleMessage(
 
       ctx.roomCode = joined.room.code;
       ctx.slot = joined.slot;
+      syncClientPresence(socket, ctx, displayName);
 
       send(socket, {
         type: "room_joined",
@@ -353,7 +408,89 @@ async function handleMessage(
         sendRematchStatus(ctx.roomCode);
       }
       ctx.match = undefined;
+      ctx.roomCode = undefined;
+      ctx.slot = undefined;
+      const existing = presence.get(ctx.clientId);
+      if (existing) {
+        presence.updateStatus(ctx.clientId, "menu");
+      }
       send(socket, { type: "returned_to_menu" });
+      break;
+    }
+
+    case "set_presence": {
+      const displayName =
+        typeof message.displayName === "string" ? message.displayName : "Player";
+      syncClientPresence(socket, ctx, displayName);
+      send(socket, {
+        type: "presence_registered",
+        displayName: displayName.trim() || "Player",
+      });
+      break;
+    }
+
+    case "get_presence": {
+      const names = Array.isArray(message.names)
+        ? message.names.filter((name): name is string => typeof name === "string")
+        : [];
+      send(socket, {
+        type: "presence_snapshot",
+        entries: presence.getPresenceForNames(names),
+      });
+      break;
+    }
+
+    case "send_friend_invite": {
+      const targetName =
+        typeof message.targetName === "string" ? message.targetName : "";
+      if (!targetName.trim()) {
+        send(socket, {
+          type: "error",
+          code: "invalid_target",
+          message: "Enter a friend name to invite",
+        });
+        break;
+      }
+      if (!ctx.roomCode || ctx.slot !== "A") {
+        send(socket, {
+          type: "error",
+          code: "not_hosting",
+          message: "Host a room before inviting friends",
+        });
+        break;
+      }
+
+      const room = lobby.getRoom(ctx.roomCode);
+      if (!room || room.players.B) {
+        send(socket, {
+          type: "error",
+          code: "room_not_joinable",
+          message: "Your room is no longer waiting for an opponent",
+        });
+        break;
+      }
+
+      const host = presence.get(ctx.clientId);
+      const target = presence.findByName(targetName);
+      if (!target) {
+        send(socket, {
+          type: "error",
+          code: "friend_offline",
+          message: `${targetName.trim()} is not online`,
+        });
+        break;
+      }
+
+      send(target.socket, {
+        type: "friend_invite",
+        fromName: host?.displayName ?? "Friend",
+        roomCode: ctx.roomCode,
+        arenaName: getArenaLayout(room.selectedRoundId).name,
+      });
+      send(socket, {
+        type: "friend_invite_sent",
+        targetName: target.displayName,
+      });
       break;
     }
 
