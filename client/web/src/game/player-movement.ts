@@ -374,6 +374,11 @@ function clipVertical(
         continue;
       }
       const top = surface.max.y;
+      // Only land on surfaces at or below where this move started — prevents
+      // snapping up onto tall prop tops when the feet center clips their footprint.
+      if (top > feet.y + ON_TOP_EPS) {
+        continue;
+      }
       if (y > top + ON_TOP_EPS) {
         continue;
       }
