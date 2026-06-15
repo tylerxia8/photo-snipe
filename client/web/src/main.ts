@@ -25,7 +25,7 @@ import {
 import { initSocialSettings, type SocialSettingsHandle } from "./social/social-settings.js";
 import { getFriends } from "./social/friends.js";
 import { applyPresenceSnapshot, type FriendPresence } from "./social/presence.js";
-import { parseMatchReplay, playMatchReplay } from "./replay/replay-player.js";
+import { normalizeMatchReplay, parseMatchReplay, playMatchReplay } from "./replay/replay-player.js";
 
 const lobby = document.getElementById("lobby")!;
 const hud = document.getElementById("hud")!;
@@ -380,7 +380,7 @@ async function handleMatchEnded(msg: ServerMessage): Promise<void> {
     replayPlaying = true;
     hud.classList.remove("hidden");
     lobby.classList.add("hidden");
-    await playMatchReplay(replay, game, replayOverlayApi, hudApi());
+    await playMatchReplay(normalizeMatchReplay(replay), game, replayOverlayApi, hudApi());
     replayPlaying = false;
   }
 

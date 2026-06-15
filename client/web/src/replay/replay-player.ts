@@ -22,7 +22,7 @@ export function playMatchReplay(
 ): Promise<void> {
   return new Promise((resolve) => {
     overlay.show(replay.winnerName);
-    hud.setMessage(`Kill cam — ${replay.winnerName}`);
+    hud.setMessage(`Kill cam — ${replay.winnerName}'s winning snap`);
     game.enterReplay(replay);
 
     const totalDurationMs = replay.snapAtMs + HOLD_AFTER_SNAP_MS;
@@ -75,4 +75,15 @@ export function parseMatchReplay(value: unknown): MatchReplay | null {
   }
 
   return replay as MatchReplay;
+}
+
+export function normalizeMatchReplay(replay: MatchReplay): MatchReplay {
+  return {
+    ...replay,
+    frames: replay.frames.map((frame) => ({
+      ...frame,
+      win: frame.win ?? [frame.cam[0], frame.cam[1] - 0.6, frame.cam[2]],
+      winRot: frame.winRot ?? frame.camRot,
+    })),
+  };
 }

@@ -44,6 +44,7 @@ describe("buildWinReplay", () => {
     expect(replay!.frames.length).toBeGreaterThan(1);
     expect(replay!.snapAtMs).toBe(replay!.frames[replay!.frames.length - 1].t);
     expect(replay!.frames[replay!.frames.length - 1].cam).toEqual([2, 2.2, -4]);
-    expect(replay!.frames[0].cam[1]).toBeCloseTo(1.6, 5);
+    expect(replay!.frames[replay!.frames.length - 1].win[1]).toBeCloseTo(1.6, 5);
+    expect(replay!.frames[0].win[1]).toBeCloseTo(1, 5);
   });
 });

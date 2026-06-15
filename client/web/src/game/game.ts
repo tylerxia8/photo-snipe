@@ -11,6 +11,7 @@ import { movePlayer, type FeetPos, type WorldColliders } from "./player-movement
 import { createBlockyPlayer, type MinecraftPlayerRig } from "./blocky-player.js";
 import { getSkin, sanitizeSkinId, type MatchReplay, type ReplayFrame } from "@photo-snipe/core";
 import { getControlsHint, getKeybinds, mouseButtonToCode, onKeybindsChange } from "../settings/keybinds.js";
+import { applyThirdPersonWinnerReplayCamera } from "../replay/replay-camera.js";
 
 const WALK_SPEED = 3;
 const JUMP_VELOCITY = 8;
@@ -24,6 +25,7 @@ export class Game {
   readonly camera = new THREE.PerspectiveCamera(75, 1, 0.1, 200);
   readonly renderer = new THREE.WebGLRenderer({ antialias: true });
   readonly opponent = new THREE.Group();
+  readonly replayWinner = new THREE.Group();
 
   private controls: PointerLockControls | null = null;
   private worldColliders: WorldColliders | null = null;
@@ -44,6 +46,7 @@ export class Game {
   private lastPhotoAttemptMs = 0;
   private photoCooldownReady = true;
   private opponentRig: MinecraftPlayerRig;
+  private replayWinnerRig: MinecraftPlayerRig;
   private opponentPrevPos = new THREE.Vector3();
   private opponentTargetPos = new THREE.Vector3();
   private opponentTargetYaw = 0;
@@ -95,6 +98,11 @@ export class Game {
     this.opponentRig = createBlockyPlayer(defaultSkin.shirtColor, defaultSkin.pantsColor);
     this.opponent.add(this.opponentRig.root);
     this.scene.add(this.opponent);
+
+    this.replayWinnerRig = createBlockyPlayer(defaultSkin.shirtColor, defaultSkin.pantsColor);
+    this.replayWinner.add(this.replayWinnerRig.root);
+    this.replayWinner.visible = false;
+    this.scene.add(this.replayWinner);
 
     this.controls = new PointerLockControls(this.camera, this.renderer.domElement);
     this.scene.add(this.controls.getObject());
@@ -220,6 +228,7 @@ export class Game {
       this.loadArena(roundId);
     }
     this.active = true;
+    this.replayWinner.visible = false;
     this.hud.setRoundName(roundName);
     this.hud.setMessage(getControlsHint());
 
@@ -286,21 +295,38 @@ export class Game {
       this.loadArena(replay.roundId);
     }
 
+    const winnerSkin = getSkin(sanitizeSkinId(replay.winnerSkinId));
+    this.replayWinnerRig.setColors(winnerSkin.shirtColor, winnerSkin.pantsColor);
     this.setOpponentSkin(replay.loserSkinId);
+    this.replayWinner.visible = true;
+    this.opponent.visible = true;
     this.camera.fov = replay.fovDeg;
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
   }
 
   applyReplayFrame(frame: ReplayFrame): void {
-    const pitch = THREE.MathUtils.degToRad(frame.camRot[0]);
-    const yaw = THREE.MathUtils.degToRad(frame.camRot[1]);
-    this.camera.position.set(frame.cam[0], frame.cam[1], frame.cam[2]);
-    this.camera.rotation.set(pitch, yaw, 0, "YXZ");
+    const winFeet = frame.win ?? [
+      frame.cam[0],
+      frame.cam[1] - EYE_OFFSET,
+      frame.cam[2],
+    ];
+    const winRot = frame.winRot ?? frame.camRot;
+
+    this.replayWinner.position.set(winFeet[0], winFeet[1], winFeet[2]);
+    this.replayWinner.rotation.y = THREE.MathUtils.degToRad(winRot[1]);
+    this.replayWinnerRig.setPose({ walkPhase: 0, airborne: false });
 
     this.opponent.position.set(frame.opp[0], frame.opp[1], frame.opp[2]);
     this.opponent.rotation.y = THREE.MathUtils.degToRad(frame.oppRot[1]);
     this.opponentRig.setPose({ walkPhase: 0, airborne: false });
+
+    applyThirdPersonWinnerReplayCamera(
+      this.camera,
+      winFeet,
+      winRot,
+      frame.opp,
+    );
   }
 
   renderReplay(): void {
@@ -309,6 +335,7 @@ export class Game {
 
   exitReplay(): void {
     this.replayMode = false;
+    this.replayWinner.visible = false;
   }
 
   updateOpponent(position: number[], rotation: number[]): void {

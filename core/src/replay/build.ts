@@ -100,12 +100,23 @@ export function buildWinReplay(options: {
     }
 
     const useWinCamera = timestampMs === winTimestampMs;
+    const winRot = useWinCamera ? options.winCameraRotation : winnerSample.rotation;
+    const winFeet = useWinCamera
+      ? ([
+          options.winCameraPosition[0],
+          options.winCameraPosition[1] - REPLAY_EYE_OFFSET,
+          options.winCameraPosition[2],
+        ] as [number, number, number])
+      : winnerSample.position;
+
     frames.push({
       t: timestampMs - startMs,
       cam: useWinCamera
         ? options.winCameraPosition
         : feetToCamera(winnerSample.position),
-      camRot: useWinCamera ? options.winCameraRotation : winnerSample.rotation,
+      camRot: winRot,
+      win: winFeet,
+      winRot,
       opp: loserSample.position,
       oppRot: loserSample.rotation,
     });
@@ -127,6 +138,11 @@ export function buildWinReplay(options: {
     snapAtMs,
     frames,
   };
+}
+
+function lerpAngleDeg(a: number, b: number, alpha: number): number {
+  const delta = ((b - a + 540) % 360) - 180;
+  return a + delta * alpha;
 }
 
 export function interpolateReplayFrame(
@@ -161,8 +177,18 @@ export function interpolateReplayFrame(
         ],
         camRot: [
           current.camRot[0] + (next.camRot[0] - current.camRot[0]) * alpha,
-          current.camRot[1] + (next.camRot[1] - current.camRot[1]) * alpha,
+          lerpAngleDeg(current.camRot[1], next.camRot[1], alpha),
           current.camRot[2] + (next.camRot[2] - current.camRot[2]) * alpha,
+        ],
+        win: [
+          current.win[0] + (next.win[0] - current.win[0]) * alpha,
+          current.win[1] + (next.win[1] - current.win[1]) * alpha,
+          current.win[2] + (next.win[2] - current.win[2]) * alpha,
+        ],
+        winRot: [
+          current.winRot[0] + (next.winRot[0] - current.winRot[0]) * alpha,
+          lerpAngleDeg(current.winRot[1], next.winRot[1], alpha),
+          current.winRot[2] + (next.winRot[2] - current.winRot[2]) * alpha,
         ],
         opp: [
           current.opp[0] + (next.opp[0] - current.opp[0]) * alpha,
@@ -171,7 +197,7 @@ export function interpolateReplayFrame(
         ],
         oppRot: [
           current.oppRot[0] + (next.oppRot[0] - current.oppRot[0]) * alpha,
-          current.oppRot[1] + (next.oppRot[1] - current.oppRot[1]) * alpha,
+          lerpAngleDeg(current.oppRot[1], next.oppRot[1], alpha),
           current.oppRot[2] + (next.oppRot[2] - current.oppRot[2]) * alpha,
         ],
       };
