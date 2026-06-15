@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { boxToAabb } from "./solid-box.js";
 import {
+  CITY_STREETS_BUILDINGS,
   CITY_STREETS_PARK,
+  CITY_STREETS_PARK_TREES,
   CITY_STREETS_ROAD_HALF,
   CITY_STREETS_HALF,
   CITY_STREETS_SPAWN_A,
@@ -61,5 +63,27 @@ describe("city streets layout", () => {
   it("uses collider-only volumes for decor props like cars and park trees", () => {
     const decorColliders = CITY_STREETS_SOLID_BOXES.filter((solid) => solid.decorMesh === false);
     expect(decorColliders.length).toBeGreaterThan(25);
+  });
+
+  it("keeps park trees out of building footprints", () => {
+    const buildings = CITY_STREETS_BUILDINGS.map(([cx, cz, sx, , sz]) => {
+      return {
+        minX: cx - sx / 2,
+        maxX: cx + sx / 2,
+        minZ: cz - sz / 2,
+        maxZ: cz + sz / 2,
+      };
+    });
+
+    for (const [x, z] of CITY_STREETS_PARK_TREES) {
+      const treeRadius = 1.1;
+      for (const building of buildings) {
+        const xOverlap =
+          x + treeRadius > building.minX && x - treeRadius < building.maxX;
+        const zOverlap =
+          z + treeRadius > building.minZ && z - treeRadius < building.maxZ;
+        expect(xOverlap && zOverlap).toBe(false);
+      }
+    }
   });
 });

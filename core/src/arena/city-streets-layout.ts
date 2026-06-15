@@ -68,37 +68,42 @@ export const CITY_STREETS_BUILDINGS: Array<[number, number, number, number, numb
   [14, 24, 10, 15, 9],
 ];
 
+const park = CITY_STREETS_PARK;
+
 for (const [cx, cz, sx, sy, sz] of CITY_STREETS_BUILDINGS) {
   pushBuilding(CITY_STREETS_SOLID_BOXES, cx, cz, sx, sy, sz);
 }
 
-/** Park perimeter fence — tall enough to block players, with overlapping corners. */
-const park = CITY_STREETS_PARK;
-for (const [cx, cz, sx, sz] of [
-  [park.cx, park.cz - park.sz * 0.5 + 0.2, park.sx + 0.4, 0.4],
-  [park.cx, park.cz + park.sz * 0.5 - 0.2, park.sx + 0.4, 0.4],
-  [park.cx - park.sx * 0.5 + 0.2, park.cz, 0.4, park.sz + 0.4],
-  [park.cx + park.sx * 0.5 - 0.2, park.cz, 0.4, park.sz + 0.4],
-] as const) {
-  CITY_STREETS_SOLID_BOXES.push(
-    colliderBox(cx, FENCE_H * 0.5, cz, sx, FENCE_H, sz, true),
-  );
-}
+/** Park trees — kept west of adjacent mid-rise blocks. */
+export const CITY_STREETS_PARK_TREES = [
+  [-27, -26],
+  [-29, -28],
+  [-24, -24],
+  [-27, -22],
+  [-25, -27],
+] as const;
 
-/** Park trees — colliders match the visible canopy width. */
-for (const [x, z] of [
-  [-26, -24],
-  [-18, -26],
-  [-28, -18],
-  [-16, -20],
-  [-24, -16],
-] as const) {
+for (const [x, z] of CITY_STREETS_PARK_TREES) {
   CITY_STREETS_SOLID_BOXES.push(colliderBox(x, 1.75, z, 2.2, 3.5, 2.2, true));
 }
 
 CITY_STREETS_SOLID_BOXES.push(colliderBox(-22, 0.65, -22, 3.2, 1.3, 1.2, true));
 CITY_STREETS_SOLID_BOXES.push(colliderBox(-19, 0.65, -19, 3.2, 1.3, 1.2, true));
 CITY_STREETS_SOLID_BOXES.push(colliderBox(-24, 0.85, -24, 2.8, 1.7, 2.8, true));
+
+/** Park fence — three sides plus a south gate; east side uses building walls. */
+export const CITY_STREETS_FENCE_SEGMENTS: Array<[number, number, number, number]> = [
+  [park.cx, park.cz - park.sz * 0.5 + 0.2, park.sx + 0.4, 0.4],
+  [park.cx - park.sx * 0.5 + 0.2, park.cz, 0.4, park.sz + 0.4],
+  [park.cx - 4, park.cz + park.sz * 0.5 - 0.2, 7, 0.4],
+  [park.cx + 4.5, park.cz + park.sz * 0.5 - 0.2, 6, 0.4],
+];
+
+for (const [cx, cz, sx, sz] of CITY_STREETS_FENCE_SEGMENTS) {
+  CITY_STREETS_SOLID_BOXES.push(
+    colliderBox(cx, FENCE_H * 0.5, cz, sx, FENCE_H, sz, true),
+  );
+}
 
 /** Parked cars along curbs — [cx, cz, sx, sy, sz]. */
 export const CITY_STREETS_PARKED_CARS: Array<[number, number, number, number, number]> = [

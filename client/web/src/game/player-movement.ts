@@ -154,9 +154,6 @@ function resolveOnX(depth: { x: number; z: number }, hint: MoveHint): boolean {
   if (hint.dx !== 0 && hint.dz === 0) {
     return true;
   }
-  if (hint.dz !== 0 && hint.dx === 0) {
-    return false;
-  }
   return depth.x <= depth.z;
 }
 

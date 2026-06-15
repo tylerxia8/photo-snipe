@@ -5,6 +5,8 @@ import {
   CITY_STREETS_HALF,
   CITY_STREETS_PARK,
   CITY_STREETS_PARKED_CARS,
+  CITY_STREETS_FENCE_SEGMENTS,
+  CITY_STREETS_PARK_TREES,
   CITY_STREETS_ROAD_HALF,
   CITY_STREETS_SPAWN_A,
   CITY_STREETS_SPAWN_B,
@@ -526,23 +528,12 @@ function addCityStreetsDecor(group: THREE.Group, theme: ArenaTheme): void {
     group.add(foliage);
   };
 
-  for (const [x, z] of [
-    [-26, -24],
-    [-18, -26],
-    [-28, -18],
-    [-16, -20],
-    [-24, -16],
-  ] as const) {
+  for (const [x, z] of CITY_STREETS_PARK_TREES) {
     addTree(x, z);
   }
 
   const fenceMat = flatMat(0x5c6370);
-  for (const [cx, cz, sx, sz] of [
-    [park.cx, park.cz - park.sz * 0.5 + 0.2, park.sx + 0.4, 0.4],
-    [park.cx, park.cz + park.sz * 0.5 - 0.2, park.sx + 0.4, 0.4],
-    [park.cx - park.sx * 0.5 + 0.2, park.cz, 0.4, park.sz + 0.4],
-    [park.cx + park.sx * 0.5 - 0.2, park.cz, 0.4, park.sz + 0.4],
-  ] as const) {
+  for (const [cx, cz, sx, sz] of CITY_STREETS_FENCE_SEGMENTS) {
     const rail = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.08, sz), fenceMat);
     rail.position.set(cx, 1.05, cz);
     group.add(rail);
