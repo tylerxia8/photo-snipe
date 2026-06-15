@@ -21,6 +21,8 @@ import {
 } from "@photo-snipe/core";
 import { loadRound } from "./data-loader.js";
 import type { LobbyPlayer } from "./lobby.js";
+import { ReplayRecorder } from "./replay-recorder.js";
+import type { MatchReplay } from "@photo-snipe/core";
 
 interface LivePlayerState {
   position: [number, number, number];
@@ -59,6 +61,8 @@ export class MatchSession {
   private syncTimer: NodeJS.Timeout | null = null;
   private interRoundTimer: NodeJS.Timeout | null = null;
   private onMatchEnd?: MatchEndHandler;
+  private replayRecorder = new ReplayRecorder();
+  private lastWinReplay: MatchReplay | null = null;
 
   constructor(
     matchConfig: MatchConfig,
@@ -88,6 +92,8 @@ export class MatchSession {
 
     const round = await loadRound(roundId);
     this.state = startRound(this.state, round);
+    this.replayRecorder.reset();
+    this.lastWinReplay = null;
 
     for (const slot of ["A", "B"] as const) {
       const spawn = round.spawns[slot === "A" ? "playerA" : "playerB"];
@@ -155,6 +161,7 @@ export class MatchSession {
       rotation,
       aiming,
     };
+    this.replayRecorder.record(slot, position, rotation, Date.now());
   }
 
   handlePhotoAttempt(
@@ -239,6 +246,18 @@ export class MatchSession {
     });
 
     if (result.valid) {
+      this.lastWinReplay = this.replayRecorder.buildWinReplay({
+        roundId: this.state.currentRound.id,
+        winnerSlot: slot,
+        winnerName: this.players[slot].displayName,
+        winnerSkinId: this.players[slot].skinId,
+        loserSkinId: this.players[opponent].skinId,
+        winCameraPosition: cameraPosition,
+        winCameraRotation: cameraRotation,
+        fovDeg,
+        aspectRatio,
+        winTimestampMs: timestampMs,
+      });
       this.finishRound("valid_capture", slot);
     }
   }
@@ -266,6 +285,8 @@ export class MatchSession {
           didWin: slot === winner,
           scores: this.state.scores,
           reason,
+          roundId: this.state.currentRound?.id,
+          replay: this.lastWinReplay,
         });
       }
       this.onMatchEnd?.(this.players);

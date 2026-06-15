@@ -9,7 +9,7 @@ import {
 } from "./arena.js";
 import { movePlayer, type FeetPos, type WorldColliders } from "./player-movement.js";
 import { createBlockyPlayer, type MinecraftPlayerRig } from "./blocky-player.js";
-import { getSkin, sanitizeSkinId } from "@photo-snipe/core";
+import { getSkin, sanitizeSkinId, type MatchReplay, type ReplayFrame } from "@photo-snipe/core";
 import { getControlsHint, getKeybinds, mouseButtonToCode, onKeybindsChange } from "../settings/keybinds.js";
 
 const WALK_SPEED = 3;
@@ -52,6 +52,7 @@ export class Game {
   private arenaGroup: THREE.Group | null = null;
   private arenaHalfExtent = 24;
   private currentRoundId = "warehouse-interior-01";
+  private replayMode = false;
 
   constructor(
     private transport: MatchTransport,
@@ -258,6 +259,7 @@ export class Game {
 
   endMatch(): void {
     this.active = false;
+    this.replayMode = false;
     this.clearInputState();
     this.hud.hideCrosshair();
 
@@ -267,6 +269,46 @@ export class Game {
     }
 
     document.exitPointerLock();
+  }
+
+  isReplayMode(): boolean {
+    return this.replayMode;
+  }
+
+  enterReplay(replay: MatchReplay): void {
+    this.replayMode = true;
+    this.active = false;
+    this.clearInputState();
+    this.hud.hideCrosshair();
+    document.exitPointerLock();
+
+    if (replay.roundId !== this.currentRoundId) {
+      this.loadArena(replay.roundId);
+    }
+
+    this.setOpponentSkin(replay.loserSkinId);
+    this.camera.fov = replay.fovDeg;
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.updateProjectionMatrix();
+  }
+
+  applyReplayFrame(frame: ReplayFrame): void {
+    const pitch = THREE.MathUtils.degToRad(frame.camRot[0]);
+    const yaw = THREE.MathUtils.degToRad(frame.camRot[1]);
+    this.camera.position.set(frame.cam[0], frame.cam[1], frame.cam[2]);
+    this.camera.rotation.set(pitch, yaw, 0, "YXZ");
+
+    this.opponent.position.set(frame.opp[0], frame.opp[1], frame.opp[2]);
+    this.opponent.rotation.y = THREE.MathUtils.degToRad(frame.oppRot[1]);
+    this.opponentRig.setPose({ walkPhase: 0, airborne: false });
+  }
+
+  renderReplay(): void {
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  exitReplay(): void {
+    this.replayMode = false;
   }
 
   updateOpponent(position: number[], rotation: number[]): void {
@@ -314,7 +356,9 @@ export class Game {
   }
 
   tick(delta: number): void {
-    if (!this.active) return;
+    if (this.replayMode || !this.active) {
+      return;
+    }
 
     this.updateMovement(delta);
     this.updateOpponentAnimation(delta);

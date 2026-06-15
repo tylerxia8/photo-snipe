@@ -624,6 +624,39 @@ canvas {
   margin-top: 0.85rem;
 }
 
+.replay-overlay {
+  position: fixed;
+  top: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.65rem 1.1rem;
+  border: 1px solid rgba(231, 76, 60, 0.55);
+  background: rgba(20, 20, 20, 0.82);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.replay-overlay.hidden {
+  display: none;
+}
+
+.replay-badge {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  color: #e74c3c;
+}
+
+.replay-winner {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  color: #fff;
+}
+
 .kr-menu-header h2 {
   font-size: 1.55rem;
   letter-spacing: 0.12em;

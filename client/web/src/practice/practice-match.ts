@@ -19,6 +19,8 @@ import {
 import type { MatchTransport } from "../game/match-transport.js";
 import type { Game } from "../game/game.js";
 import type { ServerMessage } from "../net/client.js";
+import { ReplayRecorder } from "../replay/recorder.js";
+import { getSkinId } from "../settings/appearance.js";
 import { PracticeBot, type LiveState } from "./practice-bot.js";
 import { loadRoundDefinition } from "./round-loader.js";
 
@@ -43,6 +45,8 @@ export class PracticeMatch implements MatchTransport {
     aiming: false,
   };
   private readonly bot = new PracticeBot();
+  private readonly replayRecorder = new ReplayRecorder();
+  private lastWinReplay: ReturnType<ReplayRecorder["buildWinReplay"]> = null;
   private active = false;
   private interRoundTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -106,7 +110,20 @@ export class PracticeMatch implements MatchTransport {
     }
 
     this.human = this.game.getHumanLiveState();
+    this.replayRecorder.record(
+      "A",
+      this.human.position,
+      this.human.rotation,
+      performance.now(),
+    );
     this.bot.tick(delta, this.human, world);
+    const botState = this.bot.getState();
+    this.replayRecorder.record(
+      "B",
+      botState.position,
+      botState.rotation,
+      performance.now(),
+    );
     this.game.updateOpponent(
       this.bot.getState().position,
       this.bot.getState().rotation,
@@ -129,6 +146,7 @@ export class PracticeMatch implements MatchTransport {
     _sequence: number,
   ): void {
     this.human = { position, rotation, aiming };
+    this.replayRecorder.record("A", position, rotation, performance.now());
   }
 
   sendPhotoAttempt(
@@ -191,6 +209,18 @@ export class PracticeMatch implements MatchTransport {
     });
 
     if (result.valid) {
+      this.lastWinReplay = this.replayRecorder.buildWinReplay({
+        roundId: this.round.id,
+        winnerSlot: "A",
+        winnerName: "You",
+        winnerSkinId: getSkinId(),
+        loserSkinId: "crimson",
+        winCameraPosition: cameraPosition,
+        winCameraRotation: cameraRotation,
+        fovDeg,
+        aspectRatio,
+        winTimestampMs: timestampMs,
+      });
       void this.finishRound("valid_capture", "A");
     }
   }
@@ -215,6 +245,26 @@ export class PracticeMatch implements MatchTransport {
     });
 
     if (result.valid) {
+      this.lastWinReplay = this.replayRecorder.buildWinReplay({
+        roundId: this.round.id,
+        winnerSlot: "B",
+        winnerName: "Training Bot",
+        winnerSkinId: "crimson",
+        loserSkinId: getSkinId(),
+        winCameraPosition: [
+          attempt.cameraPosition.x,
+          attempt.cameraPosition.y,
+          attempt.cameraPosition.z,
+        ],
+        winCameraRotation: [
+          attempt.cameraRotation.x,
+          attempt.cameraRotation.y,
+          attempt.cameraRotation.z,
+        ],
+        fovDeg: 75,
+        aspectRatio: 16 / 9,
+        winTimestampMs: attempt.timestampMs,
+      });
       void this.finishRound("valid_capture", "B");
     }
   }
@@ -232,6 +282,8 @@ export class PracticeMatch implements MatchTransport {
     this.round = await loadRoundDefinition(roundId);
     this.state = startRound(this.state, this.round);
     this.active = true;
+    this.replayRecorder.reset();
+    this.lastWinReplay = null;
 
     const spawn = this.round.spawns.playerA;
     const opponentSpawn = this.round.spawns.playerB;
@@ -289,6 +341,7 @@ export class PracticeMatch implements MatchTransport {
         reason,
         roundId: this.roundId,
         mode: "practice",
+        replay: this.lastWinReplay,
       });
       return;
     }

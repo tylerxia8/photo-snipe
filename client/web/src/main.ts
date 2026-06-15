@@ -25,6 +25,7 @@ import {
 import { initSocialSettings, type SocialSettingsHandle } from "./social/social-settings.js";
 import { getFriends } from "./social/friends.js";
 import { applyPresenceSnapshot, type FriendPresence } from "./social/presence.js";
+import { parseMatchReplay, playMatchReplay } from "./replay/replay-player.js";
 
 const lobby = document.getElementById("lobby")!;
 const hud = document.getElementById("hud")!;
@@ -63,6 +64,8 @@ const friendInviteFrom = document.getElementById("friend-invite-from")!;
 const friendInviteDetail = document.getElementById("friend-invite-detail")!;
 const friendInviteJoin = document.getElementById("friend-invite-join") as HTMLButtonElement;
 const friendInviteDismiss = document.getElementById("friend-invite-dismiss") as HTMLButtonElement;
+const replayOverlay = document.getElementById("replay-overlay")!;
+const replayWinnerEl = document.getElementById("replay-winner")!;
 
 const mount = document.getElementById("app")!;
 const net = new NetClient();
@@ -76,6 +79,17 @@ let waitingForOpponent = false;
 let presencePollTimer: ReturnType<typeof setInterval> | null = null;
 let presenceDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingFriendInvite: { roomCode: string } | null = null;
+let replayPlaying = false;
+
+const replayOverlayApi = {
+  show: (winnerName: string) => {
+    replayWinnerEl.textContent = winnerName;
+    replayOverlay.classList.remove("hidden");
+  },
+  hide: () => {
+    replayOverlay.classList.add("hidden");
+  },
+};
 
 function setStatus(text: string): void {
   statusEl.textContent = text;
@@ -288,6 +302,7 @@ function showLobby(): void {
   setArenaSelectEnabled(true);
   refreshArenaSelect();
   socialSettings.refreshFriends();
+  replayOverlayApi.hide();
   if (pendingFriendInvite) {
     friendInviteBanner.classList.remove("hidden");
   }
@@ -354,6 +369,22 @@ function showPostMatch(msg: ServerMessage): void {
   rematchBtn.textContent = mode === "practice" ? "PLAY AGAIN" : "REMATCH";
   postMatch.classList.remove("hidden");
   hudApi().setMessage("");
+}
+
+async function handleMatchEnded(msg: ServerMessage): Promise<void> {
+  game?.endMatch();
+
+  const replay = parseMatchReplay(msg.replay);
+  const reason = String(msg.reason ?? "");
+  if (replay && reason === "valid_capture" && game) {
+    replayPlaying = true;
+    hud.classList.remove("hidden");
+    lobby.classList.add("hidden");
+    await playMatchReplay(replay, game, replayOverlayApi, hudApi());
+    replayPlaying = false;
+  }
+
+  showPostMatch(msg);
 }
 
 function handleOpponentLeft(msg: ServerMessage): void {
@@ -544,8 +575,7 @@ function processServerMessage(msg: ServerMessage): void {
       }
       break;
     case "match_ended":
-      game?.endMatch();
-      showPostMatch(msg);
+      void handleMatchEnded(msg);
       break;
     case "opponent_left":
       handleOpponentLeft(msg);
@@ -645,8 +675,10 @@ let last = performance.now();
 function frame(now: number): void {
   const delta = Math.min((now - last) / 1000, 0.05);
   last = now;
-  practiceMatch?.tick(delta);
-  game?.tick(delta);
+  if (!replayPlaying) {
+    practiceMatch?.tick(delta);
+    game?.tick(delta);
+  }
   requestAnimationFrame(frame);
 }
 

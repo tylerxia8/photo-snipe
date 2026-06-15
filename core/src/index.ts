@@ -11,4 +11,6 @@ export * from "./arena/warehouse-interior.js";
 export * from "./photo-validation/validate.js";
 export * from "./photo-validation/occlusion.js";
 export * from "./match/state-machine.js";
+export * from "./replay/types.js";
+export * from "./replay/build.js";
 export * from "./skins.js";
