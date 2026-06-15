@@ -70,7 +70,7 @@
               <label class="field">
                 <span class="field-label">ARENA</span>
                 <select id="arena-select" class="field-select"></select>
-                <span class="field-hint">Host picks the map for the room.</span>
+                <span class="field-hint">Host picks the map for the room. Locked maps unlock as you win.</span>
               </label>
 
               <label class="field">
@@ -86,6 +86,35 @@
               <div class="actions">
                 <button id="create-btn" class="btn btn-primary" type="button">HOST MATCH</button>
                 <button id="join-btn" class="btn btn-secondary" type="button">JOIN MATCH</button>
+              </div>
+
+              <div class="settings-section play-progress-section">
+                <h3 class="settings-section-title">SOLO PRACTICE</h3>
+                <p class="settings-section-hint">
+                  Fight a training bot locally — no room code or second player required.
+                </p>
+                <button id="practice-btn" class="btn btn-secondary practice-btn" type="button">
+                  PRACTICE VS BOT
+                </button>
+              </div>
+
+              <div class="settings-section play-progress-section">
+                <h3 class="settings-section-title">OPERATOR LADDER</h3>
+                <div class="progress-rank-card">
+                  <div class="progress-rank-header">
+                    <span id="progress-rank-name" class="progress-rank-name">ROOKIE</span>
+                    <span id="progress-rank-meta" class="progress-rank-meta">0 wins</span>
+                  </div>
+                  <div class="progress-rank-track">
+                    <div id="progress-rank-bar" class="progress-rank-bar"></div>
+                  </div>
+                </div>
+                <p class="settings-section-hint">Win matches to rank up and unlock new arenas.</p>
+              </div>
+
+              <div class="settings-section play-progress-section">
+                <h3 class="settings-section-title">ARENA RECORDS</h3>
+                <div id="arena-leaderboard" class="arena-leaderboard"></div>
               </div>
 
               <p id="status" class="status">Connecting…</p>

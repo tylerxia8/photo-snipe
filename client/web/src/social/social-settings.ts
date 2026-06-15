@@ -105,7 +105,7 @@ export function initSocialSettings(options: SocialSettingsOptions): SocialSettin
 
   function submitAddFriend(): void {
     const result = addFriend(addInput.value);
-    if (!result.ok) {
+    if (result.ok === false) {
       setStatus(result.reason);
       return;
     }

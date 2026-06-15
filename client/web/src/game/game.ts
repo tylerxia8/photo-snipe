@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js";
-import type { NetClient } from "../net/client.js";
+import type { MatchTransport } from "./match-transport.js";
 import {
   buildArena,
   getHighestSurfaceBelow,
@@ -54,7 +54,7 @@ export class Game {
   private currentRoundId = "warehouse-interior-01";
 
   constructor(
-    private net: NetClient,
+    private transport: MatchTransport,
     private hud: {
       setMessage: (text: string) => void;
       setRoundName: (text: string) => void;
@@ -125,6 +125,45 @@ export class Game {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  getHumanLiveState(): {
+    position: [number, number, number];
+    rotation: [number, number, number];
+    aiming: boolean;
+  } {
+    const obj = this.controls?.getObject();
+    if (!obj || !this.active) {
+      return {
+        position: [0, this.defaultFeetY, 0],
+        rotation: [0, 0, 0],
+        aiming: false,
+      };
+    }
+
+    return {
+      position: [obj.position.x, obj.position.y - EYE_OFFSET, obj.position.z],
+      rotation: this.getCameraRotationDeg(),
+      aiming: false,
+    };
+  }
+
+  getPhysicsWorld(): {
+    colliders: WorldColliders;
+    standSurfaces: StandSurface[];
+    defaultFeetY: number;
+    arenaHalfExtent: number;
+  } | null {
+    if (!this.worldColliders) {
+      return null;
+    }
+
+    return {
+      colliders: this.worldColliders,
+      standSurfaces: this.standSurfaces,
+      defaultFeetY: this.defaultFeetY,
+      arenaHalfExtent: this.arenaHalfExtent,
+    };
   }
 
   setOpponentSkin(skinId: unknown): void {
@@ -289,7 +328,7 @@ export class Game {
       this.stateTimer = 0;
       this.sequence += 1;
       const obj = this.controls!.getObject();
-      this.net.sendPlayerState(
+      this.transport.sendPlayerState(
         [obj.position.x, obj.position.y - EYE_OFFSET, obj.position.z],
         this.getCameraRotationDeg(),
         false,
@@ -443,7 +482,7 @@ export class Game {
     this.photoCooldownReady = false;
     this.hud.setPhotoCooldown(1);
 
-    this.net.sendPhotoAttempt(
+    this.transport.sendPhotoAttempt(
       [this.camera.position.x, this.camera.position.y, this.camera.position.z],
       this.getCameraRotationDeg(),
       this.camera.fov,

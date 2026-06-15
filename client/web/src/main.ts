@@ -1,6 +1,14 @@
 import { Game } from "./game/game.js";
+import { TransportRouter } from "./game/match-transport.js";
 import { NetClient } from "./net/client.js";
 import type { ServerMessage } from "./net/client.js";
+import { PracticeMatch } from "./practice/practice-match.js";
+import { initProgressionUi } from "./progression/progression-ui.js";
+import {
+  getProgressionState,
+  getRank,
+  recordMatchResult,
+} from "./progression/stats.js";
 import { getControlsHint } from "./settings/keybinds.js";
 import { initKeybindSettings } from "./settings/keybind-settings.js";
 import { getSkinId } from "./settings/appearance.js";
@@ -9,6 +17,7 @@ import {
   getArenaChoices,
   getRoundId,
   getRoundName,
+  isArenaUnlocked,
   setRoundId,
 } from "./settings/arena-settings.js";
 import { initSocialSettings, type SocialSettingsHandle } from "./social/social-settings.js";
@@ -53,7 +62,12 @@ const friendInviteDismiss = document.getElementById("friend-invite-dismiss") as 
 
 const mount = document.getElementById("app")!;
 const net = new NetClient();
+const transportRouter = new TransportRouter();
+transportRouter.current = net;
 let game: Game | null = null;
+let practiceMatch: PracticeMatch | null = null;
+let inPractice = false;
+let currentMatchRoundId = getRoundId();
 let waitingForOpponent = false;
 let presencePollTimer: ReturnType<typeof setInterval> | null = null;
 let presenceDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -205,22 +219,49 @@ function setArenaSelectEnabled(enabled: boolean): void {
   arenaSelect.disabled = !enabled;
 }
 
-function initArenaSelect(): void {
+function populateArenaSelect(): void {
   arenaSelect.replaceChildren();
   for (const arena of getArenaChoices()) {
     const option = document.createElement("option");
     option.value = arena.id;
-    option.textContent = arena.name;
+    const unlocked = isArenaUnlocked(arena.id);
+    option.textContent = unlocked ? arena.name : `${arena.name} (locked)`;
+    option.disabled = !unlocked;
     arenaSelect.append(option);
+  }
+
+  if (!isArenaUnlocked(getRoundId())) {
+    const firstUnlocked = getArenaChoices().find((arena) => isArenaUnlocked(arena.id));
+    if (firstUnlocked) {
+      setRoundId(firstUnlocked.id);
+    }
   }
 
   arenaSelect.value = getRoundId();
   updateArenaPreview();
+}
 
+function initArenaSelect(): void {
+  populateArenaSelect();
   arenaSelect.addEventListener("change", () => {
+    if (!isArenaUnlocked(arenaSelect.value)) {
+      arenaSelect.value = getRoundId();
+      setStatus("Win more matches to unlock that arena.");
+      return;
+    }
     setRoundId(arenaSelect.value);
     updateArenaPreview();
   });
+}
+
+function refreshArenaSelect(): void {
+  const selected = getRoundId();
+  populateArenaSelect();
+  if (isArenaUnlocked(selected)) {
+    setRoundId(selected);
+    arenaSelect.value = selected;
+    updateArenaPreview(selected);
+  }
 }
 
 function showLobby(): void {
@@ -230,9 +271,12 @@ function showLobby(): void {
   resetRematchUi();
   setLobbyTab("play");
   waitingForOpponent = false;
+  inPractice = false;
+  practiceMatch?.stop();
+  practiceMatch = null;
+  transportRouter.current = net;
   setArenaSelectEnabled(true);
-  arenaSelect.value = getRoundId();
-  updateArenaPreview();
+  refreshArenaSelect();
   socialSettings.refreshFriends();
   if (pendingFriendInvite) {
     friendInviteBanner.classList.remove("hidden");
@@ -250,23 +294,48 @@ function resetRematchUi(): void {
   rematchHint.textContent = "";
 }
 
+let progressionUi: { refresh: () => void };
+
 function showPostMatch(msg: ServerMessage): void {
   const didWin = Boolean(msg.didWin);
   const winnerName = String(msg.winnerName ?? "Unknown");
   const forfeit = msg.reason === "forfeit";
+  const mode = String(msg.mode ?? (inPractice ? "practice" : "online"));
+  const roundId = String(msg.roundId ?? currentMatchRoundId);
+  const winsBefore = getProgressionState().totalWins;
+  const rankBefore = getRank(winsBefore);
+
+  recordMatchResult({
+    mode: mode === "practice" ? "practice" : "online",
+    didWin,
+    roundId,
+  });
+  progressionUi.refresh();
+  refreshArenaSelect();
+
+  const rankAfter = getRank(getProgressionState().totalWins);
 
   postMatchTitle.textContent = didWin ? "Victory" : "Defeat";
   if (forfeit && didWin) {
     postMatchSubtitle.textContent = "Opponent left — you win!";
   } else if (forfeit) {
     postMatchSubtitle.textContent = "You left the match.";
+  } else if (didWin && rankAfter.id !== rankBefore.id) {
+    postMatchSubtitle.textContent = `Promoted to ${rankAfter.name}!`;
+  } else if (didWin) {
+    postMatchSubtitle.textContent =
+      mode === "practice"
+        ? `Training bot down. Rank: ${rankAfter.name}.`
+        : "You win!";
   } else {
-    postMatchSubtitle.textContent = didWin
-      ? "You win!"
-      : `${winnerName} wins!`;
+    postMatchSubtitle.textContent =
+      mode === "practice"
+        ? `${winnerName} wins. Try again to climb the ladder.`
+        : `${winnerName} wins!`;
   }
 
   resetRematchUi();
+  rematchBtn.textContent = mode === "practice" ? "PLAY AGAIN" : "REMATCH";
   postMatch.classList.remove("hidden");
   hudApi().setMessage("");
 }
@@ -333,8 +402,40 @@ const socialSettings: SocialSettingsHandle = initSocialSettings({
   refreshPresence: refreshSocialPresence,
 });
 
-net.onStatus = setStatus;
-net.onMessage = (msg: ServerMessage) => {
+function ensureGame(): Game {
+  if (!game) {
+    game = new Game(transportRouter, hudApi(), mount);
+  }
+  return game;
+}
+
+async function startPractice(): Promise<void> {
+  if (waitingForOpponent || inPractice) {
+    return;
+  }
+
+  const roundId = getRoundId();
+  if (!isArenaUnlocked(roundId)) {
+    setStatus("Win more matches to unlock that arena.");
+    return;
+  }
+
+  inPractice = true;
+  practiceMatch = new PracticeMatch(processServerMessage, ensureGame());
+  transportRouter.current = practiceMatch;
+  hidePostMatch();
+
+  try {
+    await practiceMatch.start(roundId);
+  } catch {
+    inPractice = false;
+    practiceMatch = null;
+    transportRouter.current = net;
+    setStatus("Could not start practice match.");
+  }
+}
+
+function processServerMessage(msg: ServerMessage): void {
   switch (msg.type) {
     case "connected":
       syncPresence();
@@ -380,11 +481,13 @@ net.onMessage = (msg: ServerMessage) => {
       hidePostMatch();
       lobby.classList.add("hidden");
       hud.classList.remove("hidden");
-      if (!game) {
-        game = new Game(net, hudApi(), mount);
-      }
-      game.setOpponentSkin(msg.opponentSkinId);
-      setStatus(`Match vs ${String(msg.opponentName)}`);
+      currentMatchRoundId = String(msg.selectedRoundId ?? getRoundId());
+      ensureGame().setOpponentSkin(msg.opponentSkinId);
+      setStatus(
+        msg.mode === "practice"
+          ? "Practice vs Training Bot"
+          : `Match vs ${String(msg.opponentName)}`,
+      );
       break;
     case "round_started": {
       const round = msg.round as { id?: string; name?: string };
@@ -452,10 +555,13 @@ net.onMessage = (msg: ServerMessage) => {
       break;
     }
   }
-};
+}
+
+net.onStatus = setStatus;
+net.onMessage = processServerMessage;
 
 document.getElementById("create-btn")!.addEventListener("click", () => {
-  if (waitingForOpponent) {
+  if (waitingForOpponent || inPractice) {
     return;
   }
   net.createRoom(displayName(), getSkinId(), getRoundId());
@@ -470,11 +576,29 @@ document.getElementById("join-btn")!.addEventListener("click", () => {
   net.joinRoom(code, displayName(), getSkinId());
 });
 
+document.getElementById("practice-btn")!.addEventListener("click", () => {
+  void startPractice();
+});
+
 rematchBtn.addEventListener("click", () => {
+  if (inPractice && practiceMatch) {
+    hidePostMatch();
+    void practiceMatch.restart();
+    return;
+  }
   net.requestRematch();
 });
 
 menuBtn.addEventListener("click", () => {
+  if (inPractice) {
+    practiceMatch?.stop();
+    inPractice = false;
+    practiceMatch = null;
+    transportRouter.current = net;
+    game?.endMatch();
+    showLobby();
+    return;
+  }
   net.returnToMenu();
   showLobby();
 });
@@ -505,6 +629,7 @@ let last = performance.now();
 function frame(now: number): void {
   const delta = Math.min((now - last) / 1000, 0.05);
   last = now;
+  practiceMatch?.tick(delta);
   game?.tick(delta);
   requestAnimationFrame(frame);
 }
@@ -515,6 +640,8 @@ initKeybindSettings(updateControlsHint);
 initAppearanceSettings();
 updateOperatorPreview();
 updateControlsHint();
+const progressionUiInstance = initProgressionUi();
+progressionUi = progressionUiInstance;
 
 navPlay.addEventListener("click", () => setLobbyTab("play"));
 navSettings.addEventListener("click", () => setLobbyTab("settings"));
