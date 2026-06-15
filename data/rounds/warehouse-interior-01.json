@@ -7,7 +7,7 @@
   },
   "spawns": {
     "playerA": {
-      "position": [2.0, 1.0, -23.4],
+      "position": [9.0, 1.0, -22.0],
       "rotation": [0, 0, 0]
     },
     "playerB": {

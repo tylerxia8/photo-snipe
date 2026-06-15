@@ -41,7 +41,7 @@ for (const z of [-18, -8, 8, 18] as const) {
 }
 
 for (const [x, z] of [
-  [8, -6],
+  [12, -4],
   [-8, 6],
   [8, 6],
   [-8, -6],
@@ -70,5 +70,5 @@ for (const [x, y, z, sx, sy, sz] of crates) {
   WAREHOUSE_INTERIOR_SOLID_BOXES.push(solidBox(x, y, z, sx, sy, sz, "prop", true));
 }
 
-export const WAREHOUSE_SPAWN_A = { x: 2, z: -23.4 } as const;
+export const WAREHOUSE_SPAWN_A = { x: 9, z: -22 } as const;
 export const WAREHOUSE_SPAWN_B = { x: 2, z: 23.4 } as const;
