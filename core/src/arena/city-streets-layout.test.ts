@@ -57,4 +57,9 @@ describe("city streets layout", () => {
     expect(CITY_STREETS_PARK.sx).toBeGreaterThan(12);
     expect(onRoad(CITY_STREETS_PARK.cx, CITY_STREETS_PARK.cz)).toBe(false);
   });
+
+  it("uses collider-only volumes for decor props like cars and park trees", () => {
+    const decorColliders = CITY_STREETS_SOLID_BOXES.filter((solid) => solid.decorMesh === false);
+    expect(decorColliders.length).toBeGreaterThan(25);
+  });
 });

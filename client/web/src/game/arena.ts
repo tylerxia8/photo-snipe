@@ -172,6 +172,12 @@ function createGridTexture(light: string, dark: string, cells = 8): THREE.Canvas
   return tex;
 }
 
+function addColliderBox(colliders: THREE.Box3[], pos: THREE.Vector3, size: THREE.Vector3): THREE.Box3 {
+  const box = new THREE.Box3().setFromCenterAndSize(pos, size);
+  colliders.push(box);
+  return box;
+}
+
 function addBox(
   parent: THREE.Object3D,
   pos: THREE.Vector3,
@@ -530,6 +536,31 @@ function addCityStreetsDecor(group: THREE.Group, theme: ArenaTheme): void {
     addTree(x, z);
   }
 
+  const fenceMat = flatMat(0x5c6370);
+  for (const [cx, cz, sx, sz] of [
+    [park.cx, park.cz - park.sz * 0.5 + 0.2, park.sx + 0.4, 0.4],
+    [park.cx, park.cz + park.sz * 0.5 - 0.2, park.sx + 0.4, 0.4],
+    [park.cx - park.sx * 0.5 + 0.2, park.cz, 0.4, park.sz + 0.4],
+    [park.cx + park.sx * 0.5 - 0.2, park.cz, 0.4, park.sz + 0.4],
+  ] as const) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.08, sz), fenceMat);
+    rail.position.set(cx, 1.05, cz);
+    group.add(rail);
+    const postStep = Math.min(sx, sz) > 2 ? 2.4 : 2;
+    const posts =
+      sx > sz
+        ? Math.max(2, Math.floor(sx / postStep))
+        : Math.max(2, Math.floor(sz / postStep));
+    for (let i = 0; i < posts; i++) {
+      const t = posts === 1 ? 0.5 : i / (posts - 1);
+      const px = sx > sz ? cx - sx * 0.5 + sx * t : cx;
+      const pz = sx > sz ? cz : cz - sz * 0.5 + sz * t;
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.05, 0.12), fenceMat);
+      post.position.set(px, 0.55, pz);
+      group.add(post);
+    }
+  }
+
   const fountain = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.55, 2.8), flatMat(0x95a5a6));
   fountain.position.set(-24, 0.35, -24);
   group.add(fountain);
@@ -686,12 +717,20 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
 
     const pos = new THREE.Vector3(solid.cx, solid.cy, solid.cz);
     const size = new THREE.Vector3(solid.sx, solid.sy, solid.sz);
-    const mat = materialForSolid(solid, theme, floorMat, wallMat, ceilingMat, propIndex, roundId);
     if (solid.category === "prop") {
       propIndex += 1;
     }
 
-    const box = addBox(group, pos, size, mat, allBoxes);
+    const box =
+      solid.decorMesh === false
+        ? addColliderBox(allBoxes, pos, size)
+        : addBox(
+            group,
+            pos,
+            size,
+            materialForSolid(solid, theme, floorMat, wallMat, ceilingMat, propIndex, roundId),
+            allBoxes,
+          );
     if (solid.category === "floor") {
       floorBox = box;
     } else if (solid.category === "ceiling") {

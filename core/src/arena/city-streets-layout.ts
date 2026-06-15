@@ -1,4 +1,4 @@
-import { solidBox, type ArenaLayoutConfig, type ArenaSolidBox } from "./solid-box.js";
+import { colliderBox, solidBox, type ArenaLayoutConfig, type ArenaSolidBox } from "./solid-box.js";
 
 export const CITY_STREETS_HALF = 32;
 export const CITY_STREETS_ROAD_HALF = 5;
@@ -17,6 +17,7 @@ const FOOTPRINT = HALF * 2;
 const ROAD_HALF = CITY_STREETS_ROAD_HALF;
 const PARAPET = 1.2;
 const WALL_THICKNESS = 0.35;
+const FENCE_H = 1.5;
 
 export const CITY_STREETS_LAYOUT: ArenaLayoutConfig = {
   id: "city-streets-01",
@@ -71,17 +72,20 @@ for (const [cx, cz, sx, sy, sz] of CITY_STREETS_BUILDINGS) {
   pushBuilding(CITY_STREETS_SOLID_BOXES, cx, cz, sx, sy, sz);
 }
 
-/** Park perimeter — low iron fence segments (walkable interior). */
+/** Park perimeter fence — tall enough to block players, with overlapping corners. */
+const park = CITY_STREETS_PARK;
 for (const [cx, cz, sx, sz] of [
-  [CITY_STREETS_PARK.cx, CITY_STREETS_PARK.cz - CITY_STREETS_PARK.sz * 0.5 + 0.15, CITY_STREETS_PARK.sx, 0.35, 0.25],
-  [CITY_STREETS_PARK.cx, CITY_STREETS_PARK.cz + CITY_STREETS_PARK.sz * 0.5 - 0.15, CITY_STREETS_PARK.sx, 0.35, 0.25],
-  [CITY_STREETS_PARK.cx - CITY_STREETS_PARK.sx * 0.5 + 0.15, CITY_STREETS_PARK.cz, 0.25, 0.35, CITY_STREETS_PARK.sz - 0.5],
-  [CITY_STREETS_PARK.cx + CITY_STREETS_PARK.sx * 0.5 - 0.15, CITY_STREETS_PARK.cz, 0.25, 0.35, CITY_STREETS_PARK.sz - 0.5],
+  [park.cx, park.cz - park.sz * 0.5 + 0.2, park.sx + 0.4, 0.4],
+  [park.cx, park.cz + park.sz * 0.5 - 0.2, park.sx + 0.4, 0.4],
+  [park.cx - park.sx * 0.5 + 0.2, park.cz, 0.4, park.sz + 0.4],
+  [park.cx + park.sx * 0.5 - 0.2, park.cz, 0.4, park.sz + 0.4],
 ] as const) {
-  CITY_STREETS_SOLID_BOXES.push(solidBox(cx, 0.55, cz, sx, 1.1, sz, "prop", true));
+  CITY_STREETS_SOLID_BOXES.push(
+    colliderBox(cx, FENCE_H * 0.5, cz, sx, FENCE_H, sz, true),
+  );
 }
 
-/** Park trees, benches, and fountain base. */
+/** Park trees — colliders match the visible canopy width. */
 for (const [x, z] of [
   [-26, -24],
   [-18, -26],
@@ -89,11 +93,12 @@ for (const [x, z] of [
   [-16, -20],
   [-24, -16],
 ] as const) {
-  CITY_STREETS_SOLID_BOXES.push(solidBox(x, 1.6, z, 0.9, 3.2, 0.9, "prop", true));
+  CITY_STREETS_SOLID_BOXES.push(colliderBox(x, 1.75, z, 2.2, 3.5, 2.2, true));
 }
-CITY_STREETS_SOLID_BOXES.push(solidBox(-22, 0.35, -22, 3.2, 0.7, 1.2, "prop", true));
-CITY_STREETS_SOLID_BOXES.push(solidBox(-19, 0.35, -19, 3.2, 0.7, 1.2, "prop", true));
-CITY_STREETS_SOLID_BOXES.push(solidBox(-24, 0.45, -24, 2.4, 0.9, 2.4, "prop", true));
+
+CITY_STREETS_SOLID_BOXES.push(colliderBox(-22, 0.65, -22, 3.2, 1.3, 1.2, true));
+CITY_STREETS_SOLID_BOXES.push(colliderBox(-19, 0.65, -19, 3.2, 1.3, 1.2, true));
+CITY_STREETS_SOLID_BOXES.push(colliderBox(-24, 0.85, -24, 2.8, 1.7, 2.8, true));
 
 /** Parked cars along curbs — [cx, cz, sx, sy, sz]. */
 export const CITY_STREETS_PARKED_CARS: Array<[number, number, number, number, number]> = [
@@ -120,26 +125,26 @@ export const CITY_STREETS_PARKED_CARS: Array<[number, number, number, number, nu
 ];
 
 for (const [cx, cz, sx, sy, sz] of CITY_STREETS_PARKED_CARS) {
-  CITY_STREETS_SOLID_BOXES.push(solidBox(cx, sy * 0.5 + 0.35, cz, sx, sy, sz, "prop", true));
+  CITY_STREETS_SOLID_BOXES.push(
+    colliderBox(cx, sy * 0.5 + 0.35, cz, sx, sy, sz, true),
+  );
 }
 
 export const CITY_STREETS_TAXI = { cx: 2.5, cz: -10, sx: 4.4, sy: 1.8, sz: 2 };
 
-/** Taxi in the cross-street lane (collision + gameplay cover). */
 CITY_STREETS_SOLID_BOXES.push(
-  solidBox(
+  colliderBox(
     CITY_STREETS_TAXI.cx,
     CITY_STREETS_TAXI.sy * 0.5 + 0.35,
     CITY_STREETS_TAXI.cz,
     CITY_STREETS_TAXI.sx,
     CITY_STREETS_TAXI.sy,
     CITY_STREETS_TAXI.sz,
-    "prop",
     true,
   ),
 );
 
-/** Hot dog carts, newsstands, and bus shelter near sidewalks. */
+/** Hot dog carts, newsstands, and bus shelters near sidewalks. */
 export const CITY_STREETS_VENDORS: Array<[number, number, number, number, number, number]> = [
   [-7.5, 0.75, 8, 1.4, 1.5, 1.1],
   [7.5, 0.75, -9, 1.4, 1.5, 1.1],
@@ -154,7 +159,7 @@ export const CITY_STREETS_VENDORS: Array<[number, number, number, number, number
 ];
 
 for (const [x, y, z, sx, sy, sz] of CITY_STREETS_VENDORS) {
-  CITY_STREETS_SOLID_BOXES.push(solidBox(x, y, z, sx, sy, sz, "prop", true));
+  CITY_STREETS_SOLID_BOXES.push(colliderBox(x, y, z, sx, sy, sz, true));
 }
 
 /** Street lamps along intersections and block corners. */

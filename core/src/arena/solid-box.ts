@@ -16,6 +16,8 @@ export interface ArenaSolidBox {
   sz: number;
   category: ArenaBoxCategory;
   occludesPhotos: boolean;
+  /** When false, the web client builds collision only and decor supplies visuals. */
+  decorMesh?: boolean;
 }
 
 export interface ArenaLayoutConfig {
@@ -38,8 +40,22 @@ export function solidBox(
   sz: number,
   category: ArenaBoxCategory,
   occludesPhotos: boolean,
+  decorMesh = true,
 ): ArenaSolidBox {
-  return { cx, cy, cz, sx, sy, sz, category, occludesPhotos };
+  return { cx, cy, cz, sx, sy, sz, category, occludesPhotos, decorMesh };
+}
+
+/** Collision volume without a placeholder mesh — used when decor draws the prop. */
+export function colliderBox(
+  cx: number,
+  cy: number,
+  cz: number,
+  sx: number,
+  sy: number,
+  sz: number,
+  occludesPhotos: boolean,
+): ArenaSolidBox {
+  return solidBox(cx, cy, cz, sx, sy, sz, "prop", occludesPhotos, false);
 }
 
 export function boxToAabb(box: ArenaSolidBox): AxisAlignedBox {
