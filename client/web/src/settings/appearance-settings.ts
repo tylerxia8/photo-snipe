@@ -1,11 +1,12 @@
 import { getSkin, PLAYER_SKINS, type PlayerSkinId } from "@photo-snipe/core";
+import { isSkinOwned, subscribeShop } from "../shop/inventory.js";
 import { getSkinId, onSkinChange, setSkinId } from "./appearance.js";
 
 function hexColor(value: number): string {
   return `#${value.toString(16).padStart(6, "0")}`;
 }
 
-function previewFigureStyle(shirtColor: number, pantsColor: number): string {
+export function skinPreviewStyle(shirtColor: number, pantsColor: number): string {
   const shirt = hexColor(shirtColor);
   const pants = hexColor(pantsColor);
   return [
@@ -14,6 +15,10 @@ function previewFigureStyle(shirtColor: number, pantsColor: number): string {
     `linear-gradient(${shirt} 28% 52%, transparent 52%)`,
     `linear-gradient(${pants} 52% 100%, transparent 100%)`,
   ].join(", ");
+}
+
+function previewFigureStyle(shirtColor: number, pantsColor: number): string {
+  return skinPreviewStyle(shirtColor, pantsColor);
 }
 
 export function updateOperatorPreview(skinId = getSkinId()): void {
@@ -43,8 +48,15 @@ export function initAppearanceSettings(): void {
     setStatus(`Equipped: ${getSkin(selected).name}`);
   }
 
+  if (grid.children.length === 0) {
+    setStatus("Buy operator skins in the Shop tab.");
+  }
+
   grid.replaceChildren();
   for (const skin of PLAYER_SKINS) {
+    if (!isSkinOwned(skin.id)) {
+      continue;
+    }
     const button = document.createElement("button");
     button.type = "button";
     button.className = "skin-option";
@@ -69,4 +81,5 @@ export function initAppearanceSettings(): void {
 
   refreshSelection();
   onSkinChange(refreshSelection);
+  subscribeShop(refreshSelection);
 }

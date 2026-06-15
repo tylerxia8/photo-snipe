@@ -3,6 +3,7 @@ import {
   isValidSkinId,
   type PlayerSkinId,
 } from "@photo-snipe/core";
+import { isSkinOwned } from "../shop/inventory.js";
 
 const STORAGE_KEY = "photo-snipe-appearance";
 
@@ -15,7 +16,8 @@ function loadSkinId(): PlayerSkinId {
       return DEFAULT_SKIN_ID;
     }
     const parsed = JSON.parse(raw) as { skinId?: unknown };
-    return isValidSkinId(parsed.skinId) ? parsed.skinId : DEFAULT_SKIN_ID;
+    const skinId = isValidSkinId(parsed.skinId) ? parsed.skinId : DEFAULT_SKIN_ID;
+    return isSkinOwned(skinId) ? skinId : DEFAULT_SKIN_ID;
   } catch {
     return DEFAULT_SKIN_ID;
   }

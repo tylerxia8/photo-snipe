@@ -6,6 +6,7 @@ import {
   sanitizeRoundId,
 } from "@photo-snipe/core";
 import { getArenaUnlockRequirement, isArenaUnlocked as isArenaUnlockedByStats } from "../progression/stats.js";
+import { isArenaPassOwned } from "../shop/inventory.js";
 
 const STORAGE_KEY = "photo-snipe-arena";
 
@@ -45,7 +46,7 @@ export function getArenaChoices(): Array<{ id: string; name: string }> {
 }
 
 export function isArenaUnlocked(roundId: string): boolean {
-  return isArenaUnlockedByStats(roundId);
+  return isArenaUnlockedByStats(roundId) || isArenaPassOwned(roundId);
 }
 
 export { getArenaUnlockRequirement };

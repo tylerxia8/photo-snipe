@@ -32,7 +32,7 @@
             <button class="kr-nav-item active" type="button" data-nav="play">PLAY</button>
             <button class="kr-nav-item" type="button" data-nav="settings">SETTINGS</button>
             <button class="kr-nav-item" type="button" data-nav="social">SOCIAL</button>
-            <button class="kr-nav-item disabled" type="button" disabled>SHOP</button>
+            <button class="kr-nav-item" type="button" data-nav="shop">SHOP</button>
           </nav>
 
           <main class="kr-main">
@@ -130,6 +130,7 @@
 
               <div class="settings-section">
                 <h3 class="settings-section-title">OPERATOR SKIN</h3>
+                <p class="settings-section-hint">Equipped skins you've purchased in the Shop.</p>
                 <div id="skin-grid" class="skin-grid"></div>
                 <p id="skin-status" class="status skin-status"></p>
               </div>
@@ -197,6 +198,36 @@
               </div>
 
               <p id="social-status" class="status social-status"></p>
+            </section>
+
+            <section id="shop-panel" class="kr-menu-window panel hidden">
+              <div class="kr-menu-header">
+                <h2>SHOP</h2>
+                <p>Spend match credits on cosmetics and arena passes.</p>
+              </div>
+
+              <div class="shop-balance-row">
+                <span class="field-label">CREDITS</span>
+                <span id="shop-credits" class="shop-credits">0</span>
+              </div>
+              <p class="settings-section-hint">
+                Earn credits from matches — 40 practice win, 80 online win, 15 for a loss.
+              </p>
+
+              <div class="settings-section">
+                <h3 class="settings-section-title">OPERATOR SKINS</h3>
+                <div id="shop-skin-grid" class="shop-grid"></div>
+              </div>
+
+              <div class="settings-section">
+                <h3 class="settings-section-title">ARENA PASSES</h3>
+                <p class="settings-section-hint">
+                  Host locked maps before you reach their ladder unlock.
+                </p>
+                <div id="shop-pass-grid" class="shop-grid"></div>
+              </div>
+
+              <p id="shop-status" class="status shop-status"></p>
             </section>
           </main>
         </div>

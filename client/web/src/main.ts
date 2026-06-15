@@ -3,6 +3,8 @@ import { TransportRouter } from "./game/match-transport.js";
 import { NetClient } from "./net/client.js";
 import type { ServerMessage } from "./net/client.js";
 import { PracticeMatch } from "./practice/practice-match.js";
+import { initShopSettings, type ShopSettingsHandle } from "./shop/shop-settings.js";
+import { awardMatchCredits, subscribeShop } from "./shop/inventory.js";
 import { initProgressionUi } from "./progression/progression-ui.js";
 import {
   getProgressionState,
@@ -48,10 +50,12 @@ const menuBtn = document.getElementById("menu-btn") as HTMLButtonElement;
 const playPanel = document.getElementById("play-panel")!;
 const settingsPanel = document.getElementById("settings-panel")!;
 const socialPanel = document.getElementById("social-panel")!;
+const shopPanel = document.getElementById("shop-panel")!;
 const controlsHint = document.getElementById("controls-hint")!;
 const navPlay = document.querySelector('[data-nav="play"]')!;
 const navSettings = document.querySelector('[data-nav="settings"]')!;
 const navSocial = document.querySelector('[data-nav="social"]')!;
+const navShop = document.querySelector('[data-nav="shop"]')!;
 const arenaSelect = document.getElementById("arena-select") as HTMLSelectElement;
 const arenaPreviewName = document.getElementById("arena-preview-name")!;
 const friendInviteBanner = document.getElementById("friend-invite-banner")!;
@@ -140,7 +144,7 @@ function updateControlsHint(): void {
   controlsHint.textContent = getControlsHint();
 }
 
-type LobbyTab = "play" | "settings" | "social";
+type LobbyTab = "play" | "settings" | "social" | "shop";
 
 function syncPresence(): void {
   net.setPresence(displayName());
@@ -195,9 +199,11 @@ function setLobbyTab(tab: LobbyTab): void {
   playPanel.classList.toggle("hidden", tab !== "play");
   settingsPanel.classList.toggle("hidden", tab !== "settings");
   socialPanel.classList.toggle("hidden", tab !== "social");
+  shopPanel.classList.toggle("hidden", tab !== "shop");
   navPlay.classList.toggle("active", tab === "play");
   navSettings.classList.toggle("active", tab === "settings");
   navSocial.classList.toggle("active", tab === "social");
+  navShop.classList.toggle("active", tab === "shop");
   if (tab === "settings") {
     settingsPanel.scrollTop = 0;
   }
@@ -208,6 +214,10 @@ function setLobbyTab(tab: LobbyTab): void {
     startPresencePolling();
   } else {
     stopPresencePolling();
+  }
+  if (tab === "shop") {
+    shopPanel.scrollTop = 0;
+    shopSettings.refresh();
   }
 }
 
@@ -295,6 +305,7 @@ function resetRematchUi(): void {
 }
 
 let progressionUi: { refresh: () => void };
+let shopSettings: ShopSettingsHandle;
 
 function showPostMatch(msg: ServerMessage): void {
   const didWin = Boolean(msg.didWin);
@@ -310,7 +321,12 @@ function showPostMatch(msg: ServerMessage): void {
     didWin,
     roundId,
   });
+  const creditsEarned = awardMatchCredits({
+    mode: mode === "practice" ? "practice" : "online",
+    didWin,
+  });
   progressionUi.refresh();
+  shopSettings.refresh();
   refreshArenaSelect();
 
   const rankAfter = getRank(getProgressionState().totalWins);
@@ -321,17 +337,17 @@ function showPostMatch(msg: ServerMessage): void {
   } else if (forfeit) {
     postMatchSubtitle.textContent = "You left the match.";
   } else if (didWin && rankAfter.id !== rankBefore.id) {
-    postMatchSubtitle.textContent = `Promoted to ${rankAfter.name}!`;
+    postMatchSubtitle.textContent = `Promoted to ${rankAfter.name}! +${creditsEarned} CR`;
   } else if (didWin) {
     postMatchSubtitle.textContent =
       mode === "practice"
-        ? `Training bot down. Rank: ${rankAfter.name}.`
-        : "You win!";
+        ? `Training bot down. Rank: ${rankAfter.name}. +${creditsEarned} CR`
+        : `You win! +${creditsEarned} CR`;
   } else {
     postMatchSubtitle.textContent =
       mode === "practice"
-        ? `${winnerName} wins. Try again to climb the ladder.`
-        : `${winnerName} wins!`;
+        ? `${winnerName} wins. +${creditsEarned} CR earned.`
+        : `${winnerName} wins! +${creditsEarned} CR earned.`;
   }
 
   resetRematchUi();
@@ -642,9 +658,12 @@ updateOperatorPreview();
 updateControlsHint();
 const progressionUiInstance = initProgressionUi();
 progressionUi = progressionUiInstance;
+shopSettings = initShopSettings();
+subscribeShop(() => refreshArenaSelect());
 
 navPlay.addEventListener("click", () => setLobbyTab("play"));
 navSettings.addEventListener("click", () => setLobbyTab("settings"));
 navSocial.addEventListener("click", () => setLobbyTab("social"));
+navShop.addEventListener("click", () => setLobbyTab("shop"));
 
 requestAnimationFrame(frame);
