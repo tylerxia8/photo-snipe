@@ -145,11 +145,27 @@ function isInsideBounds(x: number, z: number, bounds: WorldColliders["bounds"]):
   );
 }
 
+interface MoveHint {
+  dx: number;
+  dz: number;
+}
+
+function resolveOnX(depth: { x: number; z: number }, hint: MoveHint): boolean {
+  if (hint.dx !== 0 && hint.dz === 0) {
+    return true;
+  }
+  if (hint.dz !== 0 && hint.dx === 0) {
+    return false;
+  }
+  return depth.x <= depth.z;
+}
+
 /** Push out of one solid by the smallest axis-aligned nudge. */
 function resolveSolidOverlap(
   feet: FeetPos,
   solid: THREE.Box3,
   bounds: WorldColliders["bounds"],
+  hint: MoveHint = { dx: 0, dz: 0 },
 ): FeetPos {
   const player = playerAabb(feet);
   if (!player.intersectsBox(solid) || !verticalOverlap(player, solid)) {
@@ -165,7 +181,7 @@ function resolveSolidOverlap(
   const pushNorth = player.max.z - solid.min.z + SKIN;
   const pushSouth = solid.max.z - player.min.z + SKIN;
 
-  if (depth.x <= depth.z) {
+  if (resolveOnX(depth, hint)) {
     const west = { ...feet, x: feet.x - pushWest };
     const east = { ...feet, x: feet.x + pushEast };
     const westOk = isInsideBounds(west.x, west.z, bounds);
@@ -205,6 +221,7 @@ function resolveAllOverlaps(
   walls: THREE.Box3[],
   props: THREE.Box3[],
   bounds: WorldColliders["bounds"],
+  hint: MoveHint = { dx: 0, dz: 0 },
 ): FeetPos {
   let resolved = { ...feet };
 
@@ -212,7 +229,7 @@ function resolveAllOverlaps(
     let changed = false;
 
     for (const solid of walls) {
-      const next = resolveSolidOverlap(resolved, solid, bounds);
+      const next = resolveSolidOverlap(resolved, solid, bounds, hint);
       if (next.x !== resolved.x || next.z !== resolved.z) {
         resolved = next;
         changed = true;
@@ -223,7 +240,7 @@ function resolveAllOverlaps(
       if (standingOnProp(resolved, solid) || supportedOnTop(resolved, solid)) {
         continue;
       }
-      const next = resolveSolidOverlap(resolved, solid, bounds);
+      const next = resolveSolidOverlap(resolved, solid, bounds, hint);
       if (next.x !== resolved.x || next.z !== resolved.z) {
         resolved = next;
         changed = true;
@@ -260,7 +277,7 @@ function clipAxisX(
       }
 
       const depth = penetrationDepth(player, solid);
-      if (depth.x > depth.z) {
+      if (dx === 0 && depth.x > depth.z) {
         continue;
       }
 
@@ -309,7 +326,7 @@ function clipAxisZ(
       }
 
       const depth = penetrationDepth(player, solid);
-      if (depth.z > depth.x) {
+      if (dz === 0 && depth.z > depth.x) {
         continue;
       }
 
@@ -350,7 +367,7 @@ function clipHorizontal(
   let z = clipAxisZ({ ...feet, x }, dz, walls, false);
   z = clipAxisZ({ ...feet, x, z }, dz, props, true);
 
-  return resolveAllOverlaps({ ...feet, x, z }, walls, props, bounds);
+  return resolveAllOverlaps({ ...feet, x, z }, walls, props, bounds, { dx, dz });
 }
 
 function clipVertical(
