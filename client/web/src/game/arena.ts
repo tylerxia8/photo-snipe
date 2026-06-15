@@ -239,7 +239,7 @@ function addIndustrialDecor(
     }
   }
 
-  for (const [x, z] of [[12, -4], [-8, 6], [8, 6], [-8, -6]] as const) {
+  for (const [x, z] of [[5, -2], [-8, 6], [8, 6], [-8, -6]] as const) {
     const cap = new THREE.Mesh(
       new THREE.BoxGeometry(1.2, 0.15, 1.2),
       flatMat(theme.accentColor),
@@ -446,7 +446,7 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
   }
 
   if (roundId === "warehouse-interior-01") {
-    addIndustrialDecor(group, layout, theme, { x: 9, z: -22 }, { x: 2, z: 23.4 });
+    addIndustrialDecor(group, layout, theme, { x: 2, z: -23.4 }, { x: 2, z: 23.4 });
   } else if (roundId === "freight-depot-01") {
     addFreightDepotDecor(group, layout, theme);
   } else if (roundId === "rooftop-01") {
