@@ -16,6 +16,12 @@ import {
   CITY_STREETS_VENDORS,
   PARKING_GARAGE_SPAWN_A,
   PARKING_GARAGE_SPAWN_B,
+  PARKING_GARAGE_CAR_HEIGHT,
+  PARKING_GARAGE_CAR_LENGTH,
+  PARKING_GARAGE_CAR_POSITIONS,
+  PARKING_GARAGE_CAR_WIDTH,
+  PARKING_GARAGE_PILLAR_POSITIONS,
+  PARKING_GARAGE_PILLAR_SIZE,
   type ArenaLayoutConfig,
   type ArenaSolidBox,
 } from "@photo-snipe/core";
@@ -701,9 +707,12 @@ function addDuctDecor(group: THREE.Group, theme: ArenaTheme): void {
 }
 
 function addParkingGarageDecor(group: THREE.Group, theme: ArenaTheme): void {
-  const stripe = (x: number, z: number, sx: number, sz: number, color = 0xffffff) => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.02, sz), flatMat(color));
-    mesh.position.set(x, 0.06, z);
+  const floorMarkMat = groundOverlayMat(0xffffff);
+  const stripe = (x: number, z: number, sx: number, sz: number) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.04, sz), floorMarkMat);
+    mesh.position.set(x, 0.08, z);
+    mesh.receiveShadow = true;
+    mesh.renderOrder = 1;
     group.add(mesh);
   };
 
@@ -715,46 +724,69 @@ function addParkingGarageDecor(group: THREE.Group, theme: ArenaTheme): void {
     stripe(x, 0, 8, 0.12);
   }
 
-  for (const [x, z] of [
-    [-10, -13],
-    [10, 13],
-    [-14, 0],
-    [14, 0],
-    [-8, -10],
-    [8, 10],
-  ] as const) {
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.08, 2.4), flatMat(0x546e7a));
-    roof.position.set(x, 2.05, z);
-    group.add(roof);
+  const carColors = theme.propColors;
+  PARKING_GARAGE_CAR_POSITIONS.forEach(([x, z], index) => {
+    const car = new THREE.Group();
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(
+        PARKING_GARAGE_CAR_LENGTH,
+        PARKING_GARAGE_CAR_HEIGHT,
+        PARKING_GARAGE_CAR_WIDTH,
+      ),
+      flatMat(carColors[index % carColors.length]!),
+    );
+    body.position.y = PARKING_GARAGE_CAR_HEIGHT * 0.5;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    car.add(body);
+    const cabin = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.55, 1.8),
+      flatMat(0x37474f),
+    );
+    cabin.position.set(0, 1.35, -0.35);
+    car.add(cabin);
+    car.position.set(x, 0, z);
+    group.add(car);
+  });
+
+  const pillarMat = flatMat(theme.wallColor);
+  for (const [x, z] of PARKING_GARAGE_PILLAR_POSITIONS) {
+    const pillar = new THREE.Group();
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(PARKING_GARAGE_PILLAR_SIZE, 4.5, PARKING_GARAGE_PILLAR_SIZE),
+      pillarMat,
+    );
+    body.position.y = 2.25;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    pillar.add(body);
+    const band = new THREE.Mesh(
+      new THREE.BoxGeometry(PARKING_GARAGE_PILLAR_SIZE * 0.82, 0.5, PARKING_GARAGE_PILLAR_SIZE * 0.82),
+      flatMat(theme.accentColor),
+    );
+    band.position.y = 2.2;
+    pillar.add(band);
+    pillar.position.set(x, 0, z);
+    group.add(pillar);
   }
 
-  for (const [x, z] of [
-    [-12, -8],
-    [12, -8],
-    [-12, 8],
-    [12, 8],
-    [0, -6],
-    [0, 6],
-    [-6, 0],
-    [6, 0],
-    [0, 0],
-  ] as const) {
-    const band = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.5, 1.8), flatMat(theme.accentColor));
-    band.position.set(x, 2.2, z);
-    group.add(band);
-  }
-
-  const padA = new THREE.Mesh(new THREE.BoxGeometry(3, 0.02, 3), flatMat(0x2980b9));
-  padA.position.set(PARKING_GARAGE_SPAWN_A.x, 0.06, PARKING_GARAGE_SPAWN_A.z);
+  const padMatA = groundOverlayMat(0x2980b9);
+  const padMatB = groundOverlayMat(0xc0392b);
+  const padA = new THREE.Mesh(new THREE.BoxGeometry(3, 0.04, 3), padMatA);
+  padA.position.set(PARKING_GARAGE_SPAWN_A.x, 0.08, PARKING_GARAGE_SPAWN_A.z);
+  padA.receiveShadow = true;
+  padA.renderOrder = 1;
   group.add(padA);
-  const padB = new THREE.Mesh(new THREE.BoxGeometry(3, 0.02, 3), flatMat(0xc0392b));
-  padB.position.set(PARKING_GARAGE_SPAWN_B.x, 0.06, PARKING_GARAGE_SPAWN_B.z);
+  const padB = new THREE.Mesh(new THREE.BoxGeometry(3, 0.04, 3), padMatB);
+  padB.position.set(PARKING_GARAGE_SPAWN_B.x, 0.08, PARKING_GARAGE_SPAWN_B.z);
+  padB.receiveShadow = true;
+  padB.renderOrder = 1;
   group.add(padB);
 
   for (const [x, z, y] of [
-    [0, 0, 4.2],
-    [-14, -14, 4.2],
-    [14, 14, 4.2],
+    [0, 0, 4.35],
+    [-14, -14, 4.35],
+    [14, 14, 4.35],
   ] as const) {
     const light = new THREE.Mesh(
       new THREE.BoxGeometry(1.4, 0.08, 0.3),

@@ -1,4 +1,4 @@
-import { solidBox, type ArenaLayoutConfig, type ArenaSolidBox } from "./solid-box.js";
+import { colliderBox, solidBox, type ArenaLayoutConfig, type ArenaSolidBox } from "./solid-box.js";
 
 const HALF = 20;
 const FOOTPRINT = HALF * 2;
@@ -6,11 +6,32 @@ const WALL_HEIGHT = 4.5;
 const WALL_THICKNESS = 0.35;
 
 /** Structural columns — wide enough to duck behind in firefights. */
-const PILLAR_SIZE = 1.8;
+export const PARKING_GARAGE_PILLAR_SIZE = 1.8;
 /** Parked sedans — tall and wide enough for movement + photo cover. */
-const CAR_LENGTH = 4.6;
-const CAR_HEIGHT = 2.0;
-const CAR_WIDTH = 2.4;
+export const PARKING_GARAGE_CAR_LENGTH = 4.6;
+export const PARKING_GARAGE_CAR_HEIGHT = 2.0;
+export const PARKING_GARAGE_CAR_WIDTH = 2.4;
+
+export const PARKING_GARAGE_PILLAR_POSITIONS = [
+  [-12, -8],
+  [12, -8],
+  [-12, 8],
+  [12, 8],
+  [0, -6],
+  [0, 6],
+  [-6, 0],
+  [6, 0],
+  [0, 0],
+] as const;
+
+export const PARKING_GARAGE_CAR_POSITIONS = [
+  [-10, -13],
+  [10, 13],
+  [-14, 0],
+  [14, 0],
+  [-8, -10],
+  [8, 10],
+] as const;
 
 export const PARKING_GARAGE_LAYOUT: ArenaLayoutConfig = {
   id: "parking-garage-01",
@@ -23,13 +44,29 @@ export const PARKING_GARAGE_LAYOUT: ArenaLayoutConfig = {
 
 function addPillar(boxes: ArenaSolidBox[], x: number, z: number): void {
   boxes.push(
-    solidBox(x, WALL_HEIGHT * 0.5, z, PILLAR_SIZE, WALL_HEIGHT, PILLAR_SIZE, "prop", true),
+    colliderBox(
+      x,
+      WALL_HEIGHT * 0.5,
+      z,
+      PARKING_GARAGE_PILLAR_SIZE,
+      WALL_HEIGHT,
+      PARKING_GARAGE_PILLAR_SIZE,
+      true,
+    ),
   );
 }
 
 function addCar(boxes: ArenaSolidBox[], x: number, z: number): void {
   boxes.push(
-    solidBox(x, CAR_HEIGHT * 0.5, z, CAR_LENGTH, CAR_HEIGHT, CAR_WIDTH, "prop", true),
+    colliderBox(
+      x,
+      PARKING_GARAGE_CAR_HEIGHT * 0.5,
+      z,
+      PARKING_GARAGE_CAR_LENGTH,
+      PARKING_GARAGE_CAR_HEIGHT,
+      PARKING_GARAGE_CAR_WIDTH,
+      true,
+    ),
   );
 }
 
@@ -44,28 +81,11 @@ export const PARKING_GARAGE_SOLID_BOXES: ArenaSolidBox[] = [
   solidBox(-HALF, WALL_HEIGHT * 0.5, 0, WALL_THICKNESS, WALL_HEIGHT, FOOTPRINT, "wall", true),
 ];
 
-for (const [x, z] of [
-  [-12, -8],
-  [12, -8],
-  [-12, 8],
-  [12, 8],
-  [0, -6],
-  [0, 6],
-  [-6, 0],
-  [6, 0],
-  [0, 0],
-] as const) {
+for (const [x, z] of PARKING_GARAGE_PILLAR_POSITIONS) {
   addPillar(PARKING_GARAGE_SOLID_BOXES, x, z);
 }
 
-for (const [x, z] of [
-  [-10, -13],
-  [10, 13],
-  [-14, 0],
-  [14, 0],
-  [-8, -10],
-  [8, 10],
-] as const) {
+for (const [x, z] of PARKING_GARAGE_CAR_POSITIONS) {
   addCar(PARKING_GARAGE_SOLID_BOXES, x, z);
 }
 
