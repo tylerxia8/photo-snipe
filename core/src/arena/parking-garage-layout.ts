@@ -70,6 +70,7 @@ function addCar(boxes: ArenaSolidBox[], x: number, z: number, facingY: number): 
       PARKING_GARAGE_CAR_HEIGHT,
       sz,
       true,
+      "car",
     ),
   );
 }

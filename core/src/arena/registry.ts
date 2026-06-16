@@ -8,7 +8,7 @@ import { DUCT_NETWORK_LAYOUT, DUCT_NETWORK_SOLID_BOXES } from "./duct-layout.js"
 import { ROOFTOP_LAYOUT, ROOFTOP_SOLID_BOXES } from "./rooftop-layout.js";
 import { PARKING_GARAGE_LAYOUT, PARKING_GARAGE_SOLID_BOXES } from "./parking-garage-layout.js";
 import {
-  boxToAabb,
+  boxToPhotoOccluderAABBs,
   type ArenaLayoutConfig,
   type ArenaSolidBox,
   type AxisAlignedBox,
@@ -87,7 +87,7 @@ export function getArenaSolids(roundId: string): ArenaSolidBox[] {
 export function getOccludersForRound(roundId: string): AxisAlignedBox[] {
   return getArenaSolids(roundId)
     .filter((box) => box.occludesPhotos)
-    .map(boxToAabb);
+    .flatMap(boxToPhotoOccluderAABBs);
 }
 
 /** @deprecated Use getOccludersForRound with round id instead. */

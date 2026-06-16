@@ -3,12 +3,35 @@ import { getOccludersForRound } from "./registry.js";
 import { boxToAabb } from "./solid-box.js";
 import { hasLineOfSight, vec3 } from "../photo-validation/occlusion.js";
 import {
+  DEFAULT_BODY_HALF_HEIGHT,
+  DEFAULT_BODY_OFFSET,
+  DEFAULT_BODY_RADIUS,
+  validatePhoto,
+} from "../photo-validation/validate.js";
+import type { RoundRules } from "../types.js";
+import {
   PARKING_GARAGE_SPAWN_A,
   PARKING_GARAGE_SPAWN_A_ROTATION,
   PARKING_GARAGE_SPAWN_B,
   PARKING_GARAGE_SPAWN_B_ROTATION,
   PARKING_GARAGE_SOLID_BOXES,
 } from "./parking-garage-layout.js";
+
+const parkingRules: RoundRules = {
+  roundTimeLimitSec: 300,
+  photoCooldownSec: 2,
+  maxPhotoDistance: 52,
+  minPhotoDistance: 1,
+  requireAimMode: false,
+  requireBodyInFrame: true,
+  exposure: {
+    flash: true,
+    sound: true,
+    soundAudibleRadius: 25,
+    flashVisibleRadius: 40,
+    flashDurationSec: 0.15,
+  },
+};
 
 const PLAYER_HALF_WIDTH = 0.3;
 const PLAYER_HEIGHT = 1.8;
@@ -160,5 +183,30 @@ describe("parking garage layout", () => {
         expect(xOverlap && yOverlap && zOverlap).toBe(false);
       }
     }
+  });
+
+  it("allows snapping over spawn cover when the opponent is in frame", () => {
+    const occluders = getOccludersForRound("parking-garage-01");
+    const result = validatePhoto(
+      {
+        playerId: "A",
+        timestampMs: 1000,
+        cameraPosition: { x: -10, y: 1.6, z: -14 },
+        cameraRotation: { x: 0, y: 0, z: 0 },
+        fovDeg: 60,
+        aiming: true,
+      },
+      {
+        position: { x: -10, y: 1, z: 0 },
+        rotation: { x: 0, y: 180, z: 0 },
+        aiming: false,
+        bodyOffset: DEFAULT_BODY_OFFSET,
+        bodyRadius: DEFAULT_BODY_RADIUS,
+        bodyHalfHeight: DEFAULT_BODY_HALF_HEIGHT,
+      },
+      parkingRules,
+      { skipOcclusion: false, occluders },
+    );
+    expect(result.valid).toBe(true);
   });
 });

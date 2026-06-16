@@ -152,7 +152,7 @@ export const CITY_STREETS_PARKED_CARS: Array<[number, number, number, number]> =
 
 for (const [cx, cz, footX, footZ] of CITY_STREETS_PARKED_CARS) {
   CITY_STREETS_SOLID_BOXES.push(
-    colliderBox(cx, CAR_BODY_H * 0.5, cz, footX, CAR_BODY_H, footZ, true),
+    colliderBox(cx, CAR_BODY_H * 0.5, cz, footX, CAR_BODY_H, footZ, true, "car"),
   );
 }
 
@@ -168,6 +168,7 @@ CITY_STREETS_SOLID_BOXES.push(
     CAR_BODY_H,
     CITY_STREETS_TAXI.footZ,
     true,
+    "car",
   ),
 );
 
