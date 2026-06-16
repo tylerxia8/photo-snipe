@@ -708,7 +708,24 @@ function addDuctDecor(group: THREE.Group, theme: ArenaTheme): void {
 
 function addParkingGarageDecor(group: THREE.Group, theme: ArenaTheme): void {
   const floorMarkMat = groundOverlayMat(0xffffff);
+  const spawnPadHalf = 1.6;
+
+  const overlapsSpawnPad = (x: number, z: number, halfX: number, halfZ: number): boolean => {
+    for (const spawn of [PARKING_GARAGE_SPAWN_A, PARKING_GARAGE_SPAWN_B]) {
+      if (
+        Math.abs(x - spawn.x) < halfX + spawnPadHalf &&
+        Math.abs(z - spawn.z) < halfZ + spawnPadHalf
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const stripe = (x: number, z: number, sx: number, sz: number) => {
+    if (overlapsSpawnPad(x, z, sx * 0.5, sz * 0.5)) {
+      return;
+    }
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.04, sz), floorMarkMat);
     mesh.position.set(x, 0.08, z);
     mesh.receiveShadow = true;
@@ -724,29 +741,96 @@ function addParkingGarageDecor(group: THREE.Group, theme: ArenaTheme): void {
     stripe(x, 0, 8, 0.12);
   }
 
-  const carColors = theme.propColors;
-  PARKING_GARAGE_CAR_POSITIONS.forEach(([x, z], index) => {
+  const addParkingCar = (x: number, z: number, bodyColor: number) => {
     const car = new THREE.Group();
-    const body = new THREE.Mesh(
-      new THREE.BoxGeometry(
-        PARKING_GARAGE_CAR_LENGTH,
-        PARKING_GARAGE_CAR_HEIGHT,
-        PARKING_GARAGE_CAR_WIDTH,
-      ),
-      flatMat(carColors[index % carColors.length]!),
+    const len = PARKING_GARAGE_CAR_LENGTH;
+    const height = PARKING_GARAGE_CAR_HEIGHT;
+    const width = PARKING_GARAGE_CAR_WIDTH;
+    const wheelMat = flatMat(0x111111);
+    const trimMat = flatMat(0x263238);
+    const glassMat = flatMat(0x1a252f);
+    const bodyMat = flatMat(bodyColor);
+
+    const chassis = new THREE.Mesh(
+      new THREE.BoxGeometry(len * 0.92, height * 0.45, width),
+      bodyMat,
     );
-    body.position.y = PARKING_GARAGE_CAR_HEIGHT * 0.5;
-    body.castShadow = true;
-    body.receiveShadow = true;
-    car.add(body);
+    chassis.position.y = height * 0.28;
+    chassis.castShadow = true;
+    chassis.receiveShadow = true;
+    car.add(chassis);
+
+    const hood = new THREE.Mesh(
+      new THREE.BoxGeometry(len * 0.32, height * 0.22, width * 0.94),
+      bodyMat,
+    );
+    hood.position.set(0, height * 0.52, len * 0.28);
+    hood.castShadow = true;
+    car.add(hood);
+
+    const trunk = new THREE.Mesh(
+      new THREE.BoxGeometry(len * 0.28, height * 0.2, width * 0.94),
+      bodyMat,
+    );
+    trunk.position.set(0, height * 0.5, -len * 0.3);
+    trunk.castShadow = true;
+    car.add(trunk);
+
     const cabin = new THREE.Mesh(
-      new THREE.BoxGeometry(2.2, 0.55, 1.8),
-      flatMat(0x37474f),
+      new THREE.BoxGeometry(len * 0.42, height * 0.38, width * 0.88),
+      bodyMat,
     );
-    cabin.position.set(0, 1.35, -0.35);
+    cabin.position.set(0, height * 0.72, -len * 0.02);
+    cabin.castShadow = true;
     car.add(cabin);
+
+    const windshield = new THREE.Mesh(
+      new THREE.BoxGeometry(len * 0.36, height * 0.24, width * 0.7),
+      glassMat,
+    );
+    windshield.position.set(0, height * 0.78, -len * 0.02);
+    car.add(windshield);
+
+    for (const dz of [len * 0.48, -len * 0.48] as const) {
+      const bumper = new THREE.Mesh(
+        new THREE.BoxGeometry(len * 0.12, height * 0.18, width * 0.98),
+        trimMat,
+      );
+      bumper.position.set(0, height * 0.18, dz);
+      car.add(bumper);
+    }
+
+    for (const ox of [-width * 0.35, width * 0.35] as const) {
+      const headlight = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, 0.1), flatMat(0xffffcc));
+      headlight.position.set(ox, height * 0.35, len * 0.46);
+      car.add(headlight);
+      const taillight = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, 0.1), flatMat(0x8b0000));
+      taillight.position.set(ox, height * 0.32, -len * 0.46);
+      car.add(taillight);
+    }
+
+    const wheelY = height * 0.18;
+    const halfLen = len * 0.34;
+    const halfWidth = width * 0.44;
+    for (const [ox, oz] of [
+      [-halfWidth, -halfLen],
+      [halfWidth, -halfLen],
+      [-halfWidth, halfLen],
+      [halfWidth, halfLen],
+    ] as const) {
+      const wheel = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.38, 0.22), wheelMat);
+      wheel.position.set(ox, wheelY, oz);
+      wheel.castShadow = true;
+      car.add(wheel);
+    }
+
     car.position.set(x, 0, z);
     group.add(car);
+  };
+
+  const carColors = theme.propColors;
+  PARKING_GARAGE_CAR_POSITIONS.forEach(([x, z], index) => {
+    addParkingCar(x, z, carColors[index % carColors.length]!);
   });
 
   const pillarMat = flatMat(theme.wallColor);
@@ -770,18 +854,21 @@ function addParkingGarageDecor(group: THREE.Group, theme: ArenaTheme): void {
     group.add(pillar);
   }
 
-  const padMatA = groundOverlayMat(0x2980b9);
-  const padMatB = groundOverlayMat(0xc0392b);
-  const padA = new THREE.Mesh(new THREE.BoxGeometry(3, 0.04, 3), padMatA);
-  padA.position.set(PARKING_GARAGE_SPAWN_A.x, 0.08, PARKING_GARAGE_SPAWN_A.z);
-  padA.receiveShadow = true;
-  padA.renderOrder = 1;
-  group.add(padA);
-  const padB = new THREE.Mesh(new THREE.BoxGeometry(3, 0.04, 3), padMatB);
-  padB.position.set(PARKING_GARAGE_SPAWN_B.x, 0.08, PARKING_GARAGE_SPAWN_B.z);
-  padB.receiveShadow = true;
-  padB.renderOrder = 1;
-  group.add(padB);
+  const addSpawnPad = (x: number, z: number, color: number) => {
+    const base = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.04, 3.2), groundOverlayMat(color));
+    base.position.set(x, 0.12, z);
+    base.receiveShadow = true;
+    base.renderOrder = 2;
+    group.add(base);
+    const inner = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.04, 2.4), groundOverlayMat(0xffffff));
+    inner.position.set(x, 0.16, z);
+    inner.receiveShadow = true;
+    inner.renderOrder = 3;
+    group.add(inner);
+  };
+
+  addSpawnPad(PARKING_GARAGE_SPAWN_A.x, PARKING_GARAGE_SPAWN_A.z, 0x2980b9);
+  addSpawnPad(PARKING_GARAGE_SPAWN_B.x, PARKING_GARAGE_SPAWN_B.z, 0xc0392b);
 
   for (const [x, z, y] of [
     [0, 0, 4.35],
