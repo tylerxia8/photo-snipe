@@ -17,4 +17,5 @@ export * from "./replay/types.js";
 export * from "./replay/build.js";
 export * from "./progression/match-rewards.js";
 export * from "./progression/operator-ladder.js";
+export * from "./practice/bot-difficulty.js";
 export * from "./skins.js";

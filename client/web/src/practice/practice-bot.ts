@@ -3,9 +3,12 @@ import {
   DEFAULT_BODY_OFFSET,
   DEFAULT_BODY_RADIUS,
   fromArray,
+  getPracticeBotProfile,
   validatePhoto,
   type PhotoAttempt,
   type PlayerPose,
+  type PracticeBotDifficulty,
+  type PracticeBotProfile,
   type RoundRules,
 } from "@photo-snipe/core";
 import {
@@ -16,7 +19,6 @@ import {
 import { movePlayer, type FeetPos, type WorldColliders } from "../game/player-movement.js";
 
 const WALK_SPEED = 2.6;
-const JUMP_VELOCITY = 7;
 const GRAVITY = 18;
 const EYE_OFFSET = 0.6;
 const STAND_SKIN = 0.02;
@@ -48,7 +50,20 @@ function poseFromState(state: LiveState): PlayerPose {
   };
 }
 
+function shortestAngleDelta(fromDeg: number, toDeg: number): number {
+  return ((toDeg - fromDeg + 180) % 360 + 360) % 360 - 180;
+}
+
+function rotateTowards(currentDeg: number, targetDeg: number, maxStepDeg: number): number {
+  const delta = shortestAngleDelta(currentDeg, targetDeg);
+  if (Math.abs(delta) <= maxStepDeg) {
+    return targetDeg;
+  }
+  return currentDeg + Math.sign(delta) * maxStepDeg;
+}
+
 export class PracticeBot {
+  private profile: PracticeBotProfile;
   private feet: FeetPos = { x: 0, y: 1, z: 0 };
   private yawDeg = 180;
   private verticalVelocity = 0;
@@ -57,6 +72,22 @@ export class PracticeBot {
   private strafeUntilMs = 0;
   private strafeDirection = 1;
   private lastPhotoAttemptMs = 0;
+  private acquiringTarget = false;
+  private reactionReadyMs = 0;
+
+  constructor(difficulty: PracticeBotDifficulty = "hard") {
+    this.profile = getPracticeBotProfile(difficulty);
+  }
+
+  setDifficulty(difficulty: PracticeBotDifficulty): void {
+    this.profile = getPracticeBotProfile(difficulty);
+    this.acquiringTarget = false;
+    this.reactionReadyMs = 0;
+  }
+
+  getProfile(): PracticeBotProfile {
+    return this.profile;
+  }
 
   init(spawn: { position: number[]; rotation: number[] }): void {
     this.feet = {
@@ -70,6 +101,8 @@ export class PracticeBot {
     this.onFloor = true;
     this.strafeUntilMs = 0;
     this.lastPhotoAttemptMs = 0;
+    this.acquiringTarget = false;
+    this.reactionReadyMs = 0;
   }
 
   getState(): LiveState {
@@ -82,7 +115,11 @@ export class PracticeBot {
   }
 
   onHumanExposure(nowMs: number): void {
-    this.strafeUntilMs = nowMs + 1200 + Math.random() * 800;
+    if (Math.random() > this.profile.strafeOnExposureChance) {
+      return;
+    }
+    const [minMs, maxMs] = this.profile.strafeOnExposureMs;
+    this.strafeUntilMs = nowMs + minMs + Math.random() * (maxMs - minMs);
     this.strafeDirection = Math.random() > 0.5 ? 1 : -1;
   }
 
@@ -97,7 +134,16 @@ export class PracticeBot {
     const dist = Math.hypot(dxHuman, dzHuman);
 
     if (dist > 0.05) {
-      this.yawDeg = (Math.atan2(dxHuman, dzHuman) * 180) / Math.PI;
+      const targetYaw = (Math.atan2(dxHuman, dzHuman) * 180) / Math.PI;
+      if (Number.isFinite(this.profile.trackTurnSpeedDegPerSec)) {
+        this.yawDeg = rotateTowards(
+          this.yawDeg,
+          targetYaw,
+          this.profile.trackTurnSpeedDegPerSec * delta,
+        );
+      } else {
+        this.yawDeg = targetYaw;
+      }
     }
 
     const yawRad = (this.yawDeg * Math.PI) / 180;
@@ -108,12 +154,12 @@ export class PracticeBot {
 
     let moveX = 0;
     let moveZ = 0;
-    const speed = WALK_SPEED * delta;
+    const speed = WALK_SPEED * this.profile.movementSpeedMultiplier * delta;
 
     if (nowMs < this.strafeUntilMs) {
       moveX += rightX * this.strafeDirection * speed;
       moveZ += rightZ * this.strafeDirection * speed;
-    } else if (dist > 8) {
+    } else if (this.profile.huntWhenFar && dist > 8) {
       moveX += forwardX * speed;
       moveZ += forwardZ * speed;
     } else if (dist > 3.5) {
@@ -121,7 +167,7 @@ export class PracticeBot {
       moveZ += forwardZ * speed * 0.55;
       moveX += rightX * this.strafeDirection * speed * 0.35;
       moveZ += rightZ * this.strafeDirection * speed * 0.35;
-    } else if (dist < 2.2) {
+    } else if (this.profile.retreatWhenClose && dist < 2.2) {
       moveX -= forwardX * speed * 0.75;
       moveZ -= forwardZ * speed * 0.75;
     } else {
@@ -185,12 +231,15 @@ export class PracticeBot {
       return null;
     }
 
+    const aimYaw =
+      this.yawDeg +
+      (Math.random() * 2 - 1) * this.profile.aimErrorDeg;
     const cameraPosition = fromArray([
       this.feet.x,
       this.feet.y + EYE_OFFSET,
       this.feet.z,
     ]);
-    const cameraRotation = { x: 0, y: this.yawDeg, z: 0 };
+    const cameraRotation = { x: 0, y: aimYaw, z: 0 };
     const attempt: PhotoAttempt = {
       playerId: "B",
       timestampMs: nowMs,
@@ -208,9 +257,27 @@ export class PracticeBot {
     });
 
     if (!result.valid) {
+      this.acquiringTarget = false;
       return null;
     }
 
+    if (!this.acquiringTarget) {
+      this.acquiringTarget = true;
+      const [minDelayMs, maxDelayMs] = this.profile.reactionDelayMs;
+      this.reactionReadyMs = nowMs + minDelayMs + Math.random() * (maxDelayMs - minDelayMs);
+    }
+
+    if (nowMs < this.reactionReadyMs) {
+      return null;
+    }
+
+    if (Math.random() > this.profile.shootChanceWhenValid) {
+      this.acquiringTarget = false;
+      this.reactionReadyMs = nowMs + 400 + Math.random() * 500;
+      return null;
+    }
+
+    this.acquiringTarget = false;
     this.lastPhotoAttemptMs = nowMs;
     return attempt;
   }

@@ -91,7 +91,36 @@
               <div class="settings-section play-progress-section">
                 <h3 class="settings-section-title">SOLO PRACTICE</h3>
                 <p class="settings-section-hint">
-                  Fight a training bot locally — no room code or second player required.
+                  Fight a training bot locally — pick a difficulty tuned to target win rates.
+                </p>
+                <div class="practice-difficulty-row" role="radiogroup" aria-label="Practice bot difficulty">
+                  <button
+                    type="button"
+                    class="practice-difficulty-btn"
+                    data-practice-difficulty="easy"
+                    aria-pressed="false"
+                  >
+                    EASY
+                  </button>
+                  <button
+                    type="button"
+                    class="practice-difficulty-btn"
+                    data-practice-difficulty="medium"
+                    aria-pressed="false"
+                  >
+                    MEDIUM
+                  </button>
+                  <button
+                    type="button"
+                    class="practice-difficulty-btn"
+                    data-practice-difficulty="hard"
+                    aria-pressed="true"
+                  >
+                    HARD
+                  </button>
+                </div>
+                <p id="practice-difficulty-stats" class="practice-difficulty-stats">
+                  Select a bot difficulty to see target win rates and your record.
                 </p>
                 <button id="practice-btn" class="btn btn-secondary practice-btn" type="button">
                   PRACTICE VS BOT

@@ -17,7 +17,7 @@ import {
   recordPhotoAttempt,
   resetMatchPerformance,
 } from "./progression/match-performance.js";
-import { formatCreditBreakdown } from "@photo-snipe/core";
+import { formatCreditBreakdown, type PracticeBotDifficulty } from "@photo-snipe/core";
 import { getControlsHint } from "./settings/keybinds.js";
 import { initKeybindSettings } from "./settings/keybind-settings.js";
 import { getSkinId } from "./settings/appearance.js";
@@ -32,7 +32,18 @@ import {
 import { initSocialSettings, type SocialSettingsHandle } from "./social/social-settings.js";
 import { getFriends } from "./social/friends.js";
 import { applyPresenceSnapshot, type FriendPresence } from "./social/presence.js";
+import {
+  getPracticeDifficulty,
+  initPracticeDifficultyUi,
+} from "./settings/practice-difficulty-settings.js";
 import { normalizeMatchReplay, parseMatchReplay, playMatchReplay } from "./replay/replay-player.js";
+
+function parsePracticeDifficulty(value: unknown): PracticeBotDifficulty | undefined {
+  if (value === "easy" || value === "medium" || value === "hard") {
+    return value;
+  }
+  return undefined;
+}
 
 const lobby = document.getElementById("lobby")!;
 const hud = document.getElementById("hud")!;
@@ -327,6 +338,7 @@ function resetRematchUi(): void {
 }
 
 let progressionUi: { refresh: () => void };
+let practiceDifficultyUi: { refresh: () => void };
 let shopSettings: ShopSettingsHandle;
 
 function showPostMatch(msg: ServerMessage): void {
@@ -340,11 +352,13 @@ function showPostMatch(msg: ServerMessage): void {
   const lossesBefore = getProgressionState().consecutiveLosses;
   const performance = getMatchPerformanceSnapshot();
   const matchMode = mode === "practice" ? "practice" : "online";
+  const practiceDifficulty = parsePracticeDifficulty(msg.practiceDifficulty);
 
   recordMatchResult({
     mode: matchMode,
     didWin,
     roundId,
+    practiceDifficulty,
   });
 
   const arenaStats = getArenaStats(roundId);
@@ -357,6 +371,7 @@ function showPostMatch(msg: ServerMessage): void {
   });
   resetMatchPerformance();
   progressionUi.refresh();
+  practiceDifficultyUi.refresh();
   shopSettings.refresh();
   refreshArenaSelect();
 
@@ -490,7 +505,7 @@ async function startPractice(): Promise<void> {
   hidePostMatch();
 
   try {
-    await practiceMatch.start(roundId);
+    await practiceMatch.start(roundId, getPracticeDifficulty());
   } catch {
     inPractice = false;
     practiceMatch = null;
@@ -549,7 +564,7 @@ function processServerMessage(msg: ServerMessage): void {
       ensureGame().setOpponentSkin(msg.opponentSkinId);
       setStatus(
         msg.mode === "practice"
-          ? "Practice vs Training Bot"
+          ? `Practice vs ${String(msg.opponentName ?? "Bot")}`
           : `Match vs ${String(msg.opponentName)}`,
       );
       break;
@@ -709,6 +724,7 @@ updateOperatorPreview();
 updateControlsHint();
 const progressionUiInstance = initProgressionUi();
 progressionUi = progressionUiInstance;
+practiceDifficultyUi = initPracticeDifficultyUi();
 shopSettings = initShopSettings();
 subscribeShop(() => refreshArenaSelect());
 

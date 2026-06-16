@@ -21,6 +21,7 @@ import type { Game } from "../game/game.js";
 import type { ServerMessage } from "../net/client.js";
 import { ReplayRecorder } from "../replay/recorder.js";
 import { getSkinId } from "../settings/appearance.js";
+import { getPracticeBotProfile, type PracticeBotDifficulty } from "@photo-snipe/core";
 import { PracticeBot, type LiveState } from "./practice-bot.js";
 import { loadRoundDefinition } from "./round-loader.js";
 
@@ -45,6 +46,7 @@ export class PracticeMatch implements MatchTransport {
     aiming: false,
   };
   private readonly bot = new PracticeBot();
+  private difficulty: PracticeBotDifficulty = "hard";
   private readonly replayRecorder = new ReplayRecorder();
   private lastWinReplay: ReturnType<ReplayRecorder["buildWinReplay"]> = null;
   private active = false;
@@ -55,9 +57,12 @@ export class PracticeMatch implements MatchTransport {
     private game: Game,
   ) {}
 
-  async start(roundId: string): Promise<void> {
+  async start(roundId: string, difficulty: PracticeBotDifficulty): Promise<void> {
     this.roundId = roundId;
+    this.difficulty = difficulty;
+    this.bot.setDifficulty(difficulty);
     this.round = await loadRoundDefinition(roundId);
+    const profile = getPracticeBotProfile(difficulty);
     const matchConfig: MatchConfig = {
       id: "practice-duel",
       name: "Practice Duel",
@@ -70,11 +75,12 @@ export class PracticeMatch implements MatchTransport {
       type: "match_started",
       matchId: "practice",
       playerSlot: "A",
-      opponentName: "Training Bot",
+      opponentName: profile.opponentName,
       opponentSkinId: "crimson",
       selectedRoundId: roundId,
       selectedRoundName: this.round.name,
       mode: "practice",
+      practiceDifficulty: difficulty,
     });
 
     await this.beginRound();
@@ -83,6 +89,7 @@ export class PracticeMatch implements MatchTransport {
   async restart(): Promise<void> {
     this.clearInterRoundTimer();
     this.active = false;
+    this.bot.setDifficulty(this.difficulty);
     this.state = createMatchState({
       id: "practice-duel",
       name: "Practice Duel",
@@ -248,7 +255,7 @@ export class PracticeMatch implements MatchTransport {
       this.lastWinReplay = this.replayRecorder.buildWinReplay({
         roundId: this.round.id,
         winnerSlot: "B",
-        winnerName: "Training Bot",
+        winnerName: getPracticeBotProfile(this.difficulty).opponentName,
         winnerSkinId: "crimson",
         loserSkinId: getSkinId(),
         winCameraPosition: [
@@ -335,12 +342,13 @@ export class PracticeMatch implements MatchTransport {
       this.emit({
         type: "match_ended",
         winnerSlot: this.state.winner,
-        winnerName: didWin ? "You" : "Training Bot",
+        winnerName: didWin ? "You" : getPracticeBotProfile(this.difficulty).opponentName,
         didWin,
         scores: this.state.scores,
         reason,
         roundId: this.roundId,
         mode: "practice",
+        practiceDifficulty: this.difficulty,
         replay: this.lastWinReplay,
       });
       return;
