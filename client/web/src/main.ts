@@ -335,8 +335,8 @@ function showPostMatch(msg: ServerMessage): void {
   const forfeit = msg.reason === "forfeit";
   const mode = String(msg.mode ?? (inPractice ? "practice" : "online"));
   const roundId = String(msg.roundId ?? currentMatchRoundId);
-  const winsBefore = getProgressionState().totalWins;
-  const rankBefore = getRank(winsBefore);
+  const rankPointsBefore = getProgressionState().rankPoints;
+  const rankBefore = getRank(rankPointsBefore);
   const lossesBefore = getProgressionState().consecutiveLosses;
   const performance = getMatchPerformanceSnapshot();
   const matchMode = mode === "practice" ? "practice" : "online";
@@ -360,7 +360,7 @@ function showPostMatch(msg: ServerMessage): void {
   shopSettings.refresh();
   refreshArenaSelect();
 
-  const rankAfter = getRank(getProgressionState().totalWins);
+  const rankAfter = getRank(getProgressionState().rankPoints);
   const creditSummary = `+${creditBreakdown.total} CR (${formatCreditBreakdown(creditBreakdown)})`;
 
   postMatchTitle.textContent = didWin ? "Victory" : "Defeat";

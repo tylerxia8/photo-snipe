@@ -102,16 +102,29 @@
                 <h3 class="settings-section-title">OPERATOR LADDER</h3>
                 <div class="progress-rank-card">
                   <div class="progress-rank-header">
-                    <span id="progress-rank-name" class="progress-rank-name">ROOKIE</span>
-                    <span id="progress-rank-meta" class="progress-rank-meta">0 wins</span>
+                    <div class="progress-rank-title">
+                      <span id="progress-rank-name" class="progress-rank-name">RECRUIT</span>
+                      <span id="progress-rank-tier" class="progress-rank-tier">Enlisted</span>
+                    </div>
+                    <span id="progress-rank-meta" class="progress-rank-meta">0 RP</span>
                   </div>
-                  <div class="progress-rank-track">
+                  <p id="progress-rank-record" class="progress-rank-record">0W · 0L · 0% · 0 online · 0 practice</p>
+                  <div
+                    id="progress-rank-track"
+                    class="progress-rank-track"
+                    role="progressbar"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="0"
+                    aria-label="Rank progress"
+                  >
                     <div id="progress-rank-bar" class="progress-rank-bar"></div>
                   </div>
                   <p id="progress-season-meta" class="progress-season-meta">Season</p>
                 </div>
+                <div id="operator-ladder" class="operator-ladder" aria-label="Operator rank ladder"></div>
                 <p class="settings-section-hint">
-                  Win matches to rank up and unlock arenas. Bonus credits for streaks, comebacks, and clean snaps.
+                  Earn rank points (RP) from every match — online wins count most. Rank up to unlock arenas and show mastery.
                 </p>
               </div>
 

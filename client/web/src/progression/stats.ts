@@ -1,4 +1,11 @@
 import { listArenaOptions } from "@photo-snipe/core";
+import {
+  awardLadderPoints,
+  estimateRankPointsFromHistory,
+  getLadderSnapshot,
+  getOperatorRank,
+  type OperatorRank,
+} from "@photo-snipe/core";
 
 const STORAGE_KEY = "photo-snipe-progression";
 
@@ -14,25 +21,14 @@ export interface ProgressionState {
   totalLosses: number;
   practiceWins: number;
   onlineWins: number;
+  rankPoints: number;
   consecutiveLosses: number;
   seasonMonth: string;
   seasonWins: number;
   perArena: Record<string, ArenaStats>;
 }
 
-export interface RankDefinition {
-  id: string;
-  name: string;
-  minWins: number;
-}
-
-export const RANKS: RankDefinition[] = [
-  { id: "rookie", name: "Rookie", minWins: 0 },
-  { id: "spotter", name: "Spotter", minWins: 1 },
-  { id: "marksman", name: "Marksman", minWins: 3 },
-  { id: "sniper", name: "Sniper", minWins: 6 },
-  { id: "ace", name: "Ace", minWins: 10 },
-];
+export type RankDefinition = OperatorRank;
 
 const ARENA_UNLOCK_WINS: Record<string, number> = {
   "warehouse-interior-01": 0,
@@ -56,11 +52,24 @@ function defaultState(): ProgressionState {
     totalLosses: 0,
     practiceWins: 0,
     onlineWins: 0,
+    rankPoints: 0,
     consecutiveLosses: 0,
     seasonMonth: currentSeasonMonth(),
     seasonWins: 0,
     perArena: {},
   };
+}
+
+function resolveRankPoints(parsed: Partial<ProgressionState>): number {
+  if (typeof parsed.rankPoints === "number" && parsed.rankPoints >= 0) {
+    return parsed.rankPoints;
+  }
+
+  return estimateRankPointsFromHistory({
+    onlineWins: typeof parsed.onlineWins === "number" ? parsed.onlineWins : 0,
+    practiceWins: typeof parsed.practiceWins === "number" ? parsed.practiceWins : 0,
+    totalLosses: typeof parsed.totalLosses === "number" ? parsed.totalLosses : 0,
+  });
 }
 
 function currentSeasonMonth(now = new Date()): string {
@@ -87,6 +96,7 @@ function loadState(): ProgressionState {
       totalLosses: typeof parsed.totalLosses === "number" ? parsed.totalLosses : 0,
       practiceWins: typeof parsed.practiceWins === "number" ? parsed.practiceWins : 0,
       onlineWins: typeof parsed.onlineWins === "number" ? parsed.onlineWins : 0,
+      rankPoints: resolveRankPoints(parsed),
       consecutiveLosses:
         typeof parsed.consecutiveLosses === "number" ? parsed.consecutiveLosses : 0,
       seasonMonth:
@@ -120,42 +130,47 @@ export function subscribeProgression(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-export function getRank(totalWins = cachedState.totalWins): RankDefinition {
-  let rank = RANKS[0];
-  for (const candidate of RANKS) {
-    if (totalWins >= candidate.minWins) {
-      rank = candidate;
-    }
-  }
-  return rank;
+export function getRank(rankPoints = cachedState.rankPoints): RankDefinition {
+  return getOperatorRank(rankPoints);
 }
 
-export function getNextRank(totalWins = cachedState.totalWins): RankDefinition | null {
-  for (const candidate of RANKS) {
-    if (totalWins < candidate.minWins) {
-      return candidate;
-    }
-  }
-  return null;
+export function getNextRank(rankPoints = cachedState.rankPoints): RankDefinition | null {
+  return getLadderSnapshot(rankPoints).next;
 }
 
-export function getRankProgress(totalWins = cachedState.totalWins): {
+export function getRankProgress(rankPoints = cachedState.rankPoints): {
   current: RankDefinition;
   next: RankDefinition | null;
   progress: number;
+  rankPoints: number;
+  rankPointsToNext: number;
+  winsNeededEstimate: string | null;
 } {
-  const current = getRank(totalWins);
-  const next = getNextRank(totalWins);
-  if (!next) {
-    return { current, next: null, progress: 1 };
-  }
-
-  const span = next.minWins - current.minWins;
-  const gained = totalWins - current.minWins;
+  const snapshot = getLadderSnapshot(rankPoints);
   return {
-    current,
-    next,
-    progress: span <= 0 ? 1 : Math.min(1, gained / span),
+    current: snapshot.current,
+    next: snapshot.next,
+    progress: snapshot.progress,
+    rankPoints: snapshot.rankPoints,
+    rankPointsToNext: snapshot.rankPointsToNext,
+    winsNeededEstimate: snapshot.winsNeededEstimate,
+  };
+}
+
+export function getOperatorRecord(): {
+  totalMatches: number;
+  winRate: number;
+  onlineWins: number;
+  practiceWins: number;
+  totalLosses: number;
+} {
+  const totalMatches = cachedState.totalWins + cachedState.totalLosses;
+  return {
+    totalMatches,
+    winRate: totalMatches > 0 ? cachedState.totalWins / totalMatches : 0,
+    onlineWins: cachedState.onlineWins,
+    practiceWins: cachedState.practiceWins,
+    totalLosses: cachedState.totalLosses,
   };
 }
 
@@ -201,6 +216,11 @@ export function recordMatchResult(options: {
     stats.losses += 1;
     stats.currentStreak = 0;
   }
+
+  cachedState.rankPoints += awardLadderPoints({
+    mode: options.mode,
+    didWin: options.didWin,
+  });
 
   cachedState.perArena[options.roundId] = stats;
   persist();
