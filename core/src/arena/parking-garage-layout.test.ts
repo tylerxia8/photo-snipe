@@ -209,4 +209,29 @@ describe("parking garage layout", () => {
     );
     expect(result.valid).toBe(true);
   });
+
+  it("allows snapping when peeking around spawn cover", () => {
+    const occluders = getOccludersForRound("parking-garage-01");
+    const result = validatePhoto(
+      {
+        playerId: "A",
+        timestampMs: 1000,
+        cameraPosition: { x: -11.2, y: 1.6, z: -15 },
+        cameraRotation: { x: -0.05, y: 20, z: 0 },
+        fovDeg: 75,
+        aiming: true,
+      },
+      {
+        position: { x: 10, y: 1, z: -5 },
+        rotation: { x: 0, y: 180, z: 0 },
+        aiming: false,
+        bodyOffset: DEFAULT_BODY_OFFSET,
+        bodyRadius: DEFAULT_BODY_RADIUS,
+        bodyHalfHeight: DEFAULT_BODY_HALF_HEIGHT,
+      },
+      parkingRules,
+      { skipOcclusion: false, occluders, aspectRatio: 16 / 9 },
+    );
+    expect(result.valid).toBe(true);
+  });
 });

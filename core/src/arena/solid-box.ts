@@ -18,7 +18,7 @@ export interface ArenaSolidBox {
   occludesPhotos: boolean;
   /** When false, the web client builds collision only and decor supplies visuals. */
   decorMesh?: boolean;
-  /** Low center block + side panels so peeking over/around a car can still snap. */
+  /** Low hood-height volume for photo occlusion — full collision box is used for movement. */
   photoOccludeProfile?: "car";
 }
 
@@ -64,9 +64,7 @@ export function colliderBox(
   };
 }
 
-const CAR_PHOTO_SIDE_W = 0.3;
-const CAR_PHOTO_BODY_H = 1.15;
-const CAR_PHOTO_SIDE_H = 1.75;
+const CAR_PHOTO_BODY_H = 1.1;
 
 function aabb(
   minX: number,
@@ -82,71 +80,21 @@ function aabb(
   };
 }
 
-/** Photo rays use open-topped car volumes so peeking over center cover still registers. */
+/** Photo rays use a low open-topped car volume so peeking over cover still registers. */
 export function boxToPhotoOccluderAABBs(box: ArenaSolidBox): AxisAlignedBox[] {
   if (box.photoOccludeProfile !== "car") {
     return [boxToAabb(box)];
   }
 
   const groundY = box.cy - box.sy / 2;
-  const longIsX = box.sx >= box.sz;
-  const longHalf = (longIsX ? box.sx : box.sz) / 2;
-  const shortHalf = (longIsX ? box.sz : box.sx) / 2;
-  const centerShortHalf = Math.max(0.2, shortHalf - CAR_PHOTO_SIDE_W);
-
-  if (longIsX) {
-    return [
-      aabb(
-        box.cx - longHalf,
-        box.cx + longHalf,
-        groundY,
-        groundY + CAR_PHOTO_BODY_H,
-        box.cz - centerShortHalf,
-        box.cz + centerShortHalf,
-      ),
-      aabb(
-        box.cx - longHalf,
-        box.cx + longHalf,
-        groundY,
-        groundY + CAR_PHOTO_SIDE_H,
-        box.cz - shortHalf,
-        box.cz - shortHalf + CAR_PHOTO_SIDE_W,
-      ),
-      aabb(
-        box.cx - longHalf,
-        box.cx + longHalf,
-        groundY,
-        groundY + CAR_PHOTO_SIDE_H,
-        box.cz + shortHalf - CAR_PHOTO_SIDE_W,
-        box.cz + shortHalf,
-      ),
-    ];
-  }
-
   return [
     aabb(
-      box.cx - centerShortHalf,
-      box.cx + centerShortHalf,
+      box.cx - box.sx / 2,
+      box.cx + box.sx / 2,
       groundY,
       groundY + CAR_PHOTO_BODY_H,
-      box.cz - longHalf,
-      box.cz + longHalf,
-    ),
-    aabb(
-      box.cx - shortHalf,
-      box.cx - shortHalf + CAR_PHOTO_SIDE_W,
-      groundY,
-      groundY + CAR_PHOTO_SIDE_H,
-      box.cz - longHalf,
-      box.cz + longHalf,
-    ),
-    aabb(
-      box.cx + shortHalf - CAR_PHOTO_SIDE_W,
-      box.cx + shortHalf,
-      groundY,
-      groundY + CAR_PHOTO_SIDE_H,
-      box.cz - longHalf,
-      box.cz + longHalf,
+      box.cz - box.sz / 2,
+      box.cz + box.sz / 2,
     ),
   ];
 }

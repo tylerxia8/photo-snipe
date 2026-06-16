@@ -38,6 +38,8 @@ export function rayAabbEntryDistance(
   return tMin >= 0 ? tMin : tMax;
 }
 
+const LOW_COVER_MAX_Y = 1.25;
+
 export function isRayBlocked(
   origin: Vector3,
   target: Vector3,
@@ -49,6 +51,9 @@ export function isRayBlocked(
 
   const direction = scale(delta, 1 / targetDist);
   for (const box of occluders) {
+    if (box.max.y <= LOW_COVER_MAX_Y && origin.y > box.max.y + 0.04) {
+      continue;
+    }
     const hit = rayAabbEntryDistance(origin, direction, box);
     if (hit !== null && hit < targetDist - EPSILON) {
       return true;
