@@ -529,6 +529,42 @@ function addCityStreetsDecor(group: THREE.Group, theme: ArenaTheme): void {
     addHotDogCart(x, z);
   }
 
+  const addNewsstand = (x: number, z: number) => {
+    const stand = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.1, 1.4), flatMat(0x7f8c8d));
+    base.position.y = 0.55;
+    stand.add(base);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.12, 1.6), flatMat(0x566573));
+    roof.position.y = 1.15;
+    stand.add(roof);
+    stand.position.set(x, 0, z);
+    group.add(stand);
+  };
+
+  const addBusShelter = (x: number, z: number) => {
+    const shelter = new THREE.Group();
+    const back = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.7, 0.12), flatMat(0x95a5a6));
+    back.position.set(0, 1.35, -0.74);
+    shelter.add(back);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.12, 1.6), flatMat(0x566573));
+    roof.position.set(0, 2.7, 0);
+    shelter.add(roof);
+    for (const sx of [-1.2, 1.2] as const) {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.7, 0.12), flatMat(0x566573));
+      post.position.set(sx, 1.35, 0.74);
+      shelter.add(post);
+    }
+    shelter.position.set(x, 0, z);
+    group.add(shelter);
+  };
+
+  addNewsstand(CITY_STREETS_VENDORS[4]![0], CITY_STREETS_VENDORS[4]![2]);
+  addNewsstand(CITY_STREETS_VENDORS[5]![0], CITY_STREETS_VENDORS[5]![2]);
+  addBusShelter(CITY_STREETS_VENDORS[6]![0], CITY_STREETS_VENDORS[6]![2]);
+  addBusShelter(CITY_STREETS_VENDORS[7]![0], CITY_STREETS_VENDORS[7]![2]);
+  addNewsstand(CITY_STREETS_VENDORS[8]![0], CITY_STREETS_VENDORS[8]![2]);
+  addNewsstand(CITY_STREETS_VENDORS[9]![0], CITY_STREETS_VENDORS[9]![2]);
+
   const addTree = (x: number, z: number) => {
     const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.4, 0.45), flatMat(0x6b4423));
     trunk.position.set(x, 0.7, z);

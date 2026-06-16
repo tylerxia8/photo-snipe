@@ -18,6 +18,7 @@ const ROAD_HALF = CITY_STREETS_ROAD_HALF;
 const PARAPET = 1.2;
 const WALL_THICKNESS = 0.35;
 const CAR_BODY_H = 2.1;
+const FENCE_H = 1.2;
 
 export const CITY_STREETS_LAYOUT: ArenaLayoutConfig = {
   id: "city-streets-01",
@@ -110,11 +111,17 @@ CITY_STREETS_SOLID_BOXES.push(
   ),
 );
 
-/** Park fence visuals only — north and west rails (no collision; keeps south/east open). */
+/** Park fence on north and west — south/east stay open. */
 export const CITY_STREETS_FENCE_SEGMENTS: Array<[number, number, number, number]> = [
   [park.cx, park.cz - park.sz * 0.5 + 0.2, park.sx + 0.4, 0.4],
   [park.cx - park.sx * 0.5 + 0.2, park.cz, 0.4, park.sz + 0.4],
 ];
+
+for (const [cx, cz, sx, sz] of CITY_STREETS_FENCE_SEGMENTS) {
+  CITY_STREETS_SOLID_BOXES.push(
+    colliderBox(cx, FENCE_H * 0.5, cz, sx, FENCE_H, sz, true),
+  );
+}
 
 /**
  * Parked cars — [cx, cz, footX, footZ] in world axes.
@@ -149,8 +156,8 @@ for (const [cx, cz, footX, footZ] of CITY_STREETS_PARKED_CARS) {
   );
 }
 
-/** Yellow cab — east lane of the boulevard, south of center. */
-export const CITY_STREETS_TAXI = { cx: 6, cz: -10, footX: 4.4, footZ: 2 };
+/** Yellow cab — south boulevard, west of mid-rise block (clear of cars and buildings). */
+export const CITY_STREETS_TAXI = { cx: -22, cz: -28, footX: 4.4, footZ: 2 };
 
 CITY_STREETS_SOLID_BOXES.push(
   colliderBox(
@@ -223,4 +230,39 @@ export function parkFootprintOverlapsBuilding(): boolean {
       parkBox.minZ < maxZ
     );
   });
+}
+
+function footprintBox(cx: number, cz: number, sx: number, sz: number) {
+  return { minX: cx - sx / 2, maxX: cx + sx / 2, minZ: cz - sz / 2, maxZ: cz + sz / 2 };
+}
+
+function footprintsOverlap(
+  a: ReturnType<typeof footprintBox>,
+  b: ReturnType<typeof footprintBox>,
+): boolean {
+  return a.maxX > b.minX && a.minX < b.maxX && a.maxZ > b.minZ && a.minZ < b.maxZ;
+}
+
+/** Validate taxi and parked cars do not overlap buildings or each other. */
+export function cityStreetsVehicleOverlaps(): boolean {
+  const cars = [
+    ...CITY_STREETS_PARKED_CARS.map(([cx, cz, footX, footZ]) => ({ cx, cz, footX, footZ })),
+    CITY_STREETS_TAXI,
+  ];
+
+  for (let i = 0; i < cars.length; i++) {
+    const a = footprintBox(cars[i]!.cx, cars[i]!.cz, cars[i]!.footX, cars[i]!.footZ);
+    for (let j = i + 1; j < cars.length; j++) {
+      const b = footprintBox(cars[j]!.cx, cars[j]!.cz, cars[j]!.footX, cars[j]!.footZ);
+      if (footprintsOverlap(a, b)) {
+        return true;
+      }
+    }
+    for (const [cx, cz, sx, , sz] of CITY_STREETS_BUILDINGS) {
+      if (footprintsOverlap(a, footprintBox(cx, cz, sx, sz))) {
+        return true;
+      }
+    }
+  }
+  return false;
 }

@@ -13,6 +13,7 @@ import {
   CITY_STREETS_SPAWN_B,
   CITY_STREETS_SOLID_BOXES,
   CITY_STREETS_TAXI,
+  cityStreetsVehicleOverlaps,
   parkFootprintOverlapsBuilding,
 } from "./city-streets-layout.js";
 
@@ -132,6 +133,10 @@ describe("city streets layout", () => {
         expect(footprintOverlaps(x, z, 1.5, 1.5, bench.x, bench.z, 3.2, 1.2)).toBe(false);
       }
     }
+  });
+
+  it("keeps vehicles clear of each other and buildings", () => {
+    expect(cityStreetsVehicleOverlaps()).toBe(false);
   });
 
   it("matches car colliders to their world-axis footprints", () => {

@@ -317,17 +317,9 @@ function clipAxisX(
 
       let nextX = x;
       if (dx > 0) {
-        const exitWest = solid.min.x - PLAYER_HALF_WIDTH - SKIN;
-        const exitEast = solid.max.x - PLAYER_HALF_WIDTH + SKIN;
-        const pushWest = player.max.x - solid.min.x + SKIN;
-        const pushEast = solid.max.x - player.min.x + SKIN;
-        nextX = Math.min(x, pushWest <= pushEast ? exitWest : exitEast);
+        nextX = Math.min(x, solid.min.x - PLAYER_HALF_WIDTH - SKIN);
       } else if (dx < 0) {
-        const exitWest = solid.min.x + PLAYER_HALF_WIDTH - SKIN;
-        const exitEast = solid.max.x + PLAYER_HALF_WIDTH + SKIN;
-        const pushWest = player.max.x - solid.min.x + SKIN;
-        const pushEast = solid.max.x - player.min.x + SKIN;
-        nextX = Math.max(x, pushWest <= pushEast ? exitWest : exitEast);
+        nextX = Math.max(x, solid.max.x + PLAYER_HALF_WIDTH + SKIN);
       } else {
         continue;
       }
@@ -374,17 +366,9 @@ function clipAxisZ(
 
       let nextZ = z;
       if (dz > 0) {
-        const exitNorth = solid.min.z - PLAYER_HALF_WIDTH - SKIN;
-        const exitSouth = solid.max.z - PLAYER_HALF_WIDTH + SKIN;
-        const pushNorth = player.max.z - solid.min.z + SKIN;
-        const pushSouth = solid.max.z - player.min.z + SKIN;
-        nextZ = Math.min(z, pushNorth <= pushSouth ? exitNorth : exitSouth);
+        nextZ = Math.min(z, solid.min.z - PLAYER_HALF_WIDTH - SKIN);
       } else if (dz < 0) {
-        const exitNorth = solid.min.z + PLAYER_HALF_WIDTH - SKIN;
-        const exitSouth = solid.max.z + PLAYER_HALF_WIDTH + SKIN;
-        const pushNorth = player.max.z - solid.min.z + SKIN;
-        const pushSouth = solid.max.z - player.min.z + SKIN;
-        nextZ = Math.max(z, pushNorth <= pushSouth ? exitNorth : exitSouth);
+        nextZ = Math.max(z, solid.max.z + PLAYER_HALF_WIDTH + SKIN);
       } else {
         continue;
       }
