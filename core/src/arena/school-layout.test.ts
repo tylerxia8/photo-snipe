@@ -100,6 +100,20 @@ describe("school layout", () => {
     expect(feetBlocked(SCHOOL_SPAWN_B.x, SCHOOL_SPAWN_B.z, SCHOOL_SPAWN_B.y)).toBe(false);
   });
 
+  it("keeps key hallway points walkable on floor 1", () => {
+    for (const [x, z] of [
+      [0, -10],
+      [0, -4],
+      [0, 0],
+      [0, 10],
+      [0, 16],
+      [0, -15],
+      [0, -12],
+    ] as const) {
+      expect(feetBlocked(x, z, 1)).toBe(false);
+    }
+  });
+
   it("connects cafeteria and gym spawns through hallways", () => {
     expect(canWalkBetween(SCHOOL_SPAWN_A, SCHOOL_SPAWN_B)).toBe(true);
   });

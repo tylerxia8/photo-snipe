@@ -39,8 +39,9 @@ Floor 1
 ## Gameplay intent
 
 - **Hallways are the main routes** between gym, cafeteria, classrooms, and stairs.
-- **Classrooms** on both floors are enclosed rooms with doors off the hall — good hiding spots.
-- **Twin stairwells** at x = ±16 climb to second-floor landings that open onto the upstairs hall.
+- **Every room has four walls** with a single doorway into the hall (classrooms, gym, cafeteria).
+- **Floor 2 is hidden from floor 1** by an opaque ceiling slab — only the gym atrium and stairwell shafts stay open.
+- **Stairwells** at x = ±18 land at **z = 0** on the second-floor hallway with a direct walkable connection.
 - **Gym** uses a hardwood floor, court lines, baskets, and side bleachers.
 - **Cafeteria** has a serving counter and bench tables.
 

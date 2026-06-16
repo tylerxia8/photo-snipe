@@ -20,7 +20,6 @@ import {
   SCHOOL_FLOOR1_HEIGHT,
   SCHOOL_FLOOR2_Y,
   SCHOOL_GYM,
-  SCHOOL_HALF,
   SCHOOL_HALL_LOCKERS,
   SCHOOL_MAIN_HALL,
   SCHOOL_NORTH_SPUR,
@@ -29,6 +28,7 @@ import {
   SCHOOL_SPAWN_B,
   SCHOOL_STAIR_LANDINGS,
   SCHOOL_STAIRS,
+  SCHOOL_STAIRWELLS,
   type ArenaLayoutConfig,
   type ArenaSolidBox,
 } from "@photo-snipe/core";
@@ -753,7 +753,15 @@ function addSchoolDecor(group: THREE.Group, theme: ArenaTheme): void {
   overlay(15, 13, 14, 12, 0xd7dce2, SCHOOL_FLOOR2_Y + 0.03);
   overlay(-15, -13, 14, 12, 0xd7dce2, SCHOOL_FLOOR2_Y + 0.03);
   overlay(15, -13, 14, 12, 0xd7dce2, SCHOOL_FLOOR2_Y + 0.03);
-  overlay(0, 0, 16, 7, 0xd7dce2, SCHOOL_FLOOR2_Y + 0.03);
+  overlay(0, 0, 40, 7, 0xcfc7b4, SCHOOL_FLOOR2_Y + 0.03);
+  overlay(-18, 0, 3.2, 9, 0xcfc7b4, SCHOOL_FLOOR2_Y + 0.03);
+  overlay(18, 0, 3.2, 9, 0xcfc7b4, SCHOOL_FLOOR2_Y + 0.03);
+
+  for (const x of [-18, 18] as const) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.1, 9), flatMat(0x546e7a));
+    rail.position.set(x + (x < 0 ? 2 : -2), SCHOOL_FLOOR2_Y + 1.1, 0);
+    group.add(rail);
+  }
 
   const lockerMat = flatMat(0x607d8b);
   for (const [x, z] of SCHOOL_HALL_LOCKERS) {
@@ -768,10 +776,10 @@ function addSchoolDecor(group: THREE.Group, theme: ArenaTheme): void {
   }
 
   const counter = new THREE.Mesh(new THREE.BoxGeometry(14, 1.05, 1.1), flatMat(0x8d6e63));
-  counter.position.set(0, 0.55, -10.4);
+  counter.position.set(0, 0.55, -20.5);
   group.add(counter);
   const glass = new THREE.Mesh(new THREE.BoxGeometry(14, 0.08, 0.9), flatMat(0xb3e5fc));
-  glass.position.set(0, 1.15, -10.4);
+  glass.position.set(0, 1.15, -20.5);
   group.add(glass);
 
   for (const [x, z] of SCHOOL_CAFE_TABLES) {
@@ -853,32 +861,36 @@ function addSchoolDecor(group: THREE.Group, theme: ArenaTheme): void {
 
   for (let i = 0; i < SCHOOL_STAIRS.length; i++) {
     const stair = SCHOOL_STAIRS[i]!;
+    const well = SCHOOL_STAIRWELLS[i]!;
     const landing = SCHOOL_STAIR_LANDINGS[i]!;
     for (const side of [-1.55, 1.55] as const) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.12, 3.4, 6.5), flatMat(0xeceff1));
-      wall.position.set(stair.x + side, 1.7, 2.5);
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.12, 3.4, 9.2), flatMat(0xeceff1));
+      wall.position.set(stair.x + side, 1.7, 0);
       group.add(wall);
     }
-    const entry = new THREE.Mesh(new THREE.BoxGeometry(3, 0.12, 0.12), flatMat(0x546e7a));
-    entry.position.set(stair.x, 0.08, stair.zStart - 0.8);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(3.2, 3.4, 0.12), flatMat(0xeceff1));
+    back.position.set(stair.x, 1.7, well.minZ);
+    group.add(back);
+    const entry = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.12, 0.12), flatMat(0x546e7a));
+    entry.position.set(stair.x, 0.08, well.maxZ + 0.2);
     group.add(entry);
 
     for (let step = 0; step < STAIR_STEPS; step++) {
-      const stepMesh = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.12, 0.45), flatMat(0x9e9e9e));
+      const stepMesh = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.12, 0.42), flatMat(0x9e9e9e));
       stepMesh.position.set(
         stair.x,
         (step + 1) * (SCHOOL_FLOOR1_HEIGHT / STAIR_STEPS) - 0.06,
-        stair.zStart + stair.zDir * (step * 0.5 + 0.25),
+        stair.zStart + stair.zDir * (step * 0.45 + 0.225),
       );
       group.add(stepMesh);
     }
 
-    const landingPad = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.08, 2.8), flatMat(0xd7dce2));
+    const landingPad = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.08, 3.6), flatMat(0xd7dce2));
     landingPad.position.set(landing.x, SCHOOL_FLOOR2_Y + 0.04, landing.z);
     group.add(landingPad);
-    const upstairsDoor = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.1, 0.12), flatMat(0xf5f5f5));
-    upstairsDoor.position.set(landing.x, SCHOOL_FLOOR2_Y + 1.05, landing.z - 1.6);
-    group.add(upstairsDoor);
+    const hallBridge = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.08, 9), flatMat(0xcfc7b4));
+    hallBridge.position.set(landing.x, SCHOOL_FLOOR2_Y + 0.04, 0);
+    group.add(hallBridge);
   }
 
   const spawnMatA = groundOverlayMat(0x2980b9);
