@@ -5,6 +5,7 @@ export const PLAYER_HEIGHT = 1.8;
 const ON_TOP_EPS = 0.05;
 const SKIN = 0.001;
 const MAX_STEP = 0.125;
+const MAX_STEP_UP = 0.48;
 const SOLVE_PASSES = 8;
 const SPAN_WALL_THICKNESS = 1.0;
 
@@ -112,10 +113,28 @@ function isGroundedAt(
 
 function snapFeetToSupport(feet: FeetPos, surfaces: THREE.Box3[]): FeetPos {
   const top = supportTopY(feet, surfaces, feet.y + ON_TOP_EPS);
-  if (top === null || feet.y >= top - ON_TOP_EPS) {
-    return feet;
+  if (top !== null && feet.y < top - ON_TOP_EPS) {
+    return { ...feet, y: top };
   }
-  return { ...feet, y: top };
+
+  let stepTop = -Infinity;
+  for (const surface of surfaces) {
+    if (!feetOverFootprint(feet, surface)) {
+      continue;
+    }
+    const surfaceTop = surface.max.y;
+    if (surfaceTop <= feet.y + ON_TOP_EPS || surfaceTop > feet.y + MAX_STEP_UP) {
+      continue;
+    }
+    if (surfaceTop > stepTop) {
+      stepTop = surfaceTop;
+    }
+  }
+  if (stepTop > -Infinity) {
+    return { ...feet, y: stepTop };
+  }
+
+  return feet;
 }
 
 function verticalOverlap(player: THREE.Box3, solid: THREE.Box3): boolean {
@@ -128,6 +147,22 @@ export function clampFeet(feet: FeetPos, bounds: WorldColliders["bounds"]): Feet
     y: THREE.MathUtils.clamp(feet.y, bounds.minY, bounds.maxY),
     z: THREE.MathUtils.clamp(feet.z, bounds.minZ, bounds.maxZ),
   };
+}
+
+function thinHorizontalProp(solid: THREE.Box3): boolean {
+  return solid.max.y - solid.min.y <= 0.25;
+}
+
+function passesUnderThin(feet: FeetPos, solid: THREE.Box3): boolean {
+  return thinHorizontalProp(solid) && feet.y < solid.min.y - ON_TOP_EPS;
+}
+
+function belowThinTop(feet: FeetPos, solid: THREE.Box3): boolean {
+  return (
+    thinHorizontalProp(solid) &&
+    feet.y < solid.max.y - ON_TOP_EPS &&
+    solid.max.y <= feet.y + MAX_STEP_UP
+  );
 }
 
 function penetrationDepth(player: THREE.Box3, solid: THREE.Box3): { x: number; z: number } {
@@ -161,7 +196,7 @@ interface MoveHint {
 
 function separationClearsOverlap(feet: FeetPos, solid: THREE.Box3): boolean {
   const player = playerAabb(feet);
-  if (supportedOnTop(feet, solid)) {
+  if (supportedOnTop(feet, solid) || belowThinTop(feet, solid) || passesUnderThin(feet, solid)) {
     return true;
   }
   return !player.intersectsBox(solid) || !verticalOverlap(player, solid);
@@ -219,7 +254,7 @@ function resolveSolidOverlap(
   if (!player.intersectsBox(solid) || !verticalOverlap(player, solid)) {
     return feet;
   }
-  if (supportedOnTop(feet, solid)) {
+  if (supportedOnTop(feet, solid) || belowThinTop(feet, solid) || passesUnderThin(feet, solid)) {
     return feet;
   }
 
@@ -280,7 +315,7 @@ function resolveAllOverlaps(
     }
 
     for (const solid of props) {
-      if (standingOnProp(resolved, solid) || supportedOnTop(resolved, solid)) {
+      if (standingOnProp(resolved, solid) || supportedOnTop(resolved, solid) || belowThinTop(resolved, solid) || passesUnderThin(resolved, solid)) {
         continue;
       }
       const next = resolveSolidOverlap(resolved, solid, bounds, hint);
@@ -310,7 +345,13 @@ function clipAxisX(
     let changed = false;
 
     for (const solid of solids) {
-      if (skipWhenStandingOn && (standingOnProp({ ...feet, x }, solid) || supportedOnTop({ ...feet, x }, solid))) {
+      if (
+        skipWhenStandingOn &&
+        (standingOnProp({ ...feet, x }, solid) ||
+          supportedOnTop({ ...feet, x }, solid) ||
+          belowThinTop({ ...feet, x }, solid) ||
+          passesUnderThin({ ...feet, x }, solid))
+      ) {
         continue;
       }
 
@@ -359,7 +400,13 @@ function clipAxisZ(
     let changed = false;
 
     for (const solid of solids) {
-      if (skipWhenStandingOn && (standingOnProp({ ...feet, z }, solid) || supportedOnTop({ ...feet, z }, solid))) {
+      if (
+        skipWhenStandingOn &&
+        (standingOnProp({ ...feet, z }, solid) ||
+          supportedOnTop({ ...feet, z }, solid) ||
+          belowThinTop({ ...feet, z }, solid) ||
+          passesUnderThin({ ...feet, z }, solid))
+      ) {
         continue;
       }
 
@@ -394,6 +441,68 @@ function clipAxisZ(
   }
 
   return z;
+}
+
+function findStepUpY(
+  feet: FeetPos,
+  targetX: number,
+  targetZ: number,
+  surfaces: THREE.Box3[],
+): number | null {
+  const probe = { ...feet, x: targetX, z: targetZ };
+  let best = -Infinity;
+  for (const surface of surfaces) {
+    if (!feetOverFootprint(probe, surface)) {
+      continue;
+    }
+    const top = surface.max.y;
+    if (top <= feet.y + ON_TOP_EPS || top > feet.y + MAX_STEP_UP) {
+      continue;
+    }
+    if (top > best) {
+      best = top;
+    }
+  }
+  return best > -Infinity ? best : null;
+}
+
+function clipHorizontalWithStepUp(
+  feet: FeetPos,
+  dx: number,
+  dz: number,
+  walls: THREE.Box3[],
+  props: THREE.Box3[],
+  surfaces: THREE.Box3[],
+  bounds: WorldColliders["bounds"],
+): FeetPos {
+  const wantedX = feet.x + dx;
+  const wantedZ = feet.z + dz;
+  let best = clipHorizontal(feet, dx, dz, walls, props, bounds);
+  if (
+    Math.abs(best.x - wantedX) < SKIN &&
+    Math.abs(best.z - wantedZ) < SKIN
+  ) {
+    return best;
+  }
+
+  let y = feet.y;
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const stepY = findStepUpY({ ...feet, y }, wantedX, wantedZ, surfaces);
+    if (stepY === null || stepY <= y + ON_TOP_EPS * 0.5) {
+      break;
+    }
+    y = stepY;
+    const stepped = clipHorizontal({ ...feet, y }, dx, dz, walls, props, bounds);
+    best = stepped;
+    if (
+      Math.abs(stepped.x - wantedX) < SKIN + 0.05 &&
+      Math.abs(stepped.z - wantedZ) < SKIN + 0.05
+    ) {
+      return { ...stepped, y };
+    }
+  }
+
+  return best;
 }
 
 function clipHorizontal(
@@ -479,12 +588,13 @@ function clipVertical(
 }
 
 function moveStep(feet: FeetPos, delta: MoveDelta, world: WorldColliders): MoveResult {
-  const horizontal = clipHorizontal(
+  const horizontal = clipHorizontalWithStepUp(
     feet,
     delta.x,
     delta.z,
     world.walls,
     world.props,
+    world.surfaces,
     world.bounds,
   );
   const vertical = clipVertical(horizontal, delta.y, world.surfaces, world.ceiling);

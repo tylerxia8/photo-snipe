@@ -17,18 +17,13 @@ import {
   SCHOOL_CAFE,
   SCHOOL_CAFE_TABLES,
   SCHOOL_CLASSROOMS,
-  SCHOOL_FLOOR1_HEIGHT,
   SCHOOL_FLOOR2_Y,
   SCHOOL_GYM,
   SCHOOL_HALL_LOCKERS,
   SCHOOL_MAIN_HALL,
-  SCHOOL_NORTH_SPUR,
-  SCHOOL_SOUTH_SPUR,
   SCHOOL_SPAWN_A,
   SCHOOL_SPAWN_B,
-  SCHOOL_STAIR_LANDINGS,
   SCHOOL_STAIRS,
-  SCHOOL_STAIRWELLS,
   type ArenaLayoutConfig,
   type ArenaSolidBox,
 } from "@photo-snipe/core";
@@ -279,6 +274,20 @@ function materialForSolid(
     }
     if (solid.sy >= 1.4 && solid.sx >= 1.2 && solid.sz >= 1) {
       return flatMat(theme.propColors[propIndex % theme.propColors.length]!);
+    }
+  }
+  if (roundId === "school-01" && solid.sy <= 0.25) {
+    if (solid.cy >= SCHOOL_FLOOR2_Y - 0.25) {
+      if (Math.abs(solid.cz) <= 3.5 && solid.sx >= 4) {
+        return flatMat(0xcfc7b4);
+      }
+      return flatMat(0xe8dcc8);
+    }
+    if (solid.cz >= SCHOOL_GYM.minZ && Math.abs(solid.cx) <= SCHOOL_GYM.maxX) {
+      return flatMat(0xc68642);
+    }
+    if (solid.cz <= SCHOOL_CAFE.maxZ && solid.cz >= SCHOOL_CAFE.minZ) {
+      return flatMat(0xd8dde2);
     }
   }
   return flatMat(theme.propColors[propIndex % theme.propColors.length]!);
@@ -714,54 +723,25 @@ function addDuctDecor(group: THREE.Group, theme: ArenaTheme): void {
 }
 
 function addSchoolDecor(group: THREE.Group, theme: ArenaTheme): void {
-  const STAIR_STEPS = 10;
-  const overlay = (x: number, z: number, sx: number, sz: number, color: number, y = 0.03) => {
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.04, sz), groundOverlayMat(color));
-    slab.position.set(x, y, z);
-    group.add(slab);
-  };
+  const STAIR_STEPS = 8;
+  const FLOOR1_FEET_Y = 1;
+  const STAIR_RUN = 0.55;
+  const stairRise = (SCHOOL_FLOOR2_Y - FLOOR1_FEET_Y) / STAIR_STEPS;
 
-  const hallW = SCHOOL_MAIN_HALL.maxX - SCHOOL_MAIN_HALL.minX;
-  const hallZ = SCHOOL_MAIN_HALL.maxZ - SCHOOL_MAIN_HALL.minZ;
-  overlay(0, 0, hallW, hallZ, 0xcfc7b4);
-  overlay(0, 11.75, 7, 16.5, 0xcfc7b4);
-  overlay(0, -11.75, 7, 16.5, 0xcfc7b4);
+  const line = (x: number, z: number, sx: number, sz: number, color: number, y = 0.06) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.02, sz), flatMat(color));
+    mesh.position.set(x, y, z);
+    group.add(mesh);
+  };
 
   const gymW = SCHOOL_GYM.maxX - SCHOOL_GYM.minX;
   const gymD = SCHOOL_GYM.maxZ - SCHOOL_GYM.minZ;
-  overlay(0, 17, gymW, gymD, 0xc68642);
+  line(0, (SCHOOL_GYM.minZ + SCHOOL_GYM.maxZ) / 2, gymW - 1, gymD - 1, 0xc68642);
   for (const x of [-6, 6] as const) {
-    overlay(x, 17, 0.12, gymD - 2, 0xffffff);
+    line(x, (SCHOOL_GYM.minZ + SCHOOL_GYM.maxZ) / 2, 0.1, gymD - 2, 0xffffff);
   }
-  overlay(0, 17, gymW - 2, 0.12, 0xffffff);
-  overlay(0, 17, 4, 4, 0xffffff);
-
-  const cafeW = SCHOOL_CAFE.maxX - SCHOOL_CAFE.minX;
-  const cafeD = SCHOOL_CAFE.maxZ - SCHOOL_CAFE.minZ;
-  overlay(0, -17, cafeW, cafeD, 0xd8dde2);
-
-  for (const room of SCHOOL_CLASSROOMS) {
-    const cx = (room.minX + room.maxX) / 2;
-    const cz = (room.minZ + room.maxZ) / 2;
-    const sx = room.maxX - room.minX - 1;
-    const sz = room.maxZ - room.minZ - 1;
-    const y = room.floor === 1 ? 0.03 : SCHOOL_FLOOR2_Y + 0.03;
-    overlay(cx, cz, sx, sz, 0xe8dcc8, y);
-  }
-
-  overlay(-15, 13, 14, 12, 0xd7dce2, SCHOOL_FLOOR2_Y + 0.03);
-  overlay(15, 13, 14, 12, 0xd7dce2, SCHOOL_FLOOR2_Y + 0.03);
-  overlay(-15, -13, 14, 12, 0xd7dce2, SCHOOL_FLOOR2_Y + 0.03);
-  overlay(15, -13, 14, 12, 0xd7dce2, SCHOOL_FLOOR2_Y + 0.03);
-  overlay(0, 0, 40, 7, 0xcfc7b4, SCHOOL_FLOOR2_Y + 0.03);
-  overlay(-18, 0, 3.2, 9, 0xcfc7b4, SCHOOL_FLOOR2_Y + 0.03);
-  overlay(18, 0, 3.2, 9, 0xcfc7b4, SCHOOL_FLOOR2_Y + 0.03);
-
-  for (const x of [-18, 18] as const) {
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.1, 9), flatMat(0x546e7a));
-    rail.position.set(x + (x < 0 ? 2 : -2), SCHOOL_FLOOR2_Y + 1.1, 0);
-    group.add(rail);
-  }
+  line(0, (SCHOOL_GYM.minZ + SCHOOL_GYM.maxZ) / 2, gymW - 2, 0.1, 0xffffff);
+  line(0, SCHOOL_GYM.minZ + 2, 4, 4, 0xffffff);
 
   const lockerMat = flatMat(0x607d8b);
   for (const [x, z] of SCHOOL_HALL_LOCKERS) {
@@ -775,11 +755,11 @@ function addSchoolDecor(group: THREE.Group, theme: ArenaTheme): void {
     group.add(bank);
   }
 
-  const counter = new THREE.Mesh(new THREE.BoxGeometry(14, 1.05, 1.1), flatMat(0x8d6e63));
-  counter.position.set(0, 0.55, -20.5);
+  const counter = new THREE.Mesh(new THREE.BoxGeometry(12, 1.05, 1.1), flatMat(0x8d6e63));
+  counter.position.set(0, 0.55, -17);
   group.add(counter);
-  const glass = new THREE.Mesh(new THREE.BoxGeometry(14, 0.08, 0.9), flatMat(0xb3e5fc));
-  glass.position.set(0, 1.15, -20.5);
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(12, 0.08, 0.9), flatMat(0xb3e5fc));
+  glass.position.set(0, 1.15, -17);
   group.add(glass);
 
   for (const [x, z] of SCHOOL_CAFE_TABLES) {
@@ -806,10 +786,10 @@ function addSchoolDecor(group: THREE.Group, theme: ArenaTheme): void {
     const cz = (room.minZ + room.maxZ) / 2;
     const y = room.floor === 1 ? 0.82 : SCHOOL_FLOOR2_Y + 0.82;
     const faceNorth = room.boardWall === "north";
-    for (let row = 0; row < 3; row++) {
+    for (let row = 0; row < 2; row++) {
       for (let col = 0; col < 2; col++) {
-        const ox = (col - 0.5) * 2.4;
-        const oz = faceNorth ? room.minZ + 3 + row * 2.2 : room.maxZ - 3 - row * 2.2;
+        const ox = (col - 0.5) * 2.2;
+        const oz = faceNorth ? room.minZ + 2.5 + row * 2 : room.maxZ - 2.5 - row * 2;
         const desk = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.08, 0.65), flatMat(0x795548));
         desk.position.set(cx + ox, y, oz);
         group.add(desk);
@@ -821,30 +801,29 @@ function addSchoolDecor(group: THREE.Group, theme: ArenaTheme): void {
     group.add(teacher);
 
     const boardY = room.floor === 1 ? 1.35 : SCHOOL_FLOOR2_Y + 1.35;
-    const boardZ =
-      room.boardWall === "north" ? room.maxZ - 0.2 : room.boardWall === "south" ? room.minZ + 0.2 : cz;
+    const boardZ = room.boardWall === "north" ? room.maxZ - 0.2 : room.minZ + 0.2;
     const board = new THREE.Mesh(new THREE.BoxGeometry(4, 1.3, 0.08), flatMat(theme.accentColor));
     board.position.set(cx, boardY, boardZ);
     group.add(board);
 
     const doorX = room.minX < 0 ? room.maxX : room.minX;
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.2, 3.2), flatMat(0xf5f5f5));
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.2, 5.2), flatMat(0xf5f5f5));
     frame.position.set(doorX, room.floor === 1 ? 1.1 : SCHOOL_FLOOR2_Y + 1.1, cz);
     group.add(frame);
   }
 
-  for (const x of [-15, 15] as const) {
+  for (const x of [-12, 12] as const) {
     const bleacher = new THREE.Group();
     for (let row = 0; row < 4; row++) {
       const seat = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.35, 0.9), flatMat(0x455a64));
       seat.position.set(0, 0.35 + row * 0.35, -0.35 - row * 0.35);
       bleacher.add(seat);
     }
-    bleacher.position.set(x, 0, 17);
+    bleacher.position.set(x, 0, 16);
     group.add(bleacher);
   }
 
-  for (const z of [12.5, 21.5] as const) {
+  for (const z of [10, 19] as const) {
     const pole = new THREE.Group();
     const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 3.2, 0.12), flatMat(0xdddddd));
     post.position.y = 1.6;
@@ -861,45 +840,27 @@ function addSchoolDecor(group: THREE.Group, theme: ArenaTheme): void {
 
   for (let i = 0; i < SCHOOL_STAIRS.length; i++) {
     const stair = SCHOOL_STAIRS[i]!;
-    const well = SCHOOL_STAIRWELLS[i]!;
-    const landing = SCHOOL_STAIR_LANDINGS[i]!;
-    for (const side of [-1.55, 1.55] as const) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.12, 3.4, 9.2), flatMat(0xeceff1));
-      wall.position.set(stair.x + side, 1.7, 0);
-      group.add(wall);
-    }
-    const back = new THREE.Mesh(new THREE.BoxGeometry(3.2, 3.4, 0.12), flatMat(0xeceff1));
-    back.position.set(stair.x, 1.7, well.minZ);
-    group.add(back);
-    const entry = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.12, 0.12), flatMat(0x546e7a));
-    entry.position.set(stair.x, 0.08, well.maxZ + 0.2);
-    group.add(entry);
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.5, 0.08), flatMat(0x546e7a));
+    sign.position.set(stair.x, 2.8, SCHOOL_MAIN_HALL.maxZ + 0.15);
+    group.add(sign);
 
     for (let step = 0; step < STAIR_STEPS; step++) {
-      const stepMesh = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.12, 0.42), flatMat(0x9e9e9e));
+      const topY = FLOOR1_FEET_Y + (step + 1) * stairRise;
+      const stepMesh = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, STAIR_RUN * 0.88), flatMat(0x9e9e9e));
       stepMesh.position.set(
         stair.x,
-        (step + 1) * (SCHOOL_FLOOR1_HEIGHT / STAIR_STEPS) - 0.06,
-        stair.zStart + stair.zDir * (step * 0.45 + 0.225),
+        topY - 0.05,
+        stair.zStart + step * STAIR_RUN + STAIR_RUN * 0.5,
       );
       group.add(stepMesh);
     }
-
-    const landingPad = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.08, 3.6), flatMat(0xd7dce2));
-    landingPad.position.set(landing.x, SCHOOL_FLOOR2_Y + 0.04, landing.z);
-    group.add(landingPad);
-    const hallBridge = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.08, 9), flatMat(0xcfc7b4));
-    hallBridge.position.set(landing.x, SCHOOL_FLOOR2_Y + 0.04, 0);
-    group.add(hallBridge);
   }
 
-  const spawnMatA = groundOverlayMat(0x2980b9);
-  const spawnMatB = groundOverlayMat(0xc0392b);
-  const padA = new THREE.Mesh(new THREE.BoxGeometry(3, 0.04, 3), spawnMatA);
-  padA.position.set(SCHOOL_SPAWN_A.x, 0.02, SCHOOL_SPAWN_A.z);
+  const padA = new THREE.Mesh(new THREE.BoxGeometry(3, 0.02, 3), flatMat(0x2980b9));
+  padA.position.set(SCHOOL_SPAWN_A.x, 0.06, SCHOOL_SPAWN_A.z);
   group.add(padA);
-  const padB = new THREE.Mesh(new THREE.BoxGeometry(3, 0.04, 3), spawnMatB);
-  padB.position.set(SCHOOL_SPAWN_B.x, 0.02, SCHOOL_SPAWN_B.z);
+  const padB = new THREE.Mesh(new THREE.BoxGeometry(3, 0.02, 3), flatMat(0xc0392b));
+  padB.position.set(SCHOOL_SPAWN_B.x, 0.06, SCHOOL_SPAWN_B.z);
   group.add(padB);
 
   for (const [x, z, y] of [
@@ -980,7 +941,7 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
       ceilingBox = box;
     } else if (solid.category === "wall") {
       wallBoxes.push(box);
-      if (roundId === "warehouse-interior-01" || roundId === "freight-depot-01" || roundId === "school-01") {
+      if (roundId === "warehouse-interior-01" || roundId === "freight-depot-01") {
         addBox(
           group,
           new THREE.Vector3(pos.x, pos.y - size.y * 0.5 + 0.075, pos.z),

@@ -81,7 +81,7 @@ describe("arena registry", () => {
   it("returns school layout metadata", () => {
     const layout = getArenaLayout("school-01");
     expect(layout.name).toBe("School");
-    expect(layout.halfExtent).toBe(26);
+    expect(layout.halfExtent).toBe(24);
     expect(layout.wallHeight).toBe(7.2);
   });
 
