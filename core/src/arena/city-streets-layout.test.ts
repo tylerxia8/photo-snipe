@@ -3,6 +3,8 @@ import { boxToAabb } from "./solid-box.js";
 import {
   CITY_STREETS_BUILDINGS,
   CITY_STREETS_PARK,
+  CITY_STREETS_PARK_BENCHES,
+  CITY_STREETS_PARK_FOUNTAIN,
   CITY_STREETS_PARK_TREES,
   CITY_STREETS_ROAD_HALF,
   CITY_STREETS_HALF,
@@ -22,6 +24,27 @@ function overlapsRoad(box: ReturnType<typeof boxToAabb>): boolean {
   const xOverlap = box.max.x > roadMin && box.min.x < roadMax;
   const zOverlap = box.max.z > roadMin && box.min.z < roadMax;
   return xOverlap && zOverlap;
+}
+
+function footprintOverlaps(
+  ax: number,
+  az: number,
+  sx: number,
+  sz: number,
+  bx: number,
+  bz: number,
+  bsx: number,
+  bsz: number,
+): boolean {
+  const aMinX = ax - sx / 2;
+  const aMaxX = ax + sx / 2;
+  const aMinZ = az - sz / 2;
+  const aMaxZ = az + sz / 2;
+  const bMinX = bx - bsx / 2;
+  const bMaxX = bx + bsx / 2;
+  const bMinZ = bz - bsz / 2;
+  const bMaxZ = bz + bsz / 2;
+  return aMaxX > bMinX && aMinX < bMaxX && aMaxZ > bMinZ && aMinZ < bMaxZ;
 }
 
 describe("city streets layout", () => {
@@ -85,6 +108,38 @@ describe("city streets layout", () => {
           z + treeRadius > building.minZ && z - treeRadius < building.maxZ;
         expect(xOverlap && zOverlap).toBe(false);
       }
+    }
+  });
+
+  it("keeps park trees clear of the fountain and benches", () => {
+    for (const [x, z] of CITY_STREETS_PARK_TREES) {
+      expect(
+        footprintOverlaps(
+          x,
+          z,
+          2.2,
+          2.2,
+          CITY_STREETS_PARK_FOUNTAIN.x,
+          CITY_STREETS_PARK_FOUNTAIN.z,
+          2.8,
+          2.8,
+        ),
+      ).toBe(false);
+
+      for (const bench of CITY_STREETS_PARK_BENCHES) {
+        expect(footprintOverlaps(x, z, 2.2, 2.2, bench.x, bench.z, 3.2, 1.2)).toBe(false);
+      }
+    }
+  });
+
+  it("gives parked cars solid body collision", () => {
+    const cars = CITY_STREETS_SOLID_BOXES.filter(
+      (solid) => solid.decorMesh === false && solid.sy >= 2,
+    );
+    expect(cars.length).toBeGreaterThan(20);
+    for (const car of cars) {
+      const box = boxToAabb(car);
+      expect(box.max.y).toBeGreaterThanOrEqual(2);
     }
   });
 });

@@ -74,13 +74,12 @@ for (const [cx, cz, sx, sy, sz] of CITY_STREETS_BUILDINGS) {
   pushBuilding(CITY_STREETS_SOLID_BOXES, cx, cz, sx, sy, sz);
 }
 
-/** Park trees — west of all nearby mid-rise footprints. */
+/** Park trees — placed in park corners, away from fountain and benches. */
 export const CITY_STREETS_PARK_TREES = [
-  [-30, -26],
-  [-28, -24],
   [-31, -28],
-  [-27, -22],
-  [-29, -25],
+  [-23, -28],
+  [-31, -18],
+  [-23, -17],
 ] as const;
 
 for (const [x, z] of CITY_STREETS_PARK_TREES) {
@@ -89,8 +88,8 @@ for (const [x, z] of CITY_STREETS_PARK_TREES) {
 
 export const CITY_STREETS_PARK_FOUNTAIN = { x: -27, z: -23 };
 export const CITY_STREETS_PARK_BENCHES = [
-  { x: -25, z: -21 },
-  { x: -29, z: -25 },
+  { x: -24, z: -19 },
+  { x: -24, z: -26 },
 ] as const;
 
 CITY_STREETS_SOLID_BOXES.push(
@@ -123,42 +122,42 @@ for (const [cx, cz, sx, sz] of CITY_STREETS_FENCE_SEGMENTS) {
   );
 }
 
-/** Parked cars along curbs — [cx, cz, sx, sy, sz]. */
+/** Parked cars along curbs — [cx, cz, sx, bodySy, sz]. */
 export const CITY_STREETS_PARKED_CARS: Array<[number, number, number, number, number]> = [
-  [-3.8, -28, 1.9, 1.25, 4.2],
-  [3.8, -28, 1.9, 1.25, 4.2],
-  [-3.8, -20, 1.9, 1.25, 4.2],
-  [3.8, -20, 1.9, 1.25, 4.2],
-  [-3.8, -12, 1.9, 1.25, 4.2],
-  [3.8, -12, 1.9, 1.25, 4.2],
-  [-3.8, 12, 1.9, 1.25, 4.2],
-  [3.8, 12, 1.9, 1.25, 4.2],
-  [-3.8, 20, 1.9, 1.25, 4.2],
-  [3.8, 20, 1.9, 1.25, 4.2],
-  [-3.8, 28, 1.9, 1.25, 4.2],
-  [3.8, 28, 1.9, 1.25, 4.2],
-  [-28, -3.8, 4.2, 1.25, 1.9],
-  [-28, 3.8, 4.2, 1.25, 1.9],
-  [-20, -3.8, 4.2, 1.25, 1.9],
-  [-20, 3.8, 4.2, 1.25, 1.9],
-  [28, -3.8, 4.2, 1.25, 1.9],
-  [28, 3.8, 4.2, 1.25, 1.9],
-  [20, -3.8, 4.2, 1.25, 1.9],
-  [20, 3.8, 4.2, 1.25, 1.9],
+  [-3.8, -28, 1.9, 2.1, 4.2],
+  [3.8, -28, 1.9, 2.1, 4.2],
+  [-3.8, -20, 1.9, 2.1, 4.2],
+  [3.8, -20, 1.9, 2.1, 4.2],
+  [-3.8, -12, 1.9, 2.1, 4.2],
+  [3.8, -12, 1.9, 2.1, 4.2],
+  [-3.8, 12, 1.9, 2.1, 4.2],
+  [3.8, 12, 1.9, 2.1, 4.2],
+  [-3.8, 20, 1.9, 2.1, 4.2],
+  [3.8, 20, 1.9, 2.1, 4.2],
+  [-3.8, 28, 1.9, 2.1, 4.2],
+  [3.8, 28, 1.9, 2.1, 4.2],
+  [-28, -3.8, 4.2, 2.1, 1.9],
+  [-28, 3.8, 4.2, 2.1, 1.9],
+  [-20, -3.8, 4.2, 2.1, 1.9],
+  [-20, 3.8, 4.2, 2.1, 1.9],
+  [28, -3.8, 4.2, 2.1, 1.9],
+  [28, 3.8, 4.2, 2.1, 1.9],
+  [20, -3.8, 4.2, 2.1, 1.9],
+  [20, 3.8, 4.2, 2.1, 1.9],
 ];
 
 for (const [cx, cz, sx, sy, sz] of CITY_STREETS_PARKED_CARS) {
   CITY_STREETS_SOLID_BOXES.push(
-    colliderBox(cx, sy * 0.5 + 0.35, cz, sx, sy, sz, true),
+    colliderBox(cx, sy * 0.5, cz, sx, sy, sz, true),
   );
 }
 
-export const CITY_STREETS_TAXI = { cx: 2.5, cz: -10, sx: 4.4, sy: 1.8, sz: 2 };
+export const CITY_STREETS_TAXI = { cx: 2.5, cz: -10, sx: 4.4, sy: 2.1, sz: 2 };
 
 CITY_STREETS_SOLID_BOXES.push(
   colliderBox(
     CITY_STREETS_TAXI.cx,
-    CITY_STREETS_TAXI.sy * 0.5 + 0.35,
+    CITY_STREETS_TAXI.sy * 0.5,
     CITY_STREETS_TAXI.cz,
     CITY_STREETS_TAXI.sx,
     CITY_STREETS_TAXI.sy,
