@@ -156,8 +156,8 @@ for (const [cx, cz, footX, footZ] of CITY_STREETS_PARKED_CARS) {
   );
 }
 
-/** Yellow cab — south boulevard, west of mid-rise block (clear of cars and buildings). */
-export const CITY_STREETS_TAXI = { cx: -22, cz: -28, footX: 4.4, footZ: 2 };
+/** Yellow cab — open stretch of the north–south boulevard. */
+export const CITY_STREETS_TAXI = { cx: 0, cz: 6, footX: 4.4, footZ: 2 };
 
 CITY_STREETS_SOLID_BOXES.push(
   colliderBox(
@@ -171,18 +171,12 @@ CITY_STREETS_SOLID_BOXES.push(
   ),
 );
 
-/** Hot dog carts, newsstands, and bus shelter near sidewalks. */
+/** Hot dog carts near sidewalks. */
 export const CITY_STREETS_VENDORS: Array<[number, number, number, number, number, number]> = [
   [-7.5, 0.75, 8, 1.4, 1.5, 1.1],
   [7.5, 0.75, -9, 1.4, 1.5, 1.1],
   [-8.5, 0.75, -6, 1.4, 1.5, 1.1],
   [8.5, 0.75, 14, 1.4, 1.5, 1.1],
-  [-9, 0.55, 18, 1.5, 1.1, 1.4],
-  [9, 0.55, -18, 1.5, 1.1, 1.4],
-  [-6, 1.35, -2, 2.8, 2.7, 1.6],
-  [6, 1.35, 2, 2.8, 2.7, 1.6],
-  [-11, 0.9, 0, 2.2, 1.8, 1.4],
-  [11, 0.9, 0, 2.2, 1.8, 1.4],
 ];
 
 for (const [x, y, z, sx, sy, sz] of CITY_STREETS_VENDORS) {

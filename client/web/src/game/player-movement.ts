@@ -6,6 +6,7 @@ const ON_TOP_EPS = 0.05;
 const SKIN = 0.001;
 const MAX_STEP = 0.125;
 const SOLVE_PASSES = 8;
+const SPAN_WALL_THICKNESS = 1.0;
 
 export interface FeetPos {
   x: number;
@@ -134,6 +135,14 @@ function penetrationDepth(player: THREE.Box3, solid: THREE.Box3): { x: number; z
     x: Math.min(player.max.x - solid.min.x, solid.max.x - player.min.x),
     z: Math.min(player.max.z - solid.min.z, solid.max.z - player.min.z),
   };
+}
+
+function thinAlongX(solid: THREE.Box3): boolean {
+  return solid.max.x - solid.min.x <= SPAN_WALL_THICKNESS;
+}
+
+function thinAlongZ(solid: THREE.Box3): boolean {
+  return solid.max.z - solid.min.z <= SPAN_WALL_THICKNESS;
 }
 
 function isInsideBounds(x: number, z: number, bounds: WorldColliders["bounds"]): boolean {
@@ -311,7 +320,7 @@ function clipAxisX(
       }
 
       const depth = penetrationDepth(player, solid);
-      if (depth.z < depth.x) {
+      if (depth.z < depth.x && thinAlongZ(solid)) {
         continue;
       }
 
@@ -360,7 +369,7 @@ function clipAxisZ(
       }
 
       const depth = penetrationDepth(player, solid);
-      if (depth.x < depth.z) {
+      if (depth.x < depth.z && thinAlongX(solid)) {
         continue;
       }
 
@@ -401,7 +410,11 @@ function clipHorizontal(
   let z = clipAxisZ({ ...feet, x }, dz, walls, false);
   z = clipAxisZ({ ...feet, x, z }, dz, props, true);
 
-  return resolveAllOverlaps({ ...feet, x, z }, walls, props, bounds, { dx, dz });
+  const clipped = { ...feet, x, z };
+  if (dx === 0 && dz === 0) {
+    return resolveAllOverlaps(clipped, walls, props, bounds, { dx, dz });
+  }
+  return clipped;
 }
 
 function clipVertical(
