@@ -1,3 +1,4 @@
+import { listArenaOptions } from "@photo-snipe/core";
 import type { PlayerSkinId } from "@photo-snipe/core";
 
 export type ShopItemType = "skin" | "arena_pass";
@@ -111,47 +112,68 @@ export const SHOP_SKINS: ShopItem[] = [
   },
 ];
 
-export const SHOP_ARENA_PASSES: ShopItem[] = [
-  {
-    id: "pass-freight-depot",
-    type: "arena_pass",
+const ARENA_PASS_DEFS: Record<
+  string,
+  { slug: string; name: string; description: string; price: number }
+> = {
+  "warehouse-interior-01": {
+    slug: "warehouse",
+    name: "Warehouse Pass",
+    description: "Host on Warehouse Interior from day one.",
+    price: 0,
+  },
+  "freight-depot-01": {
+    slug: "freight-depot",
     name: "Freight Depot Pass",
     description: "Unlock hosting on Freight Depot early.",
     price: 150,
-    arenaId: "freight-depot-01",
   },
-  {
-    id: "pass-rooftop",
-    type: "arena_pass",
+  "rooftop-01": {
+    slug: "rooftop",
     name: "Rooftop Pass",
     description: "Unlock hosting on City Rooftop early.",
     price: 250,
-    arenaId: "rooftop-01",
   },
-  {
-    id: "pass-duct-network",
-    type: "arena_pass",
+  "duct-network-01": {
+    slug: "duct-network",
     name: "Duct Network Pass",
     description: "Unlock hosting on Air Duct Network early.",
     price: 400,
-    arenaId: "duct-network-01",
   },
-  {
-    id: "pass-corn-maze",
-    type: "arena_pass",
+  "corn-maze-01": {
+    slug: "corn-maze",
     name: "Corn Maze Pass",
     description: "Unlock hosting on Corn Maze early.",
     price: 500,
-    arenaId: "corn-maze-01",
   },
-  {
-    id: "pass-city-streets",
-    type: "arena_pass",
+  "city-streets-01": {
+    slug: "city-streets",
     name: "Urban Streets Pass",
     description: "Unlock hosting on Urban Streets early.",
     price: 650,
-    arenaId: "city-streets-01",
   },
-];
+  "parking-garage-01": {
+    slug: "parking-garage",
+    name: "Parking Garage Pass",
+    description: "Unlock hosting on Parking Garage early.",
+    price: 750,
+  },
+};
+
+export const SHOP_ARENA_PASSES: ShopItem[] = listArenaOptions().map((arena) => {
+  const def = ARENA_PASS_DEFS[arena.id];
+  if (!def) {
+    throw new Error(`Missing arena pass definition for ${arena.id}`);
+  }
+
+  return {
+    id: `pass-${def.slug}`,
+    type: "arena_pass",
+    name: def.name,
+    description: def.description,
+    price: def.price,
+    arenaId: arena.id,
+  };
+});
 
 export const SHOP_ITEMS: ShopItem[] = [...SHOP_SKINS, ...SHOP_ARENA_PASSES];

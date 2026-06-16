@@ -127,7 +127,7 @@ export function initShopSettings(): ShopSettingsHandle {
 
     const price = document.createElement("span");
     price.className = "shop-card-price";
-    price.textContent = `${item.price} CR`;
+    price.textContent = item.price === 0 ? "FREE" : `${item.price} CR`;
 
     meta.append(title, desc, price);
 
