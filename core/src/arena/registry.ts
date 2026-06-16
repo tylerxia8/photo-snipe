@@ -6,6 +6,7 @@ import {
 } from "./freight-depot-layout.js";
 import { DUCT_NETWORK_LAYOUT, DUCT_NETWORK_SOLID_BOXES } from "./duct-layout.js";
 import { ROOFTOP_LAYOUT, ROOFTOP_SOLID_BOXES } from "./rooftop-layout.js";
+import { SCHOOL_LAYOUT, SCHOOL_SOLID_BOXES } from "./school-layout.js";
 import {
   boxToAabb,
   type ArenaLayoutConfig,
@@ -45,6 +46,10 @@ const ARENAS: Record<string, ArenaDefinition> = {
   "city-streets-01": {
     layout: CITY_STREETS_LAYOUT,
     solids: CITY_STREETS_SOLID_BOXES,
+  },
+  "school-01": {
+    layout: SCHOOL_LAYOUT,
+    solids: SCHOOL_SOLID_BOXES,
   },
 };
 

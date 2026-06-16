@@ -38,6 +38,7 @@ const ARENA_UNLOCK_WINS: Record<string, number> = {
   "duct-network-01": 4,
   "corn-maze-01": 6,
   "city-streets-01": 8,
+  "school-01": 10,
 };
 
 const listeners = new Set<() => void>();

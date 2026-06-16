@@ -16,6 +16,7 @@ describe("arena registry", () => {
       "duct-network-01",
       "corn-maze-01",
       "city-streets-01",
+      "school-01",
     ]);
   });
 
@@ -43,6 +44,7 @@ describe("arena registry", () => {
       { id: "duct-network-01", name: "Air Duct Network" },
       { id: "corn-maze-01", name: "Corn Maze" },
       { id: "city-streets-01", name: "Urban Streets" },
+      { id: "school-01", name: "School" },
     ]);
   });
 
@@ -76,17 +78,26 @@ describe("arena registry", () => {
     expect(layout.halfExtent).toBe(32);
   });
 
+  it("returns school layout metadata", () => {
+    const layout = getArenaLayout("school-01");
+    expect(layout.name).toBe("School");
+    expect(layout.halfExtent).toBe(26);
+    expect(layout.wallHeight).toBe(7.2);
+  });
+
   it("provides photo occluders per arena", () => {
     const warehouse = getOccludersForRound("warehouse-interior-01");
     const rooftop = getOccludersForRound("rooftop-01");
     const ducts = getOccludersForRound("duct-network-01");
     const corn = getOccludersForRound("corn-maze-01");
     const streets = getOccludersForRound("city-streets-01");
+    const school = getOccludersForRound("school-01");
     expect(warehouse.length).toBeGreaterThan(10);
     expect(rooftop.length).toBeGreaterThan(5);
     expect(ducts.length).toBeGreaterThan(15);
     expect(corn.length).toBeGreaterThan(20);
     expect(streets.length).toBeGreaterThan(25);
+    expect(school.length).toBeGreaterThan(20);
     expect(ducts.length).toBeLessThan(warehouse.length);
   });
 });

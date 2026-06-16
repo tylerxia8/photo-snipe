@@ -14,6 +14,15 @@ import {
   CITY_STREETS_SPAWN_B,
   CITY_STREETS_TAXI,
   CITY_STREETS_VENDORS,
+  SCHOOL_CAFE_TABLES,
+  SCHOOL_CLASSROOM_DESKS,
+  SCHOOL_FLOOR2_Y,
+  SCHOOL_HALF,
+  SCHOOL_LOCKER_ROWS,
+  SCHOOL_SPAWN_A,
+  SCHOOL_SPAWN_B,
+  SCHOOL_STAIRS,
+  SCHOOL_UPSTAIRS_DESKS,
   type ArenaLayoutConfig,
   type ArenaSolidBox,
 } from "@photo-snipe/core";
@@ -135,6 +144,17 @@ const THEMES: Record<string, ArenaTheme> = {
     propColors: [0xc0392b, 0x2980b9, 0x2c3e50, 0x7f8c8d, 0x34495e],
     accentColor: 0xf1c40f,
     openAir: true,
+  },
+  "school-01": {
+    skyColor: 0x8aa0b8,
+    fogColor: 0xb8c2cc,
+    floorLight: "#c8b896",
+    floorDark: "#b0a080",
+    wallColor: 0xd8dde3,
+    wallTrim: 0x2e7d32,
+    ceilingColor: 0xf0f2f5,
+    propColors: [0x607d8b, 0x795548, 0x455a64, 0x8d6e63, 0x546e7a],
+    accentColor: 0x2e7d32,
   },
 };
 
@@ -687,6 +707,104 @@ function addDuctDecor(group: THREE.Group, theme: ArenaTheme): void {
   }
 }
 
+function addSchoolDecor(group: THREE.Group, theme: ArenaTheme): void {
+  const lockerMat = flatMat(0x607d8b);
+  for (const [x, z] of SCHOOL_LOCKER_ROWS) {
+    const bank = new THREE.Group();
+    for (let i = 0; i < 4; i++) {
+      const door = new THREE.Mesh(new THREE.BoxGeometry(0.55, 2.1, 0.08), lockerMat);
+      door.position.set(-0.9 + i * 0.6, 1.05, 0.55);
+      bank.add(door);
+    }
+    bank.position.set(x, 0, z);
+    group.add(bank);
+  }
+
+  const tableMat = flatMat(0x8d6e63);
+  for (const [x, z] of SCHOOL_CAFE_TABLES) {
+    const table = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 1.1), tableMat);
+    table.position.set(x, 0.82, z);
+    group.add(table);
+    for (const ox of [-0.7, 0.7] as const) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.75, 0.12), flatMat(0x5d4037));
+      leg.position.set(x + ox, 0.38, z);
+      group.add(leg);
+    }
+  }
+
+  const deskMat = flatMat(0x795548);
+  for (const [x, z] of SCHOOL_CLASSROOM_DESKS) {
+    const desk = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.7), deskMat);
+    desk.position.set(x, 0.82, z);
+    group.add(desk);
+  }
+  for (const [x, z] of SCHOOL_UPSTAIRS_DESKS) {
+    const desk = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.7), deskMat);
+    desk.position.set(x, SCHOOL_FLOOR2_Y + 0.82, z);
+    group.add(desk);
+  }
+
+  const boardMat = flatMat(0x2e7d32);
+  for (const [x, z, y] of [
+    [-16, 16, 1.2],
+    [-16, -16, 1.2],
+    [-16, 16, SCHOOL_FLOOR2_Y + 1.2],
+    [16, 16, SCHOOL_FLOOR2_Y + 1.2],
+  ] as const) {
+    const board = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.4, 0.08), boardMat);
+    board.position.set(x, y, z);
+    group.add(board);
+  }
+
+  for (const x of [-16, -8, 0, 8, 16] as const) {
+    const bleacher = new THREE.Group();
+    for (let row = 0; row < 3; row++) {
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(5, 0.35, 0.8), flatMat(0x455a64));
+      seat.position.set(0, 0.35 + row * 0.35, -0.4 - row * 0.35);
+      bleacher.add(seat);
+    }
+    bleacher.position.set(x, 0, 21);
+    group.add(bleacher);
+  }
+
+  for (const stair of SCHOOL_STAIRS) {
+    const railMat = flatMat(0x546e7a);
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.1, 5.2), railMat);
+    rail.position.set(stair.x + (stair.x < 0 ? -1.35 : 1.35), 1.8, 0);
+    group.add(rail);
+  }
+
+  const floor2Mat = groundOverlayMat(0xd7dce2);
+  const floor2Slab = new THREE.Mesh(
+    new THREE.BoxGeometry(SCHOOL_HALF * 1.7, 0.04, SCHOOL_HALF * 1.35),
+    floor2Mat,
+  );
+  floor2Slab.position.set(0, SCHOOL_FLOOR2_Y + 0.02, 0);
+  group.add(floor2Slab);
+
+  const spawnMatA = groundOverlayMat(0x2980b9);
+  const spawnMatB = groundOverlayMat(0xc0392b);
+  const padA = new THREE.Mesh(new THREE.BoxGeometry(3, 0.04, 3), spawnMatA);
+  padA.position.set(SCHOOL_SPAWN_A.x, 0.02, SCHOOL_SPAWN_A.z);
+  group.add(padA);
+  const padB = new THREE.Mesh(new THREE.BoxGeometry(3, 0.04, 3), spawnMatB);
+  padB.position.set(SCHOOL_SPAWN_B.x, 0.02, SCHOOL_SPAWN_B.z);
+  group.add(padB);
+
+  for (const x of [-10, 0, 10] as const) {
+    const light = new THREE.Mesh(
+      new THREE.BoxGeometry(1.8, 0.08, 0.35),
+      new THREE.MeshLambertMaterial({
+        color: 0xffffff,
+        emissive: 0xfff4cc,
+        emissiveIntensity: 0.35,
+      }),
+    );
+    light.position.set(x, 6.95, 0);
+    group.add(light);
+  }
+}
+
 export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
   const { layout, solids } = getArenaDefinition(roundId);
   const theme = THEMES[roundId] ?? THEMES["warehouse-interior-01"]!;
@@ -744,7 +862,7 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
       ceilingBox = box;
     } else if (solid.category === "wall") {
       wallBoxes.push(box);
-      if (roundId === "warehouse-interior-01" || roundId === "freight-depot-01") {
+      if (roundId === "warehouse-interior-01" || roundId === "freight-depot-01" || roundId === "school-01") {
         addBox(
           group,
           new THREE.Vector3(pos.x, pos.y - size.y * 0.5 + 0.075, pos.z),
@@ -768,6 +886,8 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
     addCornMazeDecor(group, theme);
   } else if (roundId === "city-streets-01") {
     addCityStreetsDecor(group, theme);
+  } else if (roundId === "school-01") {
+    addSchoolDecor(group, theme);
   }
 
   const floorCollider = new THREE.Box3(
@@ -794,8 +914,26 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
   const standColliders = [floorCollider, ...propColliders];
   const inner = layout.halfExtent - layout.wallThickness * 0.5 - PLAYER_RADIUS - 0.01;
   const maxY = theme.openAir ? 10 : layout.wallHeight - PLAYER_HEIGHT;
-  const fogNear = roundId === "duct-network-01" ? 8 : roundId === "corn-maze-01" ? 30 : roundId === "city-streets-01" ? 42 : 45;
-  const fogFar = roundId === "duct-network-01" ? 55 : roundId === "corn-maze-01" ? 80 : roundId === "city-streets-01" ? 118 : 95;
+  const fogNear =
+    roundId === "duct-network-01"
+      ? 8
+      : roundId === "corn-maze-01"
+        ? 30
+        : roundId === "city-streets-01"
+          ? 42
+          : roundId === "school-01"
+            ? 34
+            : 45;
+  const fogFar =
+    roundId === "duct-network-01"
+      ? 55
+      : roundId === "corn-maze-01"
+        ? 80
+        : roundId === "city-streets-01"
+          ? 118
+          : roundId === "school-01"
+            ? 88
+            : 95;
 
   return {
     group,
