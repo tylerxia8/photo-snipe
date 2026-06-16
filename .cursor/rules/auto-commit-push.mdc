@@ -1,0 +1,17 @@
+---
+description: Commit and push completed work after every prompt
+alwaysApply: true
+---
+
+# Auto commit and push
+
+When you finish work in this repo (implementation, fixes, docs, config):
+
+1. Run `git status` and `git diff` to confirm what changed.
+2. Do not commit secrets (`.env`, credentials, keys).
+3. Stage relevant files, commit with a concise message focused on **why**, and push to the current branch.
+4. Skip commit/push only when the prompt was question-only (no file changes) or the user explicitly says not to.
+
+Follow the git safety protocol: no force push to main, no `--no-verify`, no amend unless allowed.
+
+After pushing, briefly tell the user the commit hash and that it was pushed.
