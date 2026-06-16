@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { boxToAabb } from "./solid-box.js";
 import {
+  SCHOOL_CLASSROOMS,
   SCHOOL_FLOOR2_FEET_Y,
   SCHOOL_SPAWN_A,
   SCHOOL_SPAWN_B,
   SCHOOL_SOLID_BOXES,
+  SCHOOL_STAIR_LANDINGS,
   SCHOOL_STAIRS,
   SCHOOL_UPSTAIRS_SPAWN,
 } from "./school-layout.js";
@@ -75,18 +77,15 @@ function canWalkBetween(
     }
 
     if (Math.abs(current.y - 1) < 0.05) {
-      for (const stair of SCHOOL_STAIRS) {
-        const top = {
-          x: stair.x,
-          z: stair.zStart + stair.zDir * (8 * 0.55 + 0.3),
-          y: SCHOOL_FLOOR2_FEET_Y,
-        };
+      for (let i = 0; i < SCHOOL_STAIRS.length; i++) {
+        const stair = SCHOOL_STAIRS[i]!;
+        const landing = SCHOOL_STAIR_LANDINGS[i]!;
         if (
           Math.hypot(current.x - stair.x, current.z - stair.zStart) < 2.5 &&
-          !visited.has(key(top.x, top.z, top.y))
+          !visited.has(key(landing.x, landing.z, SCHOOL_FLOOR2_FEET_Y))
         ) {
-          visited.add(key(top.x, top.z, top.y));
-          queue.push(top);
+          visited.add(key(landing.x, landing.z, SCHOOL_FLOOR2_FEET_Y));
+          queue.push({ x: landing.x, z: landing.z, y: SCHOOL_FLOOR2_FEET_Y });
         }
       }
     }
@@ -101,12 +100,18 @@ describe("school layout", () => {
     expect(feetBlocked(SCHOOL_SPAWN_B.x, SCHOOL_SPAWN_B.z, SCHOOL_SPAWN_B.y)).toBe(false);
   });
 
-  it("connects cafeteria and gym spawns through the main hallway", () => {
+  it("connects cafeteria and gym spawns through hallways", () => {
     expect(canWalkBetween(SCHOOL_SPAWN_A, SCHOOL_SPAWN_B)).toBe(true);
   });
 
-  it("connects the main hallway to the upstairs landing via stairs", () => {
+  it("connects the main hallway to the second floor via stairs", () => {
     const hall = { x: 0, z: 0, y: 1 };
     expect(canWalkBetween(hall, SCHOOL_UPSTAIRS_SPAWN)).toBe(true);
+  });
+
+  it("defines eight classrooms across both floors", () => {
+    expect(SCHOOL_CLASSROOMS).toHaveLength(8);
+    expect(SCHOOL_CLASSROOMS.filter((room) => room.floor === 1)).toHaveLength(4);
+    expect(SCHOOL_CLASSROOMS.filter((room) => room.floor === 2)).toHaveLength(4);
   });
 });

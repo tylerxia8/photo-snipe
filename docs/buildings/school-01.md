@@ -1,6 +1,6 @@
 # School (school-01)
 
-Two-story school interior with classrooms, lockers, cafeteria, gym, and twin stairwells.
+Two-story school built around hallways, with hideable classrooms, a cafeteria, a gym atrium, and working stairwells to the second floor.
 
 ## Dimensions
 
@@ -8,7 +8,7 @@ Two-story school interior with classrooms, lockers, cafeteria, gym, and twin sta
 |---|---|
 | Footprint | 52m × 52m |
 | Floor 1 height | 3.6m |
-| Total height | 7.2m (double-height gym atrium) |
+| Total height | 7.2m (double-height gym) |
 | Floor 1 feet Y | 1.0 |
 | Floor 2 feet Y | 3.7 |
 
@@ -16,30 +16,33 @@ Two-story school interior with classrooms, lockers, cafeteria, gym, and twin sta
 
 | Player | Position | Facing |
 |---|---|---|
-| A (cafeteria) | `(-16, 1, -18)` | North (+Z) |
-| B (gym) | `(16, 1, 18)` | South (-Z) |
+| A (cafeteria) | `(0, 1, -16)` | North (+Z) |
+| B (gym) | `(0, 1, 16)` | South (-Z) |
 
 ## Layout zones
 
 ```
 Floor 2
-  [Classrooms NW/NE/SW/SE] — hall ring at center with stairs to floor 1
+  [Classrooms] — upstairs hall ring — [Classrooms]
+         ↑ stair landings at x = ±16
 
 Floor 1
-  [Gym / double-height atrium]     north (+Z)
+  [Gym court + hoops + bleachers]     north (+Z)
+        ↑ north hallway spur
   ═════ Main hallway (E-W) ═════
-  [West classrooms]  [East locker hall]
-  [Cafeteria]                      south (-Z)
-  Twin stairs at x = ±12
+  [Lockers]              [Lockers]
+  [Classrooms]           [Classrooms]
+        ↓ south hallway spur
+  [Cafeteria + serving line + tables] south (-Z)
 ```
 
 ## Gameplay intent
 
-- **Two routes** between floors via east and west stairwells.
-- **Gym atrium** is open to the ceiling — strong vertical sight lines from the balcony edge.
-- **Cafeteria tables** and **locker banks** provide mid-map cover on floor 1.
-- **Classrooms** on both floors offer flanking lanes off the main hall.
-- **Max photo distance** is 58m; map diagonal is ~73m, so players must close distance.
+- **Hallways are the main routes** between gym, cafeteria, classrooms, and stairs.
+- **Classrooms** on both floors are enclosed rooms with doors off the hall — good hiding spots.
+- **Twin stairwells** at x = ±16 climb to second-floor landings that open onto the upstairs hall.
+- **Gym** uses a hardwood floor, court lines, baskets, and side bleachers.
+- **Cafeteria** has a serving counter and bench tables.
 
 ## Code / data files
 
