@@ -24,24 +24,25 @@ export interface LadderSnapshot {
 
 export const OPERATOR_RANKS: OperatorRank[] = [
   { id: "recruit", name: "Recruit", tier: "enlisted", minRankPoints: 0, accent: "#9aa8ba" },
-  { id: "cadet", name: "Cadet", tier: "enlisted", minRankPoints: 15, accent: "#7ea8c8" },
-  { id: "spotter", name: "Spotter", tier: "enlisted", minRankPoints: 35, accent: "#6dffd2" },
-  { id: "shooter", name: "Shooter", tier: "enlisted", minRankPoints: 60, accent: "#58d4ff" },
-  { id: "marksman", name: "Marksman", tier: "professional", minRankPoints: 90, accent: "#2196f3" },
-  { id: "tracker", name: "Tracker", tier: "professional", minRankPoints: 125, accent: "#4f8cff" },
-  { id: "sniper", name: "Sniper", tier: "professional", minRankPoints: 165, accent: "#7b61ff" },
-  { id: "operative", name: "Operative", tier: "professional", minRankPoints: 210, accent: "#a855f7" },
-  { id: "specialist", name: "Specialist", tier: "elite", minRankPoints: 260, accent: "#e879f9" },
-  { id: "ace", name: "Ace", tier: "elite", minRankPoints: 315, accent: "#f472b6" },
-  { id: "phantom", name: "Phantom", tier: "elite", minRankPoints: 375, accent: "#fb7185" },
-  { id: "legend", name: "Legend", tier: "elite", minRankPoints: 440, accent: "#fbbf24" },
+  { id: "cadet", name: "Cadet", tier: "enlisted", minRankPoints: 120, accent: "#7ea8c8" },
+  { id: "spotter", name: "Spotter", tier: "enlisted", minRankPoints: 360, accent: "#6dffd2" },
+  { id: "shooter", name: "Shooter", tier: "enlisted", minRankPoints: 720, accent: "#58d4ff" },
+  { id: "marksman", name: "Marksman", tier: "professional", minRankPoints: 1200, accent: "#2196f3" },
+  { id: "tracker", name: "Tracker", tier: "professional", minRankPoints: 1800, accent: "#4f8cff" },
+  { id: "sniper", name: "Sniper", tier: "professional", minRankPoints: 2550, accent: "#7b61ff" },
+  { id: "operative", name: "Operative", tier: "professional", minRankPoints: 3450, accent: "#a855f7" },
+  { id: "specialist", name: "Specialist", tier: "elite", minRankPoints: 4500, accent: "#e879f9" },
+  { id: "ace", name: "Ace", tier: "elite", minRankPoints: 5700, accent: "#f472b6" },
+  { id: "phantom", name: "Phantom", tier: "elite", minRankPoints: 7050, accent: "#fb7185" },
+  { id: "legend", name: "Legend", tier: "elite", minRankPoints: 12000, accent: "#fbbf24" },
 ];
 
+/** Tuned so elite ranks need weeks of play, not a single marathon session. */
 export const LADDER_POINT_AWARDS = {
-  onlineWin: 30,
-  practiceWin: 10,
-  onlineLoss: 8,
-  practiceLoss: 3,
+  onlineWin: 18,
+  practiceWin: 4,
+  onlineLoss: 3,
+  practiceLoss: 1,
 } as const;
 
 export function awardLadderPoints(result: LadderMatchResult): number {
