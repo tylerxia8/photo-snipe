@@ -11,6 +11,8 @@ import {
   CITY_STREETS_SPAWN_A,
   CITY_STREETS_SPAWN_B,
   CITY_STREETS_SOLID_BOXES,
+  CITY_STREETS_PARKED_CARS,
+  carFootprint,
   parkFootprintOverlapsBuilding,
 } from "./city-streets-layout.js";
 
@@ -100,7 +102,7 @@ describe("city streets layout", () => {
     });
 
     for (const [x, z] of CITY_STREETS_PARK_TREES) {
-      const treeRadius = 1.1;
+      const treeRadius = 0.35;
       for (const building of buildings) {
         const xOverlap =
           x + treeRadius > building.minX && x - treeRadius < building.maxX;
@@ -117,8 +119,8 @@ describe("city streets layout", () => {
         footprintOverlaps(
           x,
           z,
-          2.2,
-          2.2,
+          0.7,
+          0.7,
           CITY_STREETS_PARK_FOUNTAIN.x,
           CITY_STREETS_PARK_FOUNTAIN.z,
           2.8,
@@ -127,8 +129,24 @@ describe("city streets layout", () => {
       ).toBe(false);
 
       for (const bench of CITY_STREETS_PARK_BENCHES) {
-        expect(footprintOverlaps(x, z, 2.2, 2.2, bench.x, bench.z, 3.2, 1.2)).toBe(false);
+        expect(footprintOverlaps(x, z, 0.7, 0.7, bench.x, bench.z, 3.2, 1.2)).toBe(false);
       }
+    }
+  });
+
+  it("aligns cross-street car colliders with rotated decor footprints", () => {
+    for (const [cx, cz, sx, sy, sz] of CITY_STREETS_PARKED_CARS) {
+      const foot = carFootprint(sx, sz);
+      const collider = CITY_STREETS_SOLID_BOXES.find(
+        (solid) =>
+          solid.decorMesh === false &&
+          Math.abs(solid.cx - cx) < 0.01 &&
+          Math.abs(solid.cz - cz) < 0.01 &&
+          solid.sy === sy,
+      );
+      expect(collider).toBeDefined();
+      expect(collider!.sx).toBeCloseTo(foot.sx);
+      expect(collider!.sz).toBeCloseTo(foot.sz);
     }
   });
 

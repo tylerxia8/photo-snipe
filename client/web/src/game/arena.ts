@@ -454,28 +454,34 @@ function addCityStreetsDecor(group: THREE.Group, theme: ArenaTheme): void {
   const addCar = (
     x: number,
     z: number,
+    sx: number,
+    sz: number,
     alongZ: boolean,
     bodyColor: number,
     cabinColor = 0x1f2937,
   ) => {
     const car = new THREE.Group();
     const body = new THREE.Mesh(
-      new THREE.BoxGeometry(alongZ ? 1.9 : 4.2, 0.72, alongZ ? 4.2 : 1.9),
+      new THREE.BoxGeometry(alongZ ? sx : sz, 0.72, alongZ ? sz : sx),
       flatMat(bodyColor),
     );
     body.position.y = 0.55;
     car.add(body);
+    const cabinLen = alongZ ? Math.min(sz, 2.3) : Math.min(sx, 2.3);
+    const cabinDepth = alongZ ? Math.min(sx, 1.55) : Math.min(sz, 1.55);
     const cabin = new THREE.Mesh(
-      new THREE.BoxGeometry(alongZ ? 1.55 : 2.3, 0.55, alongZ ? 2.3 : 1.55),
+      new THREE.BoxGeometry(alongZ ? cabinDepth : cabinLen, 0.55, alongZ ? cabinLen : cabinDepth),
       flatMat(cabinColor),
     );
     cabin.position.set(0, 0.98, alongZ ? -0.35 : 0);
     car.add(cabin);
+    const halfLen = (alongZ ? sz : sx) * 0.35;
+    const halfWidth = (alongZ ? sx : sz) * 0.4;
     for (const [ox, oz] of [
-      [-0.75, -1.45],
-      [0.75, -1.45],
-      [-0.75, 1.45],
-      [0.75, 1.45],
+      [-halfWidth, -halfLen],
+      [halfWidth, -halfLen],
+      [-halfWidth, halfLen],
+      [halfWidth, halfLen],
     ] as const) {
       const wheel = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), flatMat(0x111111));
       wheel.position.set(alongZ ? ox : oz, 0.25, alongZ ? oz : ox);
@@ -491,10 +497,18 @@ function addCityStreetsDecor(group: THREE.Group, theme: ArenaTheme): void {
   const carColors = [0xbdc3c7, 0x2c3e50, 0x922b21, 0x1f618d, 0x566573];
   CITY_STREETS_PARKED_CARS.forEach(([cx, cz, sx, , sz], index) => {
     const alongZ = sx < sz;
-    addCar(cx, cz, alongZ, carColors[index % carColors.length]!);
+    addCar(cx, cz, sx, sz, alongZ, carColors[index % carColors.length]!);
   });
 
-  addCar(CITY_STREETS_TAXI.cx, CITY_STREETS_TAXI.cz, false, 0xf1c40f, 0x2c3e50);
+  addCar(
+    CITY_STREETS_TAXI.cx,
+    CITY_STREETS_TAXI.cz,
+    CITY_STREETS_TAXI.sx,
+    CITY_STREETS_TAXI.sz,
+    CITY_STREETS_TAXI.sx < CITY_STREETS_TAXI.sz,
+    0xf1c40f,
+    0x2c3e50,
+  );
   const taxiSign = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.18, 0.9), flatMat(0x2c3e50));
   taxiSign.position.set(CITY_STREETS_TAXI.cx, 1.35, CITY_STREETS_TAXI.cz);
   group.add(taxiSign);

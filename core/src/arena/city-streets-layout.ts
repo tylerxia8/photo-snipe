@@ -39,6 +39,24 @@ function pushBuilding(
   solids.push(solidBox(cx, sy * 0.5, cz, sx, sy, sz, "prop", true));
 }
 
+/** Match decor rotation: cars parked with sx > sz face along X after a 90° turn. */
+export function carFootprint(sx: number, sz: number): { sx: number; sz: number; alongZ: boolean } {
+  const alongZ = sx < sz;
+  return alongZ ? { sx, sz, alongZ } : { sx: sz, sz: sx, alongZ };
+}
+
+function pushCarCollider(
+  solids: ArenaSolidBox[],
+  cx: number,
+  cz: number,
+  sx: number,
+  sy: number,
+  sz: number,
+): void {
+  const foot = carFootprint(sx, sz);
+  solids.push(colliderBox(cx, sy * 0.5, cz, foot.sx, sy, foot.sz, true));
+}
+
 /** Open-air downtown — boulevard, cross street, skyscrapers, park, and street cover. */
 export const CITY_STREETS_SOLID_BOXES: ArenaSolidBox[] = [
   solidBox(0, -0.1, 0, FOOTPRINT, 0.2, FOOTPRINT, "floor", false),
@@ -74,16 +92,16 @@ for (const [cx, cz, sx, sy, sz] of CITY_STREETS_BUILDINGS) {
   pushBuilding(CITY_STREETS_SOLID_BOXES, cx, cz, sx, sy, sz);
 }
 
-/** Park trees — placed in park corners, away from fountain and benches. */
+/** Park trees — inset from fence corners; trunk-only collision. */
 export const CITY_STREETS_PARK_TREES = [
-  [-31, -28],
-  [-23, -28],
-  [-31, -18],
-  [-23, -17],
+  [-30, -27.5],
+  [-24.5, -28],
+  [-30, -19],
+  [-24.5, -17.5],
 ] as const;
 
 for (const [x, z] of CITY_STREETS_PARK_TREES) {
-  CITY_STREETS_SOLID_BOXES.push(colliderBox(x, 1.75, z, 2.2, 3.5, 2.2, true));
+  CITY_STREETS_SOLID_BOXES.push(colliderBox(x, 1.25, z, 0.7, 2.5, 0.7, true));
 }
 
 export const CITY_STREETS_PARK_FOUNTAIN = { x: -27, z: -23 };
@@ -138,8 +156,8 @@ export const CITY_STREETS_PARKED_CARS: Array<[number, number, number, number, nu
   [3.8, 28, 1.9, 2.1, 4.2],
   [-28, -3.8, 4.2, 2.1, 1.9],
   [-28, 3.8, 4.2, 2.1, 1.9],
-  [-20, -3.8, 4.2, 2.1, 1.9],
-  [-20, 3.8, 4.2, 2.1, 1.9],
+  [-24, -3.8, 4.2, 2.1, 1.9],
+  [-24, 3.8, 4.2, 2.1, 1.9],
   [28, -3.8, 4.2, 2.1, 1.9],
   [28, 3.8, 4.2, 2.1, 1.9],
   [20, -3.8, 4.2, 2.1, 1.9],
@@ -147,23 +165,19 @@ export const CITY_STREETS_PARKED_CARS: Array<[number, number, number, number, nu
 ];
 
 for (const [cx, cz, sx, sy, sz] of CITY_STREETS_PARKED_CARS) {
-  CITY_STREETS_SOLID_BOXES.push(
-    colliderBox(cx, sy * 0.5, cz, sx, sy, sz, true),
-  );
+  pushCarCollider(CITY_STREETS_SOLID_BOXES, cx, cz, sx, sy, sz);
 }
 
-export const CITY_STREETS_TAXI = { cx: 2.5, cz: -10, sx: 4.4, sy: 2.1, sz: 2 };
+/** Yellow cab — parked on the east cross street, off the main boulevard. */
+export const CITY_STREETS_TAXI = { cx: 8, cz: 12, sx: 4.4, sy: 2.1, sz: 2 };
 
-CITY_STREETS_SOLID_BOXES.push(
-  colliderBox(
-    CITY_STREETS_TAXI.cx,
-    CITY_STREETS_TAXI.sy * 0.5,
-    CITY_STREETS_TAXI.cz,
-    CITY_STREETS_TAXI.sx,
-    CITY_STREETS_TAXI.sy,
-    CITY_STREETS_TAXI.sz,
-    true,
-  ),
+pushCarCollider(
+  CITY_STREETS_SOLID_BOXES,
+  CITY_STREETS_TAXI.cx,
+  CITY_STREETS_TAXI.cz,
+  CITY_STREETS_TAXI.sx,
+  CITY_STREETS_TAXI.sy,
+  CITY_STREETS_TAXI.sz,
 );
 
 /** Hot dog carts, newsstands, and bus shelter near sidewalks. */
