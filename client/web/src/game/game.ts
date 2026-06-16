@@ -11,7 +11,7 @@ import { movePlayer, type FeetPos, type WorldColliders } from "./player-movement
 import { createBlockyPlayer, type MinecraftPlayerRig } from "./blocky-player.js";
 import { getSkin, sanitizeSkinId, type MatchReplay, type ReplayFrame } from "@photo-snipe/core";
 import { getControlsHint, getKeybinds, mouseButtonToCode, onKeybindsChange } from "../settings/keybinds.js";
-import { applyThirdPersonWinnerReplayCamera } from "../replay/replay-camera.js";
+import { applyReplayCamera } from "../replay/replay-camera.js";
 
 const WALK_SPEED = 3;
 const JUMP_VELOCITY = 8;
@@ -56,6 +56,7 @@ export class Game {
   private arenaHalfExtent = 24;
   private currentRoundId = "warehouse-interior-01";
   private replayMode = false;
+  private replaySnapAtMs = 0;
 
   constructor(
     private transport: MatchTransport,
@@ -286,6 +287,7 @@ export class Game {
 
   enterReplay(replay: MatchReplay): void {
     this.replayMode = true;
+    this.replaySnapAtMs = replay.snapAtMs;
     this.active = false;
     this.clearInputState();
     this.hud.hideCrosshair();
@@ -301,11 +303,11 @@ export class Game {
     this.replayWinner.visible = true;
     this.opponent.visible = true;
     this.camera.fov = replay.fovDeg;
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.aspect = replay.aspectRatio;
     this.camera.updateProjectionMatrix();
   }
 
-  applyReplayFrame(frame: ReplayFrame): void {
+  applyReplayFrame(frame: ReplayFrame, elapsedMs = 0): void {
     const winFeet = frame.win ?? [
       frame.cam[0],
       frame.cam[1] - EYE_OFFSET,
@@ -321,12 +323,10 @@ export class Game {
     this.opponent.rotation.y = THREE.MathUtils.degToRad(frame.oppRot[1]);
     this.opponentRig.setPose({ walkPhase: 0, airborne: false });
 
-    applyThirdPersonWinnerReplayCamera(
-      this.camera,
-      winFeet,
-      winRot,
-      frame.opp,
-    );
+    applyReplayCamera(this.camera, frame, {
+      elapsedMs,
+      snapAtMs: this.replaySnapAtMs,
+    });
   }
 
   renderReplay(): void {
@@ -336,6 +336,9 @@ export class Game {
   exitReplay(): void {
     this.replayMode = false;
     this.replayWinner.visible = false;
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.fov = 75;
+    this.camera.updateProjectionMatrix();
   }
 
   updateOpponent(position: number[], rotation: number[]): void {

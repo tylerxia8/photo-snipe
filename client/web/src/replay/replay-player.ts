@@ -36,7 +36,7 @@ export function playMatchReplay(
 
       const elapsed = now - startTime;
       const frameState = interpolateReplayFrame(replay.frames, Math.min(elapsed, replay.snapAtMs));
-      game.applyReplayFrame(frameState);
+      game.applyReplayFrame(frameState, Math.min(elapsed, replay.snapAtMs));
       game.renderReplay();
 
       if (!flashed && elapsed >= replay.snapAtMs) {
