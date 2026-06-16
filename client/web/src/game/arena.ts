@@ -14,16 +14,8 @@ import {
   CITY_STREETS_SPAWN_B,
   CITY_STREETS_TAXI,
   CITY_STREETS_VENDORS,
-  SCHOOL_CAFE,
-  SCHOOL_CAFE_TABLES,
-  SCHOOL_CLASSROOMS,
-  SCHOOL_FLOOR2_Y,
-  SCHOOL_GYM,
-  SCHOOL_HALL_LOCKERS,
-  SCHOOL_MAIN_HALL,
-  SCHOOL_SPAWN_A,
-  SCHOOL_SPAWN_B,
-  SCHOOL_STAIRS,
+  PARKING_GARAGE_SPAWN_A,
+  PARKING_GARAGE_SPAWN_B,
   type ArenaLayoutConfig,
   type ArenaSolidBox,
 } from "@photo-snipe/core";
@@ -146,16 +138,16 @@ const THEMES: Record<string, ArenaTheme> = {
     accentColor: 0xf1c40f,
     openAir: true,
   },
-  "school-01": {
-    skyColor: 0x8aa0b8,
-    fogColor: 0xb8c2cc,
-    floorLight: "#c8b896",
-    floorDark: "#b0a080",
-    wallColor: 0xd8dde3,
-    wallTrim: 0x2e7d32,
-    ceilingColor: 0xf0f2f5,
-    propColors: [0x607d8b, 0x795548, 0x455a64, 0x8d6e63, 0x546e7a],
-    accentColor: 0x2e7d32,
+  "parking-garage-01": {
+    skyColor: 0x4a5058,
+    fogColor: 0x6a7078,
+    floorLight: "#6b7078",
+    floorDark: "#565b63",
+    wallColor: 0x8a9098,
+    wallTrim: 0xf1c40f,
+    ceilingColor: 0x5c6168,
+    propColors: [0x607d8b, 0x78909c, 0x546e7a, 0x455a64, 0x37474f],
+    accentColor: 0xf1c40f,
   },
 };
 
@@ -274,20 +266,6 @@ function materialForSolid(
     }
     if (solid.sy >= 1.4 && solid.sx >= 1.2 && solid.sz >= 1) {
       return flatMat(theme.propColors[propIndex % theme.propColors.length]!);
-    }
-  }
-  if (roundId === "school-01" && solid.sy <= 0.25) {
-    if (solid.cy >= SCHOOL_FLOOR2_Y - 0.25) {
-      if (Math.abs(solid.cz) <= 3.5 && solid.sx >= 4) {
-        return flatMat(0xcfc7b4);
-      }
-      return flatMat(0xe8dcc8);
-    }
-    if (solid.cz >= SCHOOL_GYM.minZ && Math.abs(solid.cx) <= SCHOOL_GYM.maxX) {
-      return flatMat(0xc68642);
-    }
-    if (solid.cz <= SCHOOL_CAFE.maxZ && solid.cz >= SCHOOL_CAFE.minZ) {
-      return flatMat(0xd8dde2);
     }
   }
   return flatMat(theme.propColors[propIndex % theme.propColors.length]!);
@@ -722,157 +700,43 @@ function addDuctDecor(group: THREE.Group, theme: ArenaTheme): void {
   }
 }
 
-function addSchoolDecor(group: THREE.Group, theme: ArenaTheme): void {
-  const STAIR_STEPS = 8;
-  const FLOOR1_FEET_Y = 1;
-  const STAIR_RUN = 0.55;
-  const stairRise = (SCHOOL_FLOOR2_Y - FLOOR1_FEET_Y) / STAIR_STEPS;
-
-  const line = (x: number, z: number, sx: number, sz: number, color: number, y = 0.06) => {
+function addParkingGarageDecor(group: THREE.Group, theme: ArenaTheme): void {
+  const stripe = (x: number, z: number, sx: number, sz: number, color = 0xffffff) => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.02, sz), flatMat(color));
-    mesh.position.set(x, y, z);
+    mesh.position.set(x, 0.06, z);
     group.add(mesh);
   };
 
-  const gymW = SCHOOL_GYM.maxX - SCHOOL_GYM.minX;
-  const gymD = SCHOOL_GYM.maxZ - SCHOOL_GYM.minZ;
-  line(0, (SCHOOL_GYM.minZ + SCHOOL_GYM.maxZ) / 2, gymW - 1, gymD - 1, 0xc68642);
-  for (const x of [-6, 6] as const) {
-    line(x, (SCHOOL_GYM.minZ + SCHOOL_GYM.maxZ) / 2, 0.1, gymD - 2, 0xffffff);
+  for (const z of [-12, 0, 12] as const) {
+    stripe(-10, z, 0.12, 8);
+    stripe(10, z, 0.12, 8);
   }
-  line(0, (SCHOOL_GYM.minZ + SCHOOL_GYM.maxZ) / 2, gymW - 2, 0.1, 0xffffff);
-  line(0, SCHOOL_GYM.minZ + 2, 4, 4, 0xffffff);
-
-  const lockerMat = flatMat(0x607d8b);
-  for (const [x, z] of SCHOOL_HALL_LOCKERS) {
-    const bank = new THREE.Group();
-    for (let i = 0; i < 5; i++) {
-      const door = new THREE.Mesh(new THREE.BoxGeometry(0.42, 2.1, 0.08), lockerMat);
-      door.position.set(-1 + i * 0.5, 1.05, 0.45);
-      bank.add(door);
-    }
-    bank.position.set(x, 0, z);
-    group.add(bank);
-  }
-
-  const counter = new THREE.Mesh(new THREE.BoxGeometry(12, 1.05, 1.1), flatMat(0x8d6e63));
-  counter.position.set(0, 0.55, -17);
-  group.add(counter);
-  const glass = new THREE.Mesh(new THREE.BoxGeometry(12, 0.08, 0.9), flatMat(0xb3e5fc));
-  glass.position.set(0, 1.15, -17);
-  group.add(glass);
-
-  for (const [x, z] of SCHOOL_CAFE_TABLES) {
-    const table = new THREE.Group();
-    const top = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 1.3), flatMat(0xbcaaa4));
-    top.position.y = 0.82;
-    table.add(top);
-    for (const [ox, oz] of [
-      [-0.9, -0.45],
-      [0.9, -0.45],
-      [-0.9, 0.45],
-      [0.9, 0.45],
-    ] as const) {
-      const bench = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.45, 0.35), flatMat(0x795548));
-      bench.position.set(ox, 0.45, oz);
-      table.add(bench);
-    }
-    table.position.set(x, 0, z);
-    group.add(table);
-  }
-
-  for (const room of SCHOOL_CLASSROOMS) {
-    const cx = (room.minX + room.maxX) / 2;
-    const cz = (room.minZ + room.maxZ) / 2;
-    const y = room.floor === 1 ? 0.82 : SCHOOL_FLOOR2_Y + 0.82;
-    const faceNorth = room.boardWall === "north";
-    for (let row = 0; row < 2; row++) {
-      for (let col = 0; col < 2; col++) {
-        const ox = (col - 0.5) * 2.2;
-        const oz = faceNorth ? room.minZ + 2.5 + row * 2 : room.maxZ - 2.5 - row * 2;
-        const desk = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.08, 0.65), flatMat(0x795548));
-        desk.position.set(cx + ox, y, oz);
-        group.add(desk);
-      }
-    }
-    const teacherZ = faceNorth ? room.maxZ - 1.4 : room.minZ + 1.4;
-    const teacher = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.08, 0.9), flatMat(0x6d4c41));
-    teacher.position.set(cx, y, teacherZ);
-    group.add(teacher);
-
-    const boardY = room.floor === 1 ? 1.35 : SCHOOL_FLOOR2_Y + 1.35;
-    const boardZ = room.boardWall === "north" ? room.maxZ - 0.2 : room.minZ + 0.2;
-    const board = new THREE.Mesh(new THREE.BoxGeometry(4, 1.3, 0.08), flatMat(theme.accentColor));
-    board.position.set(cx, boardY, boardZ);
-    group.add(board);
-
-    const doorX = room.minX < 0 ? room.maxX : room.minX;
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.2, 5.2), flatMat(0xf5f5f5));
-    frame.position.set(doorX, room.floor === 1 ? 1.1 : SCHOOL_FLOOR2_Y + 1.1, cz);
-    group.add(frame);
+  for (const x of [-10, 10] as const) {
+    stripe(x, 0, 8, 0.12);
   }
 
   for (const x of [-12, 12] as const) {
-    const bleacher = new THREE.Group();
-    for (let row = 0; row < 4; row++) {
-      const seat = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.35, 0.9), flatMat(0x455a64));
-      seat.position.set(0, 0.35 + row * 0.35, -0.35 - row * 0.35);
-      bleacher.add(seat);
-    }
-    bleacher.position.set(x, 0, 16);
-    group.add(bleacher);
-  }
-
-  for (const z of [10, 19] as const) {
-    const pole = new THREE.Group();
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 3.2, 0.12), flatMat(0xdddddd));
-    post.position.y = 1.6;
-    pole.add(post);
-    const backboard = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.08), flatMat(0xffffff));
-    backboard.position.set(0, 3.1, 0);
-    pole.add(backboard);
-    const rim = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.7), flatMat(0xff6f00));
-    rim.position.set(0, 2.75, 0.35);
-    pole.add(rim);
-    pole.position.set(0, 0, z);
-    group.add(pole);
-  }
-
-  for (let i = 0; i < SCHOOL_STAIRS.length; i++) {
-    const stair = SCHOOL_STAIRS[i]!;
-    const sign = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.5, 0.08), flatMat(0x546e7a));
-    sign.position.set(stair.x, 2.8, SCHOOL_MAIN_HALL.maxZ + 0.15);
-    group.add(sign);
-
-    for (let step = 0; step < STAIR_STEPS; step++) {
-      const topY = FLOOR1_FEET_Y + (step + 1) * stairRise;
-      const stepMesh = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, STAIR_RUN * 0.88), flatMat(0x9e9e9e));
-      stepMesh.position.set(
-        stair.x,
-        topY - 0.05,
-        stair.zStart + step * STAIR_RUN + STAIR_RUN * 0.5,
-      );
-      group.add(stepMesh);
+    for (const z of [-8, 0, 8] as const) {
+      const band = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 1.2), flatMat(theme.accentColor));
+      band.position.set(x, 2.2, z);
+      group.add(band);
     }
   }
 
   const padA = new THREE.Mesh(new THREE.BoxGeometry(3, 0.02, 3), flatMat(0x2980b9));
-  padA.position.set(SCHOOL_SPAWN_A.x, 0.06, SCHOOL_SPAWN_A.z);
+  padA.position.set(PARKING_GARAGE_SPAWN_A.x, 0.06, PARKING_GARAGE_SPAWN_A.z);
   group.add(padA);
   const padB = new THREE.Mesh(new THREE.BoxGeometry(3, 0.02, 3), flatMat(0xc0392b));
-  padB.position.set(SCHOOL_SPAWN_B.x, 0.06, SCHOOL_SPAWN_B.z);
+  padB.position.set(PARKING_GARAGE_SPAWN_B.x, 0.06, PARKING_GARAGE_SPAWN_B.z);
   group.add(padB);
 
   for (const [x, z, y] of [
-    [0, 0, 6.95],
-    [-10, 0, 6.95],
-    [10, 0, 6.95],
-    [0, 12, 6.95],
-    [0, -12, 6.95],
-    [0, 0, SCHOOL_FLOOR2_Y + 3.35],
+    [0, 0, 4.2],
+    [-10, -8, 4.2],
+    [10, 8, 4.2],
   ] as const) {
     const light = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 0.08, 0.35),
+      new THREE.BoxGeometry(1.4, 0.08, 0.3),
       new THREE.MeshLambertMaterial({
         color: 0xffffff,
         emissive: 0xfff4cc,
@@ -965,8 +829,8 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
     addCornMazeDecor(group, theme);
   } else if (roundId === "city-streets-01") {
     addCityStreetsDecor(group, theme);
-  } else if (roundId === "school-01") {
-    addSchoolDecor(group, theme);
+  } else if (roundId === "parking-garage-01") {
+    addParkingGarageDecor(group, theme);
   }
 
   const floorCollider = new THREE.Box3(
@@ -1000,9 +864,7 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
         ? 30
         : roundId === "city-streets-01"
           ? 42
-          : roundId === "school-01"
-            ? 34
-            : 45;
+          : 45;
   const fogFar =
     roundId === "duct-network-01"
       ? 55
@@ -1010,9 +872,7 @@ export function buildArena(scene: THREE.Scene, roundId: string): ArenaBuild {
         ? 80
         : roundId === "city-streets-01"
           ? 118
-          : roundId === "school-01"
-            ? 88
-            : 95;
+          : 95;
 
   return {
     group,

@@ -1,24 +1,24 @@
 {
-  "id": "school-01",
-  "name": "School",
+  "id": "parking-garage-01",
+  "name": "Parking Garage",
   "building": {
-    "id": "school-main",
-    "scene": "buildings/school.tscn"
+    "id": "parking-garage-main",
+    "scene": "buildings/parking-garage.tscn"
   },
   "spawns": {
     "playerA": {
-      "position": [0.0, 1.0, -14.0],
+      "position": [0.0, 1.0, -16.0],
       "rotation": [0, 0, 0]
     },
     "playerB": {
-      "position": [0.0, 1.0, 14.0],
+      "position": [0.0, 1.0, 16.0],
       "rotation": [0, 180, 0]
     }
   },
   "rules": {
     "roundTimeLimitSec": 300,
     "photoCooldownSec": 2.0,
-    "maxPhotoDistance": 58.0,
+    "maxPhotoDistance": 52.0,
     "minPhotoDistance": 1.0,
     "requireAimMode": false,
     "requireBodyInFrame": true,

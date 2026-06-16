@@ -16,7 +16,7 @@ describe("arena registry", () => {
       "duct-network-01",
       "corn-maze-01",
       "city-streets-01",
-      "school-01",
+      "parking-garage-01",
     ]);
   });
 
@@ -44,7 +44,7 @@ describe("arena registry", () => {
       { id: "duct-network-01", name: "Air Duct Network" },
       { id: "corn-maze-01", name: "Corn Maze" },
       { id: "city-streets-01", name: "Urban Streets" },
-      { id: "school-01", name: "School" },
+      { id: "parking-garage-01", name: "Parking Garage" },
     ]);
   });
 
@@ -78,11 +78,11 @@ describe("arena registry", () => {
     expect(layout.halfExtent).toBe(32);
   });
 
-  it("returns school layout metadata", () => {
-    const layout = getArenaLayout("school-01");
-    expect(layout.name).toBe("School");
-    expect(layout.halfExtent).toBe(24);
-    expect(layout.wallHeight).toBe(7.2);
+  it("returns parking garage layout metadata", () => {
+    const layout = getArenaLayout("parking-garage-01");
+    expect(layout.name).toBe("Parking Garage");
+    expect(layout.halfExtent).toBe(20);
+    expect(layout.wallHeight).toBe(4.5);
   });
 
   it("provides photo occluders per arena", () => {
@@ -91,13 +91,13 @@ describe("arena registry", () => {
     const ducts = getOccludersForRound("duct-network-01");
     const corn = getOccludersForRound("corn-maze-01");
     const streets = getOccludersForRound("city-streets-01");
-    const school = getOccludersForRound("school-01");
+    const garage = getOccludersForRound("parking-garage-01");
     expect(warehouse.length).toBeGreaterThan(10);
     expect(rooftop.length).toBeGreaterThan(5);
     expect(ducts.length).toBeGreaterThan(15);
     expect(corn.length).toBeGreaterThan(20);
     expect(streets.length).toBeGreaterThan(25);
-    expect(school.length).toBeGreaterThan(20);
+    expect(garage.length).toBeGreaterThan(10);
     expect(ducts.length).toBeLessThan(warehouse.length);
   });
 });
