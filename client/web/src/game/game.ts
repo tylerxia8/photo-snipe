@@ -582,6 +582,22 @@ export class Game {
     }
   }
 
+  private isTypingInFormField(event: Event): boolean {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+    if (target.isContentEditable) {
+      return true;
+    }
+    const tag = target.tagName;
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+  }
+
+  private shouldCaptureGameInput(event: Event): boolean {
+    return this.active && !this.isTypingInFormField(event);
+  }
+
   private isMovementBinding(code: string): boolean {
     const binds = getKeybinds();
     return (
@@ -593,7 +609,7 @@ export class Game {
   }
 
   private onKeyDown(e: KeyboardEvent): void {
-    if (e.repeat) {
+    if (e.repeat || !this.shouldCaptureGameInput(e)) {
       return;
     }
     this.handleBindingPress(e.code);
@@ -611,10 +627,16 @@ export class Game {
   }
 
   private onKeyUp(e: KeyboardEvent): void {
+    if (!this.shouldCaptureGameInput(e)) {
+      return;
+    }
     this.keys.delete(e.code);
   }
 
   private onMouseDown(e: MouseEvent): void {
+    if (!this.shouldCaptureGameInput(e)) {
+      return;
+    }
     const code = mouseButtonToCode(e.button);
     if (!code) {
       return;
@@ -626,6 +648,9 @@ export class Game {
   }
 
   private onMouseUp(e: MouseEvent): void {
+    if (!this.active) {
+      return;
+    }
     const code = mouseButtonToCode(e.button);
     if (!code) {
       return;
