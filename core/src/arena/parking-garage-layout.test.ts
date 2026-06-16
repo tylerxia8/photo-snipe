@@ -133,11 +133,12 @@ describe("parking garage layout", () => {
     expect(PARKING_GARAGE_SPAWN_B_ROTATION[1]).toBe(180);
   });
 
-  it("keeps the center lane walkable", () => {
+  it("keeps open paths between the center pillars", () => {
     for (const [x, z] of [
-      [0, -10],
-      [0, 0],
-      [0, 10],
+      [0, -3],
+      [0, 3],
+      [-3, 0],
+      [3, 0],
     ] as const) {
       expect(feetBlocked(x, z, 1)).toBe(false);
     }
@@ -145,5 +146,19 @@ describe("parking garage layout", () => {
 
   it("connects both spawns through the garage floor", () => {
     expect(canWalkBetween(PARKING_GARAGE_SPAWN_A, PARKING_GARAGE_SPAWN_B)).toBe(true);
+  });
+
+  it("keeps cars and pillars from overlapping", () => {
+    const props = PARKING_GARAGE_SOLID_BOXES.filter((solid) => solid.category === "prop");
+    for (let i = 0; i < props.length; i += 1) {
+      const a = boxToAabb(props[i]!);
+      for (let j = i + 1; j < props.length; j += 1) {
+        const b = boxToAabb(props[j]!);
+        const xOverlap = a.max.x > b.min.x && a.min.x < b.max.x;
+        const yOverlap = a.max.y > b.min.y && a.min.y < b.max.y;
+        const zOverlap = a.max.z > b.min.z && a.min.z < b.max.z;
+        expect(xOverlap && yOverlap && zOverlap).toBe(false);
+      }
+    }
   });
 });

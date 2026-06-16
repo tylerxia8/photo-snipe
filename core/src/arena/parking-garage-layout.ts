@@ -5,6 +5,13 @@ const FOOTPRINT = HALF * 2;
 const WALL_HEIGHT = 4.5;
 const WALL_THICKNESS = 0.35;
 
+/** Structural columns — wide enough to duck behind in firefights. */
+const PILLAR_SIZE = 1.8;
+/** Parked sedans — tall and wide enough for movement + photo cover. */
+const CAR_LENGTH = 4.6;
+const CAR_HEIGHT = 2.0;
+const CAR_WIDTH = 2.4;
+
 export const PARKING_GARAGE_LAYOUT: ArenaLayoutConfig = {
   id: "parking-garage-01",
   name: "Parking Garage",
@@ -14,7 +21,19 @@ export const PARKING_GARAGE_LAYOUT: ArenaLayoutConfig = {
   defaultFeetY: 1,
 };
 
-/** Simple indoor garage — open floor, concrete pillars, parked cars, spawn cover. */
+function addPillar(boxes: ArenaSolidBox[], x: number, z: number): void {
+  boxes.push(
+    solidBox(x, WALL_HEIGHT * 0.5, z, PILLAR_SIZE, WALL_HEIGHT, PILLAR_SIZE, "prop", true),
+  );
+}
+
+function addCar(boxes: ArenaSolidBox[], x: number, z: number): void {
+  boxes.push(
+    solidBox(x, CAR_HEIGHT * 0.5, z, CAR_LENGTH, CAR_HEIGHT, CAR_WIDTH, "prop", true),
+  );
+}
+
+/** Simple indoor garage — open floor with concrete pillars and parked cars only. */
 export const PARKING_GARAGE_SOLID_BOXES: ArenaSolidBox[] = [
   solidBox(0, -0.1, 0, FOOTPRINT, 0.2, FOOTPRINT, "floor", false),
   solidBox(0, WALL_HEIGHT + 0.05, 0, FOOTPRINT, 0.1, FOOTPRINT, "ceiling", false),
@@ -28,34 +47,27 @@ export const PARKING_GARAGE_SOLID_BOXES: ArenaSolidBox[] = [
 for (const [x, z] of [
   [-12, -8],
   [12, -8],
-  [-12, 0],
-  [12, 0],
   [-12, 8],
   [12, 8],
-  [-14, -14],
-  [14, 14],
-  [-6, -4],
-  [6, 4],
+  [0, -6],
+  [0, 6],
+  [-6, 0],
+  [6, 0],
+  [0, 0],
 ] as const) {
-  PARKING_GARAGE_SOLID_BOXES.push(solidBox(x, WALL_HEIGHT * 0.5, z, 1.1, WALL_HEIGHT, 1.1, "prop", true));
+  addPillar(PARKING_GARAGE_SOLID_BOXES, x, z);
 }
 
-/** Spawn cover — one car directly ahead of each spawn so players start behind metal. */
 for (const [x, z] of [
-  [-10, -12.5],
-  [10, 12.5],
+  [-10, -13],
+  [10, 13],
   [-14, 0],
   [14, 0],
+  [-8, -10],
+  [8, 10],
 ] as const) {
-  PARKING_GARAGE_SOLID_BOXES.push(solidBox(x, 0.75, z, 4.2, 1.5, 2, "prop", true));
+  addCar(PARKING_GARAGE_SOLID_BOXES, x, z);
 }
-
-PARKING_GARAGE_SOLID_BOXES.push(
-  solidBox(0, 0.55, -5, 16, 1.1, 0.7, "prop", true),
-  solidBox(0, 0.55, 5, 16, 1.1, 0.7, "prop", true),
-  solidBox(0, 1.2, -11, 30, 2.4, 0.6, "prop", true),
-  solidBox(0, 1.2, 11, 30, 2.4, 0.6, "prop", true),
-);
 
 /** Behind the south spawn car, facing its rear (+Z). */
 export const PARKING_GARAGE_SPAWN_A = { x: -10, z: -16, y: 1 } as const;

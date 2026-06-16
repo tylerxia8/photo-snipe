@@ -716,22 +716,32 @@ function addParkingGarageDecor(group: THREE.Group, theme: ArenaTheme): void {
   }
 
   for (const [x, z] of [
-    [-10, -12.5],
-    [10, 12.5],
+    [-10, -13],
+    [10, 13],
     [-14, 0],
     [14, 0],
+    [-8, -10],
+    [8, 10],
   ] as const) {
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.08, 2), flatMat(0x546e7a));
-    roof.position.set(x, 1.55, z);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.08, 2.4), flatMat(0x546e7a));
+    roof.position.set(x, 2.05, z);
     group.add(roof);
   }
 
-  for (const x of [-12, 12] as const) {
-    for (const z of [-8, 0, 8] as const) {
-      const band = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 1.2), flatMat(theme.accentColor));
-      band.position.set(x, 2.2, z);
-      group.add(band);
-    }
+  for (const [x, z] of [
+    [-12, -8],
+    [12, -8],
+    [-12, 8],
+    [12, 8],
+    [0, -6],
+    [0, 6],
+    [-6, 0],
+    [6, 0],
+    [0, 0],
+  ] as const) {
+    const band = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.5, 1.8), flatMat(theme.accentColor));
+    band.position.set(x, 2.2, z);
+    group.add(band);
   }
 
   const padA = new THREE.Mesh(new THREE.BoxGeometry(3, 0.02, 3), flatMat(0x2980b9));
