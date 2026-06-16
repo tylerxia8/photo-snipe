@@ -1,14 +1,20 @@
 import { describe, expect, it } from "vitest";
+import { getOccludersForRound } from "./registry.js";
 import { boxToAabb } from "./solid-box.js";
+import { hasLineOfSight, vec3 } from "../photo-validation/occlusion.js";
 import {
   PARKING_GARAGE_SPAWN_A,
+  PARKING_GARAGE_SPAWN_A_ROTATION,
   PARKING_GARAGE_SPAWN_B,
+  PARKING_GARAGE_SPAWN_B_ROTATION,
   PARKING_GARAGE_SOLID_BOXES,
 } from "./parking-garage-layout.js";
 
 const PLAYER_HALF_WIDTH = 0.3;
 const PLAYER_HEIGHT = 1.8;
 const GRID_STEP = 0.4;
+const EYE_OFFSET = 0.6;
+const BODY_HALF_HEIGHT = 0.9;
 
 function blockingSolids() {
   return PARKING_GARAGE_SOLID_BOXES.filter(
@@ -77,6 +83,14 @@ function canWalkBetween(
   return false;
 }
 
+function spawnCamera(spawn: { x: number; z: number; y: number }) {
+  return vec3(spawn.x, spawn.y + EYE_OFFSET, spawn.z);
+}
+
+function spawnBodyCenter(spawn: { x: number; z: number; y: number }) {
+  return vec3(spawn.x, spawn.y + BODY_HALF_HEIGHT, spawn.z);
+}
+
 describe("parking garage layout", () => {
   it("keeps spawn points out of solid props", () => {
     expect(feetBlocked(PARKING_GARAGE_SPAWN_A.x, PARKING_GARAGE_SPAWN_A.z, PARKING_GARAGE_SPAWN_A.y)).toBe(
@@ -85,6 +99,38 @@ describe("parking garage layout", () => {
     expect(feetBlocked(PARKING_GARAGE_SPAWN_B.x, PARKING_GARAGE_SPAWN_B.z, PARKING_GARAGE_SPAWN_B.y)).toBe(
       false,
     );
+  });
+
+  it("blocks spawn line of sight between players behind cover", () => {
+    const occluders = getOccludersForRound("parking-garage-01");
+    const aCam = spawnCamera(PARKING_GARAGE_SPAWN_A);
+    const bBody = spawnBodyCenter(PARKING_GARAGE_SPAWN_B);
+    const bCam = spawnCamera(PARKING_GARAGE_SPAWN_B);
+    const aBody = spawnBodyCenter(PARKING_GARAGE_SPAWN_A);
+
+    expect(hasLineOfSight(aCam, bBody, occluders)).toBe(false);
+    expect(hasLineOfSight(bCam, aBody, occluders)).toBe(false);
+  });
+
+  it("places spawns behind nearby cover props", () => {
+    const coverNear = (spawn: { x: number; z: number }) =>
+      PARKING_GARAGE_SOLID_BOXES.some((solid) => {
+        if (solid.category !== "prop" || solid.sy < 1) {
+          return false;
+        }
+        const box = boxToAabb(solid);
+        const dx = Math.abs(spawn.x - solid.cx);
+        const dz = Math.abs(spawn.z - solid.cz);
+        return dx < solid.sx * 0.75 + 1.5 && dz < solid.sz * 0.75 + 2.5;
+      });
+
+    expect(coverNear(PARKING_GARAGE_SPAWN_A)).toBe(true);
+    expect(coverNear(PARKING_GARAGE_SPAWN_B)).toBe(true);
+  });
+
+  it("starts players facing their spawn car, not the opponent", () => {
+    expect(PARKING_GARAGE_SPAWN_A_ROTATION[1]).toBe(0);
+    expect(PARKING_GARAGE_SPAWN_B_ROTATION[1]).toBe(180);
   });
 
   it("keeps the center lane walkable", () => {

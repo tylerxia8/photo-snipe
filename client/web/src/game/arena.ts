@@ -715,6 +715,17 @@ function addParkingGarageDecor(group: THREE.Group, theme: ArenaTheme): void {
     stripe(x, 0, 8, 0.12);
   }
 
+  for (const [x, z] of [
+    [-10, -12.5],
+    [10, 12.5],
+    [-14, 0],
+    [14, 0],
+  ] as const) {
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.08, 2), flatMat(0x546e7a));
+    roof.position.set(x, 1.55, z);
+    group.add(roof);
+  }
+
   for (const x of [-12, 12] as const) {
     for (const z of [-8, 0, 8] as const) {
       const band = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 1.2), flatMat(theme.accentColor));
@@ -732,8 +743,8 @@ function addParkingGarageDecor(group: THREE.Group, theme: ArenaTheme): void {
 
   for (const [x, z, y] of [
     [0, 0, 4.2],
-    [-10, -8, 4.2],
-    [10, 8, 4.2],
+    [-14, -14, 4.2],
+    [14, 14, 4.2],
   ] as const) {
     const light = new THREE.Mesh(
       new THREE.BoxGeometry(1.4, 0.08, 0.3),

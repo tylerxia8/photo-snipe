@@ -14,24 +14,26 @@ Simple indoor duel arena — one open concrete floor with pillars, parked cars, 
 
 | Player | Position | Facing |
 |---|---|---|
-| A | `(0, 1, -16)` | North (+Z) |
-| B | `(0, 1, 16)` | South (-Z) |
+| A | `(-10, 1, -16)` | North (+Z), into spawn car |
+| B | `(10, 1, 16)` | South (-Z), into spawn car |
+
+Each player starts **behind their own parked car** with pillars nearby for peeking. Spawn line of sight to the opponent is blocked by cars, barriers, and pillars — you need to move out of cover to get a shot.
 
 ## Layout zones
 
 ```
-[North wall]  ← Player B spawn
-  Parked cars (NE/NW) + pillars in two rows
-  ─── center lane with jersey barriers ───
-  Parked cars (SE/SW) + pillars
-[South wall]  ← Player A spawn
+[North wall]  ← Player B behind car at (10, 12.5)
+  Pillars + flank cars
+  ─── wide jersey barriers + half-height partition walls ───
+  Pillars + flank cars
+[South wall]  ← Player A behind car at (-10, -12.5)
 ```
 
 ## Gameplay intent
 
 - **Flat single floor** — no stairs or floor transitions.
-- **Pillar grid** breaks sight lines without maze complexity.
-- **Four parked cars** and **two barriers** give simple mid-map cover.
+- **Spawn cars** block opening snap shots; **pillars** and **mid-map cars** support hiding mid-duel.
+- **Jersey barriers** split the center lane for staggered pushes.
 
 ## Code / data files
 
