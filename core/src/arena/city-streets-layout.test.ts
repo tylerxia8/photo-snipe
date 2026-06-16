@@ -6,13 +6,13 @@ import {
   CITY_STREETS_PARK_BENCHES,
   CITY_STREETS_PARK_FOUNTAIN,
   CITY_STREETS_PARK_TREES,
+  CITY_STREETS_PARKED_CARS,
   CITY_STREETS_ROAD_HALF,
   CITY_STREETS_HALF,
   CITY_STREETS_SPAWN_A,
   CITY_STREETS_SPAWN_B,
   CITY_STREETS_SOLID_BOXES,
-  CITY_STREETS_PARKED_CARS,
-  carFootprint,
+  CITY_STREETS_TAXI,
   parkFootprintOverlapsBuilding,
 } from "./city-streets-layout.js";
 
@@ -102,7 +102,7 @@ describe("city streets layout", () => {
     });
 
     for (const [x, z] of CITY_STREETS_PARK_TREES) {
-      const treeRadius = 0.35;
+      const treeRadius = 0.75;
       for (const building of buildings) {
         const xOverlap =
           x + treeRadius > building.minX && x - treeRadius < building.maxX;
@@ -119,8 +119,8 @@ describe("city streets layout", () => {
         footprintOverlaps(
           x,
           z,
-          0.7,
-          0.7,
+          1.5,
+          1.5,
           CITY_STREETS_PARK_FOUNTAIN.x,
           CITY_STREETS_PARK_FOUNTAIN.z,
           2.8,
@@ -129,25 +129,33 @@ describe("city streets layout", () => {
       ).toBe(false);
 
       for (const bench of CITY_STREETS_PARK_BENCHES) {
-        expect(footprintOverlaps(x, z, 0.7, 0.7, bench.x, bench.z, 3.2, 1.2)).toBe(false);
+        expect(footprintOverlaps(x, z, 1.5, 1.5, bench.x, bench.z, 3.2, 1.2)).toBe(false);
       }
     }
   });
 
-  it("aligns cross-street car colliders with rotated decor footprints", () => {
-    for (const [cx, cz, sx, sy, sz] of CITY_STREETS_PARKED_CARS) {
-      const foot = carFootprint(sx, sz);
+  it("matches car colliders to their world-axis footprints", () => {
+    for (const [cx, cz, footX, footZ] of CITY_STREETS_PARKED_CARS) {
       const collider = CITY_STREETS_SOLID_BOXES.find(
         (solid) =>
           solid.decorMesh === false &&
           Math.abs(solid.cx - cx) < 0.01 &&
           Math.abs(solid.cz - cz) < 0.01 &&
-          solid.sy === sy,
+          solid.sy >= 2,
       );
       expect(collider).toBeDefined();
-      expect(collider!.sx).toBeCloseTo(foot.sx);
-      expect(collider!.sz).toBeCloseTo(foot.sz);
+      expect(collider!.sx).toBeCloseTo(footX);
+      expect(collider!.sz).toBeCloseTo(footZ);
     }
+
+    const taxiCollider = CITY_STREETS_SOLID_BOXES.find(
+      (solid) =>
+        solid.decorMesh === false &&
+        Math.abs(solid.cx - CITY_STREETS_TAXI.cx) < 0.01 &&
+        Math.abs(solid.cz - CITY_STREETS_TAXI.cz) < 0.01,
+    );
+    expect(taxiCollider!.sx).toBeCloseTo(CITY_STREETS_TAXI.footX);
+    expect(taxiCollider!.sz).toBeCloseTo(CITY_STREETS_TAXI.footZ);
   });
 
   it("gives parked cars solid body collision", () => {

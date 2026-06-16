@@ -17,7 +17,7 @@ const FOOTPRINT = HALF * 2;
 const ROAD_HALF = CITY_STREETS_ROAD_HALF;
 const PARAPET = 1.2;
 const WALL_THICKNESS = 0.35;
-const FENCE_H = 1.5;
+const CAR_BODY_H = 2.1;
 
 export const CITY_STREETS_LAYOUT: ArenaLayoutConfig = {
   id: "city-streets-01",
@@ -37,24 +37,6 @@ function pushBuilding(
   sz: number,
 ): void {
   solids.push(solidBox(cx, sy * 0.5, cz, sx, sy, sz, "prop", true));
-}
-
-/** Match decor rotation: cars parked with sx > sz face along X after a 90° turn. */
-export function carFootprint(sx: number, sz: number): { sx: number; sz: number; alongZ: boolean } {
-  const alongZ = sx < sz;
-  return alongZ ? { sx, sz, alongZ } : { sx: sz, sz: sx, alongZ };
-}
-
-function pushCarCollider(
-  solids: ArenaSolidBox[],
-  cx: number,
-  cz: number,
-  sx: number,
-  sy: number,
-  sz: number,
-): void {
-  const foot = carFootprint(sx, sz);
-  solids.push(colliderBox(cx, sy * 0.5, cz, foot.sx, sy, foot.sz, true));
 }
 
 /** Open-air downtown — boulevard, cross street, skyscrapers, park, and street cover. */
@@ -92,22 +74,22 @@ for (const [cx, cz, sx, sy, sz] of CITY_STREETS_BUILDINGS) {
   pushBuilding(CITY_STREETS_SOLID_BOXES, cx, cz, sx, sy, sz);
 }
 
-/** Park trees — inset from fence corners; trunk-only collision. */
+/** Park trees — open grass, clear of fountain, benches, and north fence rail. */
 export const CITY_STREETS_PARK_TREES = [
-  [-30, -27.5],
-  [-24.5, -28],
-  [-30, -19],
-  [-24.5, -17.5],
+  [-29, -26],
+  [-25, -26],
+  [-29, -19],
+  [-25, -18],
 ] as const;
 
 for (const [x, z] of CITY_STREETS_PARK_TREES) {
-  CITY_STREETS_SOLID_BOXES.push(colliderBox(x, 1.25, z, 0.7, 2.5, 0.7, true));
+  CITY_STREETS_SOLID_BOXES.push(colliderBox(x, 1.35, z, 1.5, 2.7, 1.5, true));
 }
 
 export const CITY_STREETS_PARK_FOUNTAIN = { x: -27, z: -23 };
 export const CITY_STREETS_PARK_BENCHES = [
-  { x: -24, z: -19 },
-  { x: -24, z: -26 },
+  { x: -24, z: -20 },
+  { x: -30, z: -24 },
 ] as const;
 
 CITY_STREETS_SOLID_BOXES.push(
@@ -128,56 +110,58 @@ CITY_STREETS_SOLID_BOXES.push(
   ),
 );
 
-/** Park fence on north and west only — south/east stay open to the sidewalk. */
+/** Park fence visuals only — north and west rails (no collision; keeps south/east open). */
 export const CITY_STREETS_FENCE_SEGMENTS: Array<[number, number, number, number]> = [
   [park.cx, park.cz - park.sz * 0.5 + 0.2, park.sx + 0.4, 0.4],
   [park.cx - park.sx * 0.5 + 0.2, park.cz, 0.4, park.sz + 0.4],
 ];
 
-for (const [cx, cz, sx, sz] of CITY_STREETS_FENCE_SEGMENTS) {
+/**
+ * Parked cars — [cx, cz, footX, footZ] in world axes.
+ * footX/footZ always match the visible body after decor rotation.
+ */
+export const CITY_STREETS_PARKED_CARS: Array<[number, number, number, number]> = [
+  [-3.8, -28, 1.9, 4.2],
+  [3.8, -28, 1.9, 4.2],
+  [-3.8, -20, 1.9, 4.2],
+  [3.8, -20, 1.9, 4.2],
+  [-3.8, -12, 1.9, 4.2],
+  [3.8, -12, 1.9, 4.2],
+  [-3.8, 12, 1.9, 4.2],
+  [3.8, 12, 1.9, 4.2],
+  [-3.8, 20, 1.9, 4.2],
+  [3.8, 20, 1.9, 4.2],
+  [-3.8, 28, 1.9, 4.2],
+  [3.8, 28, 1.9, 4.2],
+  [-28, -3.8, 4.2, 1.9],
+  [-28, 3.8, 4.2, 1.9],
+  [-20, -3.8, 4.2, 1.9],
+  [-20, 3.8, 4.2, 1.9],
+  [28, -3.8, 4.2, 1.9],
+  [28, 3.8, 4.2, 1.9],
+  [20, -3.8, 4.2, 1.9],
+  [20, 3.8, 4.2, 1.9],
+];
+
+for (const [cx, cz, footX, footZ] of CITY_STREETS_PARKED_CARS) {
   CITY_STREETS_SOLID_BOXES.push(
-    colliderBox(cx, FENCE_H * 0.5, cz, sx, FENCE_H, sz, true),
+    colliderBox(cx, CAR_BODY_H * 0.5, cz, footX, CAR_BODY_H, footZ, true),
   );
 }
 
-/** Parked cars along curbs — [cx, cz, sx, bodySy, sz]. */
-export const CITY_STREETS_PARKED_CARS: Array<[number, number, number, number, number]> = [
-  [-3.8, -28, 1.9, 2.1, 4.2],
-  [3.8, -28, 1.9, 2.1, 4.2],
-  [-3.8, -20, 1.9, 2.1, 4.2],
-  [3.8, -20, 1.9, 2.1, 4.2],
-  [-3.8, -12, 1.9, 2.1, 4.2],
-  [3.8, -12, 1.9, 2.1, 4.2],
-  [-3.8, 12, 1.9, 2.1, 4.2],
-  [3.8, 12, 1.9, 2.1, 4.2],
-  [-3.8, 20, 1.9, 2.1, 4.2],
-  [3.8, 20, 1.9, 2.1, 4.2],
-  [-3.8, 28, 1.9, 2.1, 4.2],
-  [3.8, 28, 1.9, 2.1, 4.2],
-  [-28, -3.8, 4.2, 2.1, 1.9],
-  [-28, 3.8, 4.2, 2.1, 1.9],
-  [-24, -3.8, 4.2, 2.1, 1.9],
-  [-24, 3.8, 4.2, 2.1, 1.9],
-  [28, -3.8, 4.2, 2.1, 1.9],
-  [28, 3.8, 4.2, 2.1, 1.9],
-  [20, -3.8, 4.2, 2.1, 1.9],
-  [20, 3.8, 4.2, 2.1, 1.9],
-];
+/** Yellow cab — east lane of the boulevard, south of center. */
+export const CITY_STREETS_TAXI = { cx: 6, cz: -10, footX: 4.4, footZ: 2 };
 
-for (const [cx, cz, sx, sy, sz] of CITY_STREETS_PARKED_CARS) {
-  pushCarCollider(CITY_STREETS_SOLID_BOXES, cx, cz, sx, sy, sz);
-}
-
-/** Yellow cab — parked on the east cross street, off the main boulevard. */
-export const CITY_STREETS_TAXI = { cx: 8, cz: 12, sx: 4.4, sy: 2.1, sz: 2 };
-
-pushCarCollider(
-  CITY_STREETS_SOLID_BOXES,
-  CITY_STREETS_TAXI.cx,
-  CITY_STREETS_TAXI.cz,
-  CITY_STREETS_TAXI.sx,
-  CITY_STREETS_TAXI.sy,
-  CITY_STREETS_TAXI.sz,
+CITY_STREETS_SOLID_BOXES.push(
+  colliderBox(
+    CITY_STREETS_TAXI.cx,
+    CAR_BODY_H * 0.5,
+    CITY_STREETS_TAXI.cz,
+    CITY_STREETS_TAXI.footX,
+    CAR_BODY_H,
+    CITY_STREETS_TAXI.footZ,
+    true,
+  ),
 );
 
 /** Hot dog carts, newsstands, and bus shelter near sidewalks. */

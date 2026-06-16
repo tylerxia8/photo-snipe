@@ -454,58 +454,52 @@ function addCityStreetsDecor(group: THREE.Group, theme: ArenaTheme): void {
   const addCar = (
     x: number,
     z: number,
-    sx: number,
-    sz: number,
-    alongZ: boolean,
+    footX: number,
+    footZ: number,
     bodyColor: number,
     cabinColor = 0x1f2937,
   ) => {
     const car = new THREE.Group();
     const body = new THREE.Mesh(
-      new THREE.BoxGeometry(alongZ ? sx : sz, 0.72, alongZ ? sz : sx),
+      new THREE.BoxGeometry(footX, 0.72, footZ),
       flatMat(bodyColor),
     );
     body.position.y = 0.55;
     car.add(body);
-    const cabinLen = alongZ ? Math.min(sz, 2.3) : Math.min(sx, 2.3);
-    const cabinDepth = alongZ ? Math.min(sx, 1.55) : Math.min(sz, 1.55);
+    const cabinX = Math.min(footX, footX > footZ ? 2.3 : 1.55);
+    const cabinZ = Math.min(footZ, footX > footZ ? 1.55 : 2.3);
     const cabin = new THREE.Mesh(
-      new THREE.BoxGeometry(alongZ ? cabinDepth : cabinLen, 0.55, alongZ ? cabinLen : cabinDepth),
+      new THREE.BoxGeometry(cabinX, 0.55, cabinZ),
       flatMat(cabinColor),
     );
-    cabin.position.set(0, 0.98, alongZ ? -0.35 : 0);
+    cabin.position.set(0, 0.98, footZ >= footX ? -0.35 : 0);
     car.add(cabin);
-    const halfLen = (alongZ ? sz : sx) * 0.35;
-    const halfWidth = (alongZ ? sx : sz) * 0.4;
+    const halfX = footX * 0.4;
+    const halfZ = footZ * 0.35;
     for (const [ox, oz] of [
-      [-halfWidth, -halfLen],
-      [halfWidth, -halfLen],
-      [-halfWidth, halfLen],
-      [halfWidth, halfLen],
+      [-halfX, -halfZ],
+      [halfX, -halfZ],
+      [-halfX, halfZ],
+      [halfX, halfZ],
     ] as const) {
       const wheel = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), flatMat(0x111111));
-      wheel.position.set(alongZ ? ox : oz, 0.25, alongZ ? oz : ox);
+      wheel.position.set(ox, 0.25, oz);
       car.add(wheel);
     }
     car.position.set(x, 0, z);
-    if (!alongZ) {
-      car.rotation.y = Math.PI / 2;
-    }
     group.add(car);
   };
 
   const carColors = [0xbdc3c7, 0x2c3e50, 0x922b21, 0x1f618d, 0x566573];
-  CITY_STREETS_PARKED_CARS.forEach(([cx, cz, sx, , sz], index) => {
-    const alongZ = sx < sz;
-    addCar(cx, cz, sx, sz, alongZ, carColors[index % carColors.length]!);
+  CITY_STREETS_PARKED_CARS.forEach(([cx, cz, footX, footZ], index) => {
+    addCar(cx, cz, footX, footZ, carColors[index % carColors.length]!);
   });
 
   addCar(
     CITY_STREETS_TAXI.cx,
     CITY_STREETS_TAXI.cz,
-    CITY_STREETS_TAXI.sx,
-    CITY_STREETS_TAXI.sz,
-    CITY_STREETS_TAXI.sx < CITY_STREETS_TAXI.sz,
+    CITY_STREETS_TAXI.footX,
+    CITY_STREETS_TAXI.footZ,
     0xf1c40f,
     0x2c3e50,
   );

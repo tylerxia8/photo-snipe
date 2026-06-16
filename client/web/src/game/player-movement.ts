@@ -150,8 +150,6 @@ interface MoveHint {
   dz: number;
 }
 
-const MAX_RESOLVE_PUSH = 0.75;
-
 function separationClearsOverlap(feet: FeetPos, solid: THREE.Box3): boolean {
   const player = playerAabb(feet);
   if (supportedOnTop(feet, solid)) {
@@ -160,7 +158,7 @@ function separationClearsOverlap(feet: FeetPos, solid: THREE.Box3): boolean {
   return !player.intersectsBox(solid) || !verticalOverlap(player, solid);
 }
 
-function pickAxisSeparation(
+function pickSeparation(
   feet: FeetPos,
   pushNegative: number,
   pushPositive: number,
@@ -169,25 +167,27 @@ function pickAxisSeparation(
   moveDelta: number,
   solid: THREE.Box3,
   bounds: WorldColliders["bounds"],
+  axis: "x" | "z",
 ): FeetPos {
   const negativeValid =
     pushNegative > 0 &&
-    pushNegative <= MAX_RESOLVE_PUSH &&
     separationClearsOverlap(negative, solid) &&
     isInsideBounds(negative.x, negative.z, bounds);
   const positiveValid =
     pushPositive > 0 &&
-    pushPositive <= MAX_RESOLVE_PUSH &&
     separationClearsOverlap(positive, solid) &&
     isInsideBounds(positive.x, positive.z, bounds);
 
-  if (moveDelta > 0 && negativeValid) {
-    return negative;
-  }
-  if (moveDelta < 0 && positiveValid) {
-    return positive;
-  }
   if (negativeValid && positiveValid) {
+    const center =
+      axis === "x" ? (solid.min.x + solid.max.x) * 0.5 : (solid.min.z + solid.max.z) * 0.5;
+    const feetAxis = axis === "x" ? feet.x : feet.z;
+    if (moveDelta > 0) {
+      return feetAxis <= center ? negative : positive;
+    }
+    if (moveDelta < 0) {
+      return feetAxis >= center ? positive : negative;
+    }
     return pushNegative <= pushPositive ? negative : positive;
   }
   if (negativeValid) {
@@ -199,7 +199,7 @@ function pickAxisSeparation(
   return feet;
 }
 
-/** Push out of one solid on the shallowest axis using a bounded, overlap-clearing nudge. */
+/** Push out of one solid on the shallowest axis that actually clears overlap. */
 function resolveSolidOverlap(
   feet: FeetPos,
   solid: THREE.Box3,
@@ -222,7 +222,7 @@ function resolveSolidOverlap(
   if (useX) {
     const pushWest = player.max.x - solid.min.x + SKIN;
     const pushEast = solid.max.x - player.min.x + SKIN;
-    return pickAxisSeparation(
+    return pickSeparation(
       feet,
       pushWest,
       pushEast,
@@ -231,12 +231,13 @@ function resolveSolidOverlap(
       hint.dx,
       solid,
       bounds,
+      "x",
     );
   }
 
   const pushNorth = player.max.z - solid.min.z + SKIN;
   const pushSouth = solid.max.z - player.min.z + SKIN;
-  return pickAxisSeparation(
+  return pickSeparation(
     feet,
     pushNorth,
     pushSouth,
@@ -245,6 +246,7 @@ function resolveSolidOverlap(
     hint.dz,
     solid,
     bounds,
+    "z",
   );
 }
 
@@ -315,9 +317,17 @@ function clipAxisX(
 
       let nextX = x;
       if (dx > 0) {
-        nextX = Math.min(x, solid.min.x - PLAYER_HALF_WIDTH - SKIN);
+        const exitWest = solid.min.x - PLAYER_HALF_WIDTH - SKIN;
+        const exitEast = solid.max.x - PLAYER_HALF_WIDTH + SKIN;
+        const pushWest = player.max.x - solid.min.x + SKIN;
+        const pushEast = solid.max.x - player.min.x + SKIN;
+        nextX = Math.min(x, pushWest <= pushEast ? exitWest : exitEast);
       } else if (dx < 0) {
-        nextX = Math.max(x, solid.max.x + PLAYER_HALF_WIDTH + SKIN);
+        const exitWest = solid.min.x + PLAYER_HALF_WIDTH - SKIN;
+        const exitEast = solid.max.x + PLAYER_HALF_WIDTH + SKIN;
+        const pushWest = player.max.x - solid.min.x + SKIN;
+        const pushEast = solid.max.x - player.min.x + SKIN;
+        nextX = Math.max(x, pushWest <= pushEast ? exitWest : exitEast);
       } else {
         continue;
       }
@@ -364,9 +374,17 @@ function clipAxisZ(
 
       let nextZ = z;
       if (dz > 0) {
-        nextZ = Math.min(z, solid.min.z - PLAYER_HALF_WIDTH - SKIN);
+        const exitNorth = solid.min.z - PLAYER_HALF_WIDTH - SKIN;
+        const exitSouth = solid.max.z - PLAYER_HALF_WIDTH + SKIN;
+        const pushNorth = player.max.z - solid.min.z + SKIN;
+        const pushSouth = solid.max.z - player.min.z + SKIN;
+        nextZ = Math.min(z, pushNorth <= pushSouth ? exitNorth : exitSouth);
       } else if (dz < 0) {
-        nextZ = Math.max(z, solid.max.z + PLAYER_HALF_WIDTH + SKIN);
+        const exitNorth = solid.min.z + PLAYER_HALF_WIDTH - SKIN;
+        const exitSouth = solid.max.z + PLAYER_HALF_WIDTH + SKIN;
+        const pushNorth = player.max.z - solid.min.z + SKIN;
+        const pushSouth = solid.max.z - player.min.z + SKIN;
+        nextZ = Math.max(z, pushNorth <= pushSouth ? exitNorth : exitSouth);
       } else {
         continue;
       }
