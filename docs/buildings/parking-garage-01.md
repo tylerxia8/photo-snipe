@@ -26,7 +26,7 @@ Each player starts **behind their own parked car** with pillars nearby for peeki
 ```
 [North wall]  ← Player B behind car at (10, 13)
   Side pillars + flank cars at (±14, 0)
-  Center pillar cross + mid cars at (-8, -10) and (8, 10)
+  Center pillar cross + mid cars at (0, -12) and (0, 12)
 [South wall]  ← Player A behind car at (-10, -13)
 ```
 

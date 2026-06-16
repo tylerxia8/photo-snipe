@@ -24,13 +24,14 @@ export const PARKING_GARAGE_PILLAR_POSITIONS = [
   [0, 0],
 ] as const;
 
-export const PARKING_GARAGE_CAR_POSITIONS = [
-  [-10, -13],
-  [10, 13],
-  [-14, 0],
-  [14, 0],
-  [-8, -10],
-  [8, 10],
+/** Parked car slots — model front faces +Z at 0°, +X at 90°, etc. */
+export const PARKING_GARAGE_CARS = [
+  { x: -10, z: -13, facingY: 0 },
+  { x: 10, z: 13, facingY: 180 },
+  { x: -14, z: 0, facingY: 90 },
+  { x: 14, z: 0, facingY: 270 },
+  { x: 0, z: -12, facingY: 0 },
+  { x: 0, z: 12, facingY: 180 },
 ] as const;
 
 export const PARKING_GARAGE_LAYOUT: ArenaLayoutConfig = {
@@ -56,15 +57,18 @@ function addPillar(boxes: ArenaSolidBox[], x: number, z: number): void {
   );
 }
 
-function addCar(boxes: ArenaSolidBox[], x: number, z: number): void {
+function addCar(boxes: ArenaSolidBox[], x: number, z: number, facingY: number): void {
+  const alongX = facingY === 90 || facingY === 270;
+  const sx = alongX ? PARKING_GARAGE_CAR_LENGTH : PARKING_GARAGE_CAR_WIDTH;
+  const sz = alongX ? PARKING_GARAGE_CAR_WIDTH : PARKING_GARAGE_CAR_LENGTH;
   boxes.push(
     colliderBox(
       x,
       PARKING_GARAGE_CAR_HEIGHT * 0.5,
       z,
-      PARKING_GARAGE_CAR_LENGTH,
+      sx,
       PARKING_GARAGE_CAR_HEIGHT,
-      PARKING_GARAGE_CAR_WIDTH,
+      sz,
       true,
     ),
   );
@@ -85,8 +89,8 @@ for (const [x, z] of PARKING_GARAGE_PILLAR_POSITIONS) {
   addPillar(PARKING_GARAGE_SOLID_BOXES, x, z);
 }
 
-for (const [x, z] of PARKING_GARAGE_CAR_POSITIONS) {
-  addCar(PARKING_GARAGE_SOLID_BOXES, x, z);
+for (const { x, z, facingY } of PARKING_GARAGE_CARS) {
+  addCar(PARKING_GARAGE_SOLID_BOXES, x, z, facingY);
 }
 
 /** Behind the south spawn car, facing its rear (+Z). */
