@@ -1,4 +1,9 @@
 import type { PlayerSkinId } from "@photo-snipe/core";
+import {
+  computeMatchCredits,
+  type MatchCreditBreakdown,
+  type MatchPerformanceSnapshot,
+} from "@photo-snipe/core";
 
 const STORAGE_KEY = "photo-snipe-shop";
 
@@ -126,12 +131,13 @@ export function purchaseArenaPass(
 export function awardMatchCredits(options: {
   mode: "practice" | "online";
   didWin: boolean;
-}): number {
-  const amount = options.didWin
-    ? options.mode === "online"
-      ? 80
-      : 40
-    : 15;
-  addCredits(amount);
-  return amount;
+  arenaWinStreak: number;
+  consecutiveLossesBeforeMatch: number;
+  performance: MatchPerformanceSnapshot;
+}): MatchCreditBreakdown {
+  const breakdown = computeMatchCredits(options);
+  if (breakdown.total > 0) {
+    addCredits(breakdown.total);
+  }
+  return breakdown;
 }

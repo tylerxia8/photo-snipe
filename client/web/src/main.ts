@@ -7,10 +7,17 @@ import { initShopSettings, type ShopSettingsHandle } from "./shop/shop-settings.
 import { awardMatchCredits, subscribeShop } from "./shop/inventory.js";
 import { initProgressionUi } from "./progression/progression-ui.js";
 import {
+  getArenaStats,
   getProgressionState,
   getRank,
   recordMatchResult,
 } from "./progression/stats.js";
+import {
+  getMatchPerformanceSnapshot,
+  recordPhotoAttempt,
+  resetMatchPerformance,
+} from "./progression/match-performance.js";
+import { formatCreditBreakdown } from "@photo-snipe/core";
 import { getControlsHint } from "./settings/keybinds.js";
 import { initKeybindSettings } from "./settings/keybind-settings.js";
 import { getSkinId } from "./settings/appearance.js";
@@ -330,39 +337,49 @@ function showPostMatch(msg: ServerMessage): void {
   const roundId = String(msg.roundId ?? currentMatchRoundId);
   const winsBefore = getProgressionState().totalWins;
   const rankBefore = getRank(winsBefore);
+  const lossesBefore = getProgressionState().consecutiveLosses;
+  const performance = getMatchPerformanceSnapshot();
+  const matchMode = mode === "practice" ? "practice" : "online";
 
   recordMatchResult({
-    mode: mode === "practice" ? "practice" : "online",
+    mode: matchMode,
     didWin,
     roundId,
   });
-  const creditsEarned = awardMatchCredits({
-    mode: mode === "practice" ? "practice" : "online",
+
+  const arenaStats = getArenaStats(roundId);
+  const creditBreakdown = awardMatchCredits({
+    mode: matchMode,
     didWin,
+    arenaWinStreak: didWin ? arenaStats.currentStreak : 0,
+    consecutiveLossesBeforeMatch: lossesBefore,
+    performance,
   });
+  resetMatchPerformance();
   progressionUi.refresh();
   shopSettings.refresh();
   refreshArenaSelect();
 
   const rankAfter = getRank(getProgressionState().totalWins);
+  const creditSummary = `+${creditBreakdown.total} CR (${formatCreditBreakdown(creditBreakdown)})`;
 
   postMatchTitle.textContent = didWin ? "Victory" : "Defeat";
   if (forfeit && didWin) {
-    postMatchSubtitle.textContent = "Opponent left — you win!";
+    postMatchSubtitle.textContent = `Opponent left — you win! ${creditSummary}`;
   } else if (forfeit) {
     postMatchSubtitle.textContent = "You left the match.";
   } else if (didWin && rankAfter.id !== rankBefore.id) {
-    postMatchSubtitle.textContent = `Promoted to ${rankAfter.name}! +${creditsEarned} CR`;
+    postMatchSubtitle.textContent = `Promoted to ${rankAfter.name}! ${creditSummary}`;
   } else if (didWin) {
     postMatchSubtitle.textContent =
       mode === "practice"
-        ? `Training bot down. Rank: ${rankAfter.name}. +${creditsEarned} CR`
-        : `You win! +${creditsEarned} CR`;
+        ? `Training bot down. Rank: ${rankAfter.name}. ${creditSummary}`
+        : `You win! ${creditSummary}`;
   } else {
     postMatchSubtitle.textContent =
       mode === "practice"
-        ? `${winnerName} wins. +${creditsEarned} CR earned.`
-        : `${winnerName} wins! +${creditsEarned} CR earned.`;
+        ? `${winnerName} wins. ${creditSummary}`
+        : `${winnerName} wins! ${creditSummary}`;
   }
 
   resetRematchUi();
@@ -540,6 +557,7 @@ function processServerMessage(msg: ServerMessage): void {
       const round = msg.round as { id?: string; name?: string };
       const spawn = msg.yourSpawn as { position: number[]; rotation: number[] };
       const opponentSpawn = msg.opponentSpawn as { position: number[]; rotation: number[] };
+      resetMatchPerformance();
       game?.startRound(
         String(round?.id ?? "warehouse-interior-01"),
         spawn,
@@ -561,6 +579,7 @@ function processServerMessage(msg: ServerMessage): void {
       hudApi().setMessage("You heard a shutter nearby!");
       break;
     case "photo_result":
+      recordPhotoAttempt(Boolean(msg.valid));
       if (msg.valid) {
         hudApi().setMessage("Valid capture!");
       } else if (msg.reason === "cooldown") {

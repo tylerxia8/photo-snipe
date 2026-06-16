@@ -14,6 +14,9 @@ export interface ProgressionState {
   totalLosses: number;
   practiceWins: number;
   onlineWins: number;
+  consecutiveLosses: number;
+  seasonMonth: string;
+  seasonWins: number;
   perArena: Record<string, ArenaStats>;
 }
 
@@ -53,8 +56,23 @@ function defaultState(): ProgressionState {
     totalLosses: 0,
     practiceWins: 0,
     onlineWins: 0,
+    consecutiveLosses: 0,
+    seasonMonth: currentSeasonMonth(),
+    seasonWins: 0,
     perArena: {},
   };
+}
+
+function currentSeasonMonth(now = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function formatSeasonLabel(seasonMonth: string): string {
+  const [year, month] = seasonMonth.split("-");
+  const date = new Date(Number(year), Number(month) - 1, 1);
+  return date.toLocaleString(undefined, { month: "short", year: "numeric" });
 }
 
 function loadState(): ProgressionState {
@@ -69,6 +87,11 @@ function loadState(): ProgressionState {
       totalLosses: typeof parsed.totalLosses === "number" ? parsed.totalLosses : 0,
       practiceWins: typeof parsed.practiceWins === "number" ? parsed.practiceWins : 0,
       onlineWins: typeof parsed.onlineWins === "number" ? parsed.onlineWins : 0,
+      consecutiveLosses:
+        typeof parsed.consecutiveLosses === "number" ? parsed.consecutiveLosses : 0,
+      seasonMonth:
+        typeof parsed.seasonMonth === "string" ? parsed.seasonMonth : currentSeasonMonth(),
+      seasonWins: typeof parsed.seasonWins === "number" ? parsed.seasonWins : 0,
       perArena:
         parsed.perArena && typeof parsed.perArena === "object"
           ? (parsed.perArena as Record<string, ArenaStats>)
@@ -154,9 +177,16 @@ export function recordMatchResult(options: {
   roundId: string;
 }): void {
   const stats = cachedState.perArena[options.roundId] ?? emptyArenaStats();
+  const month = currentSeasonMonth();
+  if (cachedState.seasonMonth !== month) {
+    cachedState.seasonMonth = month;
+    cachedState.seasonWins = 0;
+  }
 
   if (options.didWin) {
     cachedState.totalWins += 1;
+    cachedState.seasonWins += 1;
+    cachedState.consecutiveLosses = 0;
     stats.wins += 1;
     stats.currentStreak += 1;
     stats.bestStreak = Math.max(stats.bestStreak, stats.currentStreak);
@@ -167,6 +197,7 @@ export function recordMatchResult(options: {
     }
   } else {
     cachedState.totalLosses += 1;
+    cachedState.consecutiveLosses += 1;
     stats.losses += 1;
     stats.currentStreak = 0;
   }
@@ -175,11 +206,27 @@ export function recordMatchResult(options: {
   persist();
 }
 
+export function getSeasonProgress(now = new Date()): {
+  month: string;
+  label: string;
+  wins: number;
+} {
+  const month = currentSeasonMonth(now);
+  const wins =
+    cachedState.seasonMonth === month ? cachedState.seasonWins : 0;
+  return {
+    month,
+    label: formatSeasonLabel(month),
+    wins,
+  };
+}
+
 export function getArenaLeaderboardRows(): Array<{
   id: string;
   name: string;
   wins: number;
   losses: number;
+  currentStreak: number;
   bestStreak: number;
   unlocked: boolean;
   unlockWins: number;
@@ -191,6 +238,7 @@ export function getArenaLeaderboardRows(): Array<{
       name: arena.name,
       wins: stats.wins,
       losses: stats.losses,
+      currentStreak: stats.currentStreak,
       bestStreak: stats.bestStreak,
       unlocked: isArenaUnlocked(arena.id),
       unlockWins: getArenaUnlockRequirement(arena.id),

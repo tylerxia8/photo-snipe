@@ -465,6 +465,13 @@ canvas {
   transition: width 0.25s ease;
 }
 
+.progress-season-meta {
+  margin: 0.55rem 0 0;
+  font-size: 0.78rem;
+  color: #9aa8ba;
+  letter-spacing: 0.04em;
+}
+
 .arena-leaderboard {
   display: grid;
   gap: 0.45rem;
