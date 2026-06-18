@@ -98,10 +98,41 @@ wss://photosnipe.yourdomain.com  →  ws://localhost:8787
 
 ```
 GET /health
-→ 200 {"ok":true,"service":"photo-snipe","uptimeSec":123}
+→ 200 {
+  "ok": true,
+  "service": "photo-snipe",
+  "uptimeSec": 123,
+  "connections": 42,
+  "rooms": 8,
+  "waitingRooms": 2,
+  "activeMatches": 6
+}
 ```
 
-Used by Railway, Render, and Docker `HEALTHCHECK`.
+Used by Railway, Render, and Docker `HEALTHCHECK`. Connection and room counts support load testing — see [STRESS_TEST.md](STRESS_TEST.md).
+
+---
+
+## Web client
+
+The production Docker image bundles the built web client from `client/web/`. After deploy, open the public URL in a browser — no Godot install required. Two browser tabs (or devices) can play a full online match through the same endpoint.
+
+The legacy Godot client still connects via `client/godot/config/network.cfg` if you prefer the desktop build.
+
+---
+
+## Stress testing
+
+Run concurrent match load against a running server:
+
+```bash
+npm run build
+npm run start:server
+# In another terminal:
+npm run stress-test -- --rooms 50 --duration 10
+```
+
+See [STRESS_TEST.md](STRESS_TEST.md) for methodology and recorded results.
 
 ---
 

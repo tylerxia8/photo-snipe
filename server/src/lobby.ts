@@ -78,6 +78,20 @@ export class LobbyManager {
     return this.rooms.get(code.toUpperCase());
   }
 
+  getRoomCount(): number {
+    return this.rooms.size;
+  }
+
+  getWaitingRoomCount(): number {
+    let count = 0;
+    for (const room of this.rooms.values()) {
+      if (room.players.A && !room.players.B) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   removePlayer(clientId: string): void {
     for (const [code, room] of this.rooms) {
       for (const slot of ["A", "B"] as const) {

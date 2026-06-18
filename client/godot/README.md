@@ -1,6 +1,6 @@
 # PhotoSnipe Godot Client
 
-Godot 4 first-person client for online 1v1 matches.
+Legacy Godot 4 desktop client for online 1v1 matches. **The primary shipped client is the browser build** in `client/web/`, served automatically from the production server URL. Use this Godot project only if you want a native desktop build — it currently ships the warehouse arena only.
 
 ## Requirements
 

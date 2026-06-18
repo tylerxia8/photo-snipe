@@ -27,6 +27,7 @@ const lobby = new LobbyManager();
 const rematch = new RematchManager();
 const presence = new PresenceRegistry();
 const clients = new WeakMap<WebSocket, ClientContext>();
+let activeMatchCount = 0;
 
 function opponentSlot(slot: PlayerSlot): PlayerSlot {
   return slot === "A" ? "B" : "A";
@@ -97,7 +98,9 @@ async function startMatch(
     ...baseConfig,
     roundPool: [roundId],
   };
+  activeMatchCount++;
   const match = new MatchSession(matchConfig, playerA, playerB, () => {
+    activeMatchCount = Math.max(0, activeMatchCount - 1);
     registerRematch(match, roomCode);
     clearMatchContext(match);
   });
@@ -230,6 +233,10 @@ const httpServer = createServer((req, res) => {
         ok: true,
         service: "photo-snipe",
         uptimeSec: Math.floor(process.uptime()),
+        connections: wss.clients.size,
+        rooms: lobby.getRoomCount(),
+        waitingRooms: lobby.getWaitingRoomCount(),
+        activeMatches: activeMatchCount,
       }),
     );
     return;

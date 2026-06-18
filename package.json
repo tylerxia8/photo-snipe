@@ -12,6 +12,7 @@
     "dev:server": "npm run dev -w server",
     "dev:web": "npm run dev -w @photo-snipe/web",
     "start": "node server/dist/index.js",
-    "start:server": "npm run start -w server"
+    "start:server": "npm run start -w server",
+    "stress-test": "node scripts/stress-test.mjs"
   }
 }

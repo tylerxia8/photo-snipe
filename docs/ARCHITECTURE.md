@@ -6,7 +6,7 @@ PhotoSnipe is a **1v1 competitive first-person game**. Two players begin each ro
 
 Each round uses a **different building**, so floor plans, cover, and sight lines change throughout a match. The core tension is positioning and timing: find a sight line on your opponent without giving them one on you.
 
-**MVP client engine:** Godot 4. See [ENGINE.md](ENGINE.md) for the full decision rationale.
+**Primary client:** Browser (TypeScript + Three.js) in `client/web/`. Legacy Godot 4 desktop client in `client/godot/` (warehouse only). See [ENGINE.md](ENGINE.md) for the original engine decision rationale.
 
 ---
 
@@ -61,8 +61,8 @@ Tactical slow walk for the first playtest. Values are tunable in [`data/config/g
 2. **Rounds are data.** Building scene, opposite-end spawn points, and rules live in JSON.
 3. **One building, two spawns.** Both players share the same geometry and collision; they start at opposite ends and converge.
 4. **Face-specific validation.** A valid photo requires the opponent's **face hit volume** inside the camera frustum — body-only shots do not count.
-5. **Separate simulation from presentation.** Movement and rendering are client-side (Godot); match outcome logic is shared and server-verified (TypeScript).
-6. **Godot for MVP client; Node for server.** Engine handles FPS feel; server handles fairness.
+5. **Separate simulation from presentation.** Movement and rendering are client-side (web/Godot); match outcome logic is shared and server-verified (TypeScript).
+6. **Web client for production; Node for server.** Browser Three.js client is the shipped product; server handles fairness.
 
 ---
 
@@ -70,9 +70,9 @@ Tactical slow walk for the first playtest. Values are tunable in [`data/config/g
 
 ```mermaid
 flowchart TB
-    subgraph clients [Godot 4 Clients]
-        C1[Player A - FPS Client]
-        C2[Player B - FPS Client]
+    subgraph clients [Browser Clients - Three.js]
+        C1[Player A - Web Client]
+        C2[Player B - Web Client]
     end
 
     subgraph server [Node.js Game Server]
@@ -80,6 +80,7 @@ flowchart TB
         RV[Round Manager]
         PV[Photo Validator]
         PS[Player State Sync]
+        SC[Static Web Client]
     end
 
     subgraph data [Data Layer]
@@ -138,7 +139,19 @@ Engine-neutral TypeScript. No Godot dependencies.
 | `RoundOrchestrator` | Rotate buildings between rounds, reset spawns |
 | `Anti-cheat hooks` | Rate-limit photos, sanity-check movement (post-MVP) |
 
-### Godot client (`client/godot/`)
+### Web client (`client/web/`) — primary
+
+| Module | Responsibility |
+|---|---|
+| `game/` | Three.js scene, FPS movement, arena loading, match HUD |
+| `net/client.ts` | WebSocket connection and message dispatch |
+| `practice/` | Offline bot matches (client-only) |
+| `shop/` | Credits economy, skins, arena host passes |
+| `progression/` | Ladder rank, arena unlocks, match stats |
+| `social/` | Friends list, presence, room invites |
+| `replay/` | Kill-cam playback |
+
+### Godot client (`client/godot/`) — legacy
 
 | Module | Responsibility |
 |---|---|
@@ -441,28 +454,34 @@ photo-snipe/
 
 ---
 
-## MVP Scope
+## Shipped Scope (Final)
 
-### In scope
+### Implemented
 
-- [ ] Godot 4 client with first-person walk + look
-- [ ] **Online 1v1** over deployed WebSocket server (`wss://`)
-- [ ] Room-code lobby (create/join match)
-- [ ] 1 building with opposite-end spawns
-- [ ] Aim mode + photo capture button
-- [ ] **Flash + shutter sound** on every capture attempt (exposure risk)
-- [ ] Server-validated **face-in-frame** win condition
-- [ ] **5-minute round timer** with draw on timeout
-- [ ] Round win screen and best-of-3 match flow
-- [ ] Unit tests for face validation logic
+- [x] **Browser web client** with first-person walk, look, jump, and aim mode
+- [x] **Online 1v1** over deployed WebSocket server (`wss://`)
+- [x] Room-code lobby (create/join match) with host arena selection
+- [x] **7 arenas** with distinct layouts and occlusion geometry
+- [x] Aim mode + photo capture with exposure flash/sound
+- [x] Server-validated **body-in-frame** win condition with line-of-sight occlusion
+- [x] **5-minute round timer** with draw on timeout
+- [x] Round win screen, best-of-N match flow, rematch voting
+- [x] **Ranked operator ladder** (12 ranks, localStorage persistence)
+- [x] **Credits & shop** (skins, arena host passes)
+- [x] **Social** (friends, presence, invites)
+- [x] **Solo practice vs bot** (easy/medium/hard)
+- [x] **Kill-cam replay** on valid captures
+- [x] Unit tests for validation, ladder, arenas (64 tests)
 
-### Out of scope (post-MVP)
+### Out of scope
 
-- Ranked matchmaking and player accounts
-- More than 2 players
-- Replay system
+- Account system / cross-device progression sync
+- Skill-based matchmaking (room codes only)
+- More than 2 players per match
 - Procedural buildings
 - Mobile builds
+
+See also [TECHNICAL_WALKTHROUGH.md](TECHNICAL_WALKTHROUGH.md), [STRESS_TEST.md](STRESS_TEST.md), and [DEMO_SCRIPT.md](DEMO_SCRIPT.md).
 
 ---
 
@@ -494,7 +513,6 @@ photo-snipe/
 
 ## Next Steps
 
-1. Run `railway login && railway up` (see [DEPLOYMENT.md](DEPLOYMENT.md)) and set Godot `network.cfg` to the `wss://` URL.
-2. Validate online face capture end-to-end with two remote Godot clients.
-3. Add shutter sound asset and polish exposure VFX.
-4. Add JSON Schema validation for round files in CI.
+1. Re-record the demo video using [DEMO_SCRIPT.md](DEMO_SCRIPT.md) — two-browser multiplayer, technical walkthrough, AI reflection.
+2. Optional: expand Godot client to feature-parity with web (7 arenas).
+3. Optional: add account system for cross-device progression.
